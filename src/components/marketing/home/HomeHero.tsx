@@ -13,28 +13,13 @@ import dynamic from "next/dynamic";
 
 const Globe = dynamic(() => import("@/components/marketing/globe/GlobeLines"), { ssr: false });
 
-const LIVE = [
-  { route: "-", kicker: "Live · just now", time: "4h 12m", title: "Shortlist sent to a retail group in Riyadh", tags: ["HR & payroll", "3 verified matches"] },
-  { route: "nyc", kicker: "Live · 12 min ago", time: "1d 2h", title: "Demo booked by a logistics firm in New York", tags: ["AI & automation", "Central AI"] },
-  { route: "--", kicker: "Live · 40 min ago", time: "6h", title: "Milestone accepted by a clinic group in Doha", tags: ["Healthcare", "Paid on acceptance"] },
-];
-
-
 const PROMPTS = ["HR and payroll for 400 staff in Riyadh", "Clinic billing for 3 sites in Doha", "POS for 12 stores in Dubai", "Read 30k invoices a month in New York"];
 
 export function HomeHero() {
   preload("/data/globe-dots.bin", { as: "fetch", crossOrigin: "anonymous" });
-  const [active] = useState<string | null>(null);
-  const [i, setI] = useState(0);
   const [film, setFilm] = useState(false);
   const headline = useRef<HTMLHeadingElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (active) return;
-    const t = setInterval(() => setI((x) => (x + 1) % LIVE.length), 4200);
-    return () => clearInterval(t);
-  }, [active]);
 
   useLayoutEffect(() => {
     if (!headline.current) return;
@@ -45,7 +30,6 @@ export function HomeHero() {
     return () => ctx.revert();
   }, []);
 
-  const live = active ? LIVE.find((l) => l.route === active) ?? LIVE[i] : LIVE[i];
 
   return (
     <section className="relative mx-2 mt-2 md:mx-4 md:mt-4 flex min-h-[760px] flex-col overflow-hidden rounded-lg bg-night-hero text-white md:h-[880px]">
@@ -123,36 +107,6 @@ export function HomeHero() {
           <span className="text-[13px] leading-[18px] text-haze">From request to go-live, in one minute.</span>
         </span>
       </button>
-
-      {/* Bottom-right corner: live activity */}
-      <div className="pointer-events-none absolute bottom-8 right-8 z-20 hidden w-[300px] lg:block">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={live.title}
-            initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
-            transition={{ duration: 0.45 }}
-            className="flex flex-col gap-3 rounded-lg border border-white/15 bg-[#0C1F45]/55 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl"
-          >
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs text-haze">
-                <span className="relative flex size-[7px]">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-[#3DDC84]/70" />
-                  <span className="relative size-[7px] rounded-full bg-[#3DDC84]" />
-                </span>
-                {live.kicker}
-              </span>
-              <span className="font-mono text-xs text-sky">{live.time}</span>
-            </div>
-            <div className="text-[15px] font-medium leading-5">{live.title}</div>
-            <div className="flex gap-1.5">
-              <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs">{live.tags[0]}</span>
-              <span className="rounded-md bg-sky/20 px-2.5 py-1 text-xs font-semibold text-sky">{live.tags[1]}</span>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
 
       <FilmModal open={film} onClose={() => setFilm(false)} />
       <SearchDock anchor={barRef} />

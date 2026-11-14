@@ -12,9 +12,9 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://dgix-rho.vercel.app");
 
-const TITLE = "DGIX · Proven products. Sold to the world.";
+const TITLE = "DGIX · Built in Bangladesh. For the world.";
 const DESCRIPTION = "DGIX is Daffodil's global innovation exchange. We verify software from Bangladesh, match it to your need, and deliver it under one contract.";
-const SHARE_IMAGE = { url: "/og/dgix-og.jpg", width: 1200, height: 630, alt: "DGIX: Proven products. Sold to the world.", type: "image/jpeg" };
+const SHARE_IMAGE = { url: "/og/dgix-og.jpg", width: 1200, height: 630, alt: "DGIX: Built in Bangladesh. For the world.", type: "image/jpeg" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

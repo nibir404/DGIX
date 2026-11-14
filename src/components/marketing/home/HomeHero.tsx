@@ -46,11 +46,11 @@ export function HomeHero() {
       {/* Foreground: everything centred */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[calc(100%-104px)] max-w-[980px] flex-col items-center justify-center gap-7 px-4 pb-10 pt-6 text-center sm:px-6 md:gap-8 md:pb-[150px]">
         <h1 ref={headline} className="text-[44px] leading-[46px] sm:text-[64px] sm:leading-[66px] md:text-[84px] md:leading-[86px] lg:text-[100px] lg:leading-[100px] font-light tracking-[-0.05em]">
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">Proven products.</span></span>
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">Sold to the world.</span></span>
+          <span className="hl-line block overflow-hidden pb-2"><span className="block">Built in Bangladesh.</span></span>
+          <span className="hl-line block overflow-hidden pb-2"><span className="block">For the world.</span></span>
         </h1>
         <p className="hero-fade max-w-[620px] text-[17px] leading-[26px] text-white/75 sm:text-[19px] sm:leading-[29px]">
-          <span className="font-medium text-white">DGIX is Daffodil&apos;s global innovation exchange.</span> We verify products from Bangladesh, match them to your need, and deliver them under one contract.
+          <span className="font-medium text-white">A Daffodil Group initiative</span> to take promising Bangladeshi technology to global buyers, and bring global expertise and opportunity back to Bangladesh.
         </p>
         <div className="pointer-events-auto flex w-full flex-col items-center gap-5">
           <div ref={barRef} className="hero-fade flex w-full justify-center">

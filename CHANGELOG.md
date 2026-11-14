@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-11-14
+
+The home page comparison now makes the case for DGIX at a glance.
+
+### Changed
+- **"Why not go direct?", more prominent:** the DGIX column sits on a glowing blue card with check marks and a Recommended badge, while "Going it alone" is greyed and crossed out. On phones each row shows the pain point above the DGIX answer on the blue card. The intro now reads "Same software, none of the risk."
+
 ## [1.3.0] — 2026-11-14
 
 Bangladesh now glows on the home globe, and shared links show a DGIX preview card.
@@ -106,7 +113,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/nibir404/DGIX/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nibir404/DGIX/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/nibir404/DGIX/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/nibir404/DGIX/compare/v1.1.0...v1.2.0

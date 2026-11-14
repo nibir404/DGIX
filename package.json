@@ -20,9 +20,9 @@
     "lenis": "^1.3.11",
     "motion-dom": "12.23.21",
     "motion-utils": "12.23.6",
-    "next": "15.5.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "next": "15.5.29",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
     "three": "^0.180.0",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2"
@@ -37,7 +37,7 @@
     "@types/three": "^0.180.0",
     "@types/topojson-client": "^3.1.5",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
+    "eslint-config-next": "15.5.29",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

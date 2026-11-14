@@ -64,7 +64,7 @@ export default function LeadsPage() {
         <Empty title="No leads yet" body="When DGIX matches a buyer to one of your products, it shows up here." />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {leads.map((l, i) => {
+          {leads.map((l) => {
             const dark = l.kind === "requested";
             return (
               <Panel key={l.id} className={clsx("flex flex-col gap-[14px] p-6", dark ? "bg-night" : "bg-paper")} style={dark ? { backgroundImage: NIGHT_CARD } : undefined}>

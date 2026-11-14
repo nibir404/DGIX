@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "globe:dots": "node scripts/gen-globe-dots.mjs",
+    "globe:bangladesh": "node scripts/gen-bangladesh.mjs",
     "og:image": "node scripts/gen-og-image.mjs"
   },
   "dependencies": {

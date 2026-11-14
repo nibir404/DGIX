@@ -4,12 +4,12 @@ import { useEffect, useRef } from "react";
 import { geoDistance, geoGraticule10, geoInterpolate, geoOrthographic, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
-import type { FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 /**
  * Line-art globe: dark sphere, thin graticule, crisp white coastlines,
- * a fine dot grid over land, Dhaka as the glowing home marker and
- * great-circle routes to the buyer markets.
+ * a fine dot grid over land, Bangladesh lit up in glowing amber with Dhaka
+ * as the home marker, and golden great-circle routes to the buyer markets.
  *
  * Drawn on a 2D canvas with d3-geo (orthographic). Drag to turn it;
  * it drifts slowly on its own, pauses off screen and respects reduced motion.
@@ -32,9 +32,12 @@ const C = {
   grid: "rgba(255,255,255,0.10)",
   coast: "rgba(255,255,255,0.92)",
   dot: [190, 210, 240] as const,
-  route: "rgba(127,182,255,0.85)",
-  home: "#FF4D3D",
-  market: "#7FB6FF",
+  route: "rgba(255,196,110,0.9)",
+  routeGlow: "rgba(255,150,40,0.9)",
+  home: "#FFF1D6",
+  amber: "#FF9A1F",
+  amberHot: "#FFC35A",
+  market: "#FFD48A",
 };
 
 type Land = FeatureCollection<Polygon | MultiPolygon>;
@@ -52,6 +55,7 @@ export default function GlobeLines({ className }: { className?: string }) {
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let land: Land | null = null;
+    let bd: Feature<Polygon | MultiPolygon> | null = null;
     let dots: Float32Array | null = null;
     let w = 0, h = 0, dpr = 1, raf = 0, visible = true, t0 = performance.now();
     let dragLon = 0, dragLat = 0;
@@ -100,6 +104,7 @@ export default function GlobeLines({ className }: { className?: string }) {
       if (dots) {
         const [r0, g0, b0] = C.dot;
         for (let i = 0; i < dots.length; i += 3) {
+          if (dots[i + 2] === 1 && bd) continue; // Bangladesh dots are drawn in amber below
           const p: [number, number] = [dots[i + 1], dots[i]];
           const d = geoDistance(p, center);
           if (d > 1.5) continue;
@@ -116,6 +121,43 @@ export default function GlobeLines({ className }: { className?: string }) {
         ctx.beginPath(); path(land); ctx.strokeStyle = C.coast; ctx.lineWidth = 0.9; ctx.lineJoin = "round"; ctx.stroke();
       }
 
+      // Bangladesh: glowing amber fill, hot dots and a bright neon outline
+      const bdVisible = geoDistance(DHAKA, center) < 1.45;
+      const breathe = reduce ? 0.85 : 0.75 + 0.25 * Math.sin(t * 1.6);
+      if (bd && bdVisible) {
+        ctx.save();
+        // Wide outer bloom
+        ctx.globalCompositeOperation = "lighter";
+        ctx.shadowColor = C.amber;
+        ctx.shadowBlur = 38 * breathe;
+        ctx.beginPath(); path(bd);
+        ctx.fillStyle = `rgba(255,140,30,${(0.30 * breathe).toFixed(3)})`; ctx.fill();
+        // Inner fill with a warm gradient
+        ctx.shadowBlur = 0;
+        const [bx0, by0] = projection([88, 26.6]) ?? [0, 0];
+        const [bx1, by1] = projection([92.6, 20.7]) ?? [0, 0];
+        const fg = ctx.createLinearGradient(bx0, by0, bx1, by1);
+        fg.addColorStop(0, "rgba(255,200,90,0.55)");
+        fg.addColorStop(1, "rgba(255,110,20,0.45)");
+        ctx.beginPath(); path(bd); ctx.fillStyle = fg; ctx.fill();
+        // Dense hot dots inside the border
+        if (dots) {
+          ctx.fillStyle = "rgba(255,226,160,0.95)";
+          for (let i = 0; i < dots.length; i += 3) {
+            if (dots[i + 2] !== 1) continue;
+            const xy = projection([dots[i + 1], dots[i]]);
+            if (xy) ctx.fillRect(xy[0] - 0.7, xy[1] - 0.7, 1.4, 1.4);
+          }
+        }
+        // Neon outline: blurred wide pass, then a crisp hot core
+        ctx.lineJoin = "round";
+        ctx.shadowColor = C.amber; ctx.shadowBlur = 18;
+        ctx.beginPath(); path(bd); ctx.strokeStyle = C.amber; ctx.lineWidth = 3.2; ctx.stroke();
+        ctx.shadowColor = C.amberHot; ctx.shadowBlur = 6;
+        ctx.beginPath(); path(bd); ctx.strokeStyle = "#FFE3A8"; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.restore();
+      }
+
       // Routes: great circles drawing out from Dhaka, looping
       routes.forEach((r, i) => {
         const phase = reduce ? 1 : Math.min(1, ((t * 0.35 + i * 0.27) % 1.6) / 1.0);
@@ -124,12 +166,26 @@ export default function GlobeLines({ className }: { className?: string }) {
         for (let s = 0; s <= steps * phase; s++) pts.push(r.interp(s / steps));
         if (pts.length < 2) return;
         ctx.beginPath(); path({ type: "LineString", coordinates: pts });
-        ctx.strokeStyle = C.route; ctx.lineWidth = 1.4; ctx.setLineDash([]); ctx.stroke();
+        ctx.save();
+        ctx.shadowColor = C.routeGlow; ctx.shadowBlur = 10;
+        ctx.strokeStyle = C.route; ctx.lineWidth = 1.6; ctx.setLineDash([]); ctx.stroke();
+        ctx.restore();
+        // Bright head travelling along the arc while it draws
+        if (phase < 1) {
+          const head = projection(pts[pts.length - 1]);
+          if (head && geoDistance(pts[pts.length - 1], center) < 1.5) {
+            ctx.save(); ctx.shadowColor = C.amberHot; ctx.shadowBlur = 12;
+            ctx.beginPath(); ctx.arc(head[0], head[1], 2.4, 0, Math.PI * 2); ctx.fillStyle = "#FFF1D6"; ctx.fill();
+            ctx.restore();
+          }
+        }
         // Market marker once the arc arrives
         if (phase >= 1 && geoDistance(r.at, center) < 1.45) {
           const xy = projection(r.at);
           if (xy) {
-            ctx.beginPath(); ctx.arc(xy[0], xy[1], 3, 0, Math.PI * 2); ctx.fillStyle = C.market; ctx.fill();
+            ctx.save(); ctx.shadowColor = C.amber; ctx.shadowBlur = 14;
+            ctx.beginPath(); ctx.arc(xy[0], xy[1], 3.4, 0, Math.PI * 2); ctx.fillStyle = C.market; ctx.fill();
+            ctx.restore();
           }
         }
       });
@@ -140,9 +196,9 @@ export default function GlobeLines({ className }: { className?: string }) {
         if (xy) {
           const pulse = reduce ? 0.5 : (t % 2.2) / 2.2;
           ctx.beginPath(); ctx.arc(xy[0], xy[1], 5 + pulse * 16, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,77,61,${(0.35 * (1 - pulse)).toFixed(3)})`; ctx.fill();
-          ctx.shadowColor = C.home; ctx.shadowBlur = 14;
-          ctx.beginPath(); ctx.arc(xy[0], xy[1], 5, 0, Math.PI * 2); ctx.fillStyle = C.home; ctx.fill();
+          ctx.fillStyle = `rgba(255,170,60,${(0.4 * (1 - pulse)).toFixed(3)})`; ctx.fill();
+          ctx.shadowColor = C.amberHot; ctx.shadowBlur = 16;
+          ctx.beginPath(); ctx.arc(xy[0], xy[1], 3.6, 0, Math.PI * 2); ctx.fillStyle = C.home; ctx.fill();
           ctx.shadowBlur = 0;
         }
       }
@@ -162,6 +218,10 @@ export default function GlobeLines({ className }: { className?: string }) {
         land = feature(topo, topo.objects.land) as unknown as Land;
         start();
       })
+      .catch(() => {});
+    fetch("/data/bangladesh.json")
+      .then((r) => r.json())
+      .then((f: Feature<Polygon | MultiPolygon>) => { bd = f; start(); })
       .catch(() => {});
     fetch("/data/globe-dots.bin")
       .then((r) => r.arrayBuffer())

@@ -25,6 +25,22 @@ const ICONS: Record<CheckKey, React.ReactNode> = {
   docs: (<><rect x="3" y="5" width="13" height="14" rx="2" /><path d="M16 10l5-3v10l-5-3" /></>),
 };
 
+/** One icon per product gate: problem → offer → economics → proof → scale → portfolio. */
+const GATE_ICONS: Record<(typeof GATES)[number]["id"], React.ReactNode> = {
+  // Problem: a target — the real need the product solves
+  PG0: (<><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="0.5" /></>),
+  // Offer: a package — what is actually sold
+  PG1: (<><path d="M21 8 12 3 3 8v8l9 5 9-5z" /><path d="m3 8 9 5 9-5M12 13v8" /></>),
+  // Economics: coins — pricing and unit economics
+  PG2: (<><ellipse cx="9" cy="7" rx="5.5" ry="2.5" /><path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V7" /><path d="M9.5 16.5c.8 1.2 2.9 2 5.5 2 3 0 5.5-1.1 5.5-2.5v-4c0-1.4-2.5-2.5-5.5-2.5" /></>),
+  // Proof: a verified badge — evidence from live customers
+  PG3: (<><path d="M12 3l2.4 1.8 3-.1.9 2.8 2.4 1.8-.9 2.8.9 2.8-2.4 1.8-.9 2.8-3-.1L12 21l-2.4-1.8-3 .1-.9-2.8L3.3 14.7l.9-2.8-.9-2.8 2.4-1.8.9-2.8 3 .1z" /><path d="m8.8 12 2.2 2.2 4.2-4.4" /></>),
+  // Scale: trend up — ready for more markets and customers
+  PG4: (<><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>),
+  // Portfolio: stacked layers — part of the long-term catalogue
+  PG5: (<><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></>),
+};
+
 function CheckCard({ i, k, label, max }: { i: number; k: CheckKey; label: string; max: number }) {
   const variant = i === 0 ? "night" : i < 3 ? "mist" : "line";
   const dark = variant === "night";
@@ -66,7 +82,8 @@ function Gates() {
     return () => st.kill();
   }, []);
   return (
-    <div ref={ref} className="grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-6">
+    <div className="@container">
+    <div ref={ref} className="grid grid-cols-2 gap-[10px] @md:grid-cols-3 @4xl:grid-cols-6">
       {GATES.map((g, i) => {
         const on = i === active;
         const passed = i < active;
@@ -74,20 +91,34 @@ function Gates() {
           <div
             key={g.id}
             className={clsx(
-              "relative flex flex-col gap-3 overflow-hidden rounded-lg px-4 py-5 transition-colors duration-500",
+              "relative flex min-w-0 flex-col gap-4 overflow-hidden rounded-lg p-4 transition-colors duration-500 sm:p-5",
               on ? "bg-night" : "bg-paper",
             )}
           >
-            <div className={clsx("flex items-center justify-between font-mono text-xs leading-4 transition-colors duration-500", on ? "text-glow-amber" : "text-muted")}>
-              {g.id}
-              <svg width="12" height="12" viewBox="0 0 24 24" stroke="#14804A" {...sw} strokeWidth={3} className={clsx("transition-opacity duration-300", passed ? "opacity-100" : "opacity-0")}>
-                <path d="m5 12.5 4.5 4.5L19 7.5" />
-              </svg>
+            <div className="flex items-start justify-between gap-2">
+              <span
+                className={clsx(
+                  "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-500",
+                  on ? "bg-white/10 text-glow-amber" : passed ? "bg-[#E6F4EC] text-success" : "bg-mist text-primary",
+                )}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" {...sw} aria-hidden>{GATE_ICONS[g.id]}</svg>
+              </span>
+              <span
+                aria-label={passed ? "Passed" : undefined}
+                className={clsx("flex size-5 items-center justify-center rounded-full bg-success text-white transition-opacity duration-300", passed ? "opacity-100" : "opacity-0")}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" stroke="currentColor" {...sw} strokeWidth={3.5} aria-hidden><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+              </span>
             </div>
-            <div className={clsx("break-words text-[15px] leading-[18px] font-medium transition-colors duration-500", on ? "text-paper" : "text-ink")}>{g.name}</div>
+            <div className="flex flex-col gap-1">
+              <div className={clsx("font-mono text-xs leading-4 transition-colors duration-500", on ? "text-glow-amber" : "text-muted")}>{g.id}</div>
+              <div className={clsx("text-[15px] leading-5 font-medium transition-colors duration-500 [hyphens:none] [overflow-wrap:normal] [word-break:keep-all]", on ? "text-paper" : "text-ink")}>{g.name}</div>
+            </div>
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
@@ -109,7 +140,7 @@ export function VerifiedPage() {
           lead="Eight checks. Six gates. One hundred points. Reviewed per product, version and country by someone who didn't build it."
           aside={
             <div className="flex items-center gap-4 rounded-lg border border-[#FFFFFF2E] bg-[#FFFFFF14] py-3 pl-3 pr-[22px]">
-              <div className="flex size-[56px] shrink-0 items-center justify-center rounded-full shadow-[0_0_30px_#F6A11A80]" style={{ backgroundImage: "linear-gradient(in oklab 135deg, #FFD58A 0%, #F6A11A 100%)" }}>
+              <div className="flex size-[56px] shrink-0 items-center justify-center rounded-full shadow-[0_0_30px_#2F6BD880]" style={{ backgroundImage: "linear-gradient(in oklab 135deg, #7FB6FF 0%, #2F6BD8 100%)" }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" stroke="#08152F" {...sw} strokeWidth={2}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
               </div>
               <div className="flex flex-col">
@@ -140,7 +171,7 @@ export function VerifiedPage() {
       <section className="mx-2 flex flex-col gap-5 px-4 py-20 md:mx-4 md:px-10 md:py-[112px] lg:flex-row">
         <Reveal
           className="flex flex-col gap-7 rounded-lg bg-mist p-6 md:p-10 lg:flex-[1.4]"
-          style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%), radial-gradient(ellipse 40% 60% at 0% 100% in oklab, #F6A11A2E 0%, #F6A11A00 70%)" }}
+          style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%)" }}
         >
           <h3 className="text-[32px] leading-10 md:text-[40px] md:leading-12 font-light tracking-tight text-ink">Six gates, in order.</h3>
           <Gates />

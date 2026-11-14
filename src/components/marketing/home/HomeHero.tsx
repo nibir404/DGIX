@@ -175,9 +175,9 @@ function NeedBar() {
   return (
     <form
       onSubmit={submit}
-      className="hero-fade relative flex h-16 sm:h-20 w-full md:max-w-[680px] items-center gap-2 sm:gap-3 rounded-lg border border-sky/40 bg-[#0C1F45]/80 pl-4 sm:pl-7 pr-1.5 sm:pr-2 shadow-[0_0_0_1px_rgba(255,213,138,0.35),0_0_60px_rgba(246,161,26,0.25)] backdrop-blur-xl"
+      className="hero-fade relative flex h-16 sm:h-20 w-full md:max-w-[680px] items-center gap-2 sm:gap-3 rounded-lg border border-sky/40 bg-[#0C1F45]/80 pl-4 sm:pl-7 pr-1.5 sm:pr-2 shadow-[0_0_0_1px_rgba(127,182,255,0.25),0_0_40px_rgba(47,107,216,0.25)] backdrop-blur-xl transition-[border-color,box-shadow,background-color] duration-300 hover:border-sky/70 focus-within:border-sky focus-within:bg-[#0C1F45]/95 focus-within:shadow-[0_0_0_4px_rgba(127,182,255,0.28),0_0_32px_rgba(127,182,255,0.55),0_0_90px_rgba(47,107,216,0.6)]"
     >
-      <Icon name="sparkle" size={18} className="shrink-0 text-glow-amber" />
+      <Icon name="sparkle" size={18} className="shrink-0 text-sky" />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}

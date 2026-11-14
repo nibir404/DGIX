@@ -7,7 +7,7 @@ import { useLookup, useStore } from "@/lib/store";
 import { fmtMoney } from "@/lib/seed";
 import { H1, Kicker, k } from "@/components/admin/kit";
 
-const tones = ["bg-[linear-gradient(135deg,#6FD3A0,#14804A)]", "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)]", "bg-[linear-gradient(135deg,#FFD58A,#F6A11A)] text-ink", "bg-[#FBE7E7] text-danger"];
+const tones = ["bg-[linear-gradient(135deg,#6FD3A0,#14804A)]", "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)]", "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)] text-ink", "bg-[#FBE7E7] text-danger"];
 
 export default function Partners() {
   const { db } = useStore();

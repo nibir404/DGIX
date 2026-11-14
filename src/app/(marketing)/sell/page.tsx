@@ -94,7 +94,7 @@ export default function SellPage() {
         <Reveal
           delay={0.1}
           className="flex flex-col justify-between gap-7 rounded-lg bg-mist p-6 md:p-10"
-          style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0%, #C9DCFF 0%, #C9DCFF00 60%), radial-gradient(ellipse 40% 60% at 0% 100%, #F6A11A2E 0%, #F6A11A00 70%)" }}
+          style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0%, #C9DCFF 0%, #C9DCFF00 60%)" }}
         >
           <h3 className="text-[32px] leading-[40px] md:text-[40px] md:leading-12 font-light tracking-tight text-ink">From application to listed.</h3>
           <div className="flex flex-col gap-[14px]">

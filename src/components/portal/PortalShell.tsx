@@ -126,7 +126,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
           </button>
         )}
         <div className={clsx("mb-5 flex items-center gap-3 rounded-lg px-2 py-2", collapsed && "justify-center")}>
-          <div className={clsx("flex size-[34px] shrink-0 items-center justify-center rounded-lg text-[13px] font-bold text-white", role === "seller" ? "bg-[linear-gradient(135deg,#14804A,#3DDC84)]" : role === "staff" ? "bg-[linear-gradient(135deg,#163C7E,#1E4FA3)]" : "bg-[linear-gradient(135deg,#F6A11A,#E52A2A)]")}>
+          <div className={clsx("flex size-[34px] shrink-0 items-center justify-center rounded-lg text-[13px] font-bold text-white", role === "seller" ? "bg-[linear-gradient(135deg,#14804A,#3DDC84)]" : role === "staff" ? "bg-[linear-gradient(135deg,#163C7E,#1E4FA3)]" : "bg-[linear-gradient(135deg,#2F6BD8,#E52A2A)]")}>
             {(co?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2)}
           </div>
           {!collapsed && (

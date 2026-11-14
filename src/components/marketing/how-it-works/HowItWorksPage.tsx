@@ -50,12 +50,12 @@ function Visual1() {
   return (
     <div
       className="flex flex-1 items-center justify-center rounded-lg bg-night px-4 py-10 md:px-8 md:py-14"
-      style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 70% 100% in oklab, #F6A11A40 0%, #F6A11A00 70%)" }}
+      style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%)" }}
     >
       <div className="flex w-full max-w-[684px] flex-col gap-[14px]">
         <div
-          className="flex rounded-lg p-[2px] shadow-[0_0_0_6px_#7FB6FF1F,0_0_48px_6px_#7FB6FF59,0_0_90px_10px_#F6A11A2E] sm:rounded-lg"
-          style={{ backgroundImage: "conic-gradient(in oklab from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #F6A11A 50%, #FFD58A 75%, #7FB6FF 100%)" }}
+          className="flex rounded-lg p-[2px] shadow-[0_0_0_6px_#7FB6FF1F,0_0_48px_6px_#7FB6FF59,0_0_90px_10px_#2F6BD82E] sm:rounded-lg transition-shadow duration-300 focus-within:shadow-[0_0_0_6px_#7FB6FF47,0_0_40px_8px_#7FB6FF8C,0_0_110px_14px_#2F6BD866]"
+          style={{ backgroundImage: "conic-gradient(in oklab from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #2F6BD8 50%, #7FB6FF 75%, #7FB6FF 100%)" }}
         >
           <div className="flex flex-1 flex-col gap-3 rounded-lg p-4 sm:h-[76px] sm:flex-row sm:items-center sm:gap-[14px] sm:rounded-lg sm:py-0 sm:pl-[26px] sm:pr-[10px]" style={{ backgroundImage: "linear-gradient(in oklab 90deg, #0E1E40 0%, #142B57 100%)" }}>
             <div className="flex flex-1 items-center gap-[14px]">
@@ -110,7 +110,7 @@ function Visual2() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] leading-[14px] font-bold text-night" style={{ backgroundImage: "linear-gradient(in oklab 135deg, #FFD58A 0%, #F6A11A 100%)" }}>AS</div>
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] leading-[14px] font-bold text-night" style={{ backgroundImage: "linear-gradient(in oklab 135deg, #7FB6FF 0%, #2F6BD8 100%)" }}>AS</div>
             <span className="text-[13px] leading-4 text-muted">Confirmed by Asha</span>
           </div>
           <div className="inline-flex h-11 items-center rounded-lg px-5 text-sm leading-[18px] font-semibold text-paper shadow-[inset_0_1px_0_#FFFFFF59,0_8px_20px_-6px_#1E4FA38C]" style={{ backgroundImage: blueBtn }}>Request demo</div>
@@ -149,11 +149,11 @@ function Visual4() {
   return (
     <div
       className="flex flex-1 items-center justify-center rounded-lg bg-night p-4 py-10 md:p-12"
-      style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 0% 100% in oklab, #F6A11A40 0%, #F6A11A00 70%)" }}
+      style={{ backgroundImage: "radial-gradient(ellipse 60% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%)" }}
     >
       <div
         className="flex h-[200px] flex-1 flex-col justify-between rounded-lg bg-night p-6"
-        style={{ backgroundImage: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 50% 60% at 0% 100% in oklab, #F6A11A4D 0%, #F6A11A00 70%)" }}
+        style={{ backgroundImage: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #2F6BD8 0%, #2F6BD800 60%)" }}
       >
         <div className="text-[13px] leading-4 text-[#FFFFFFA6]">Contract value</div>
         <div className="flex flex-col gap-[6px]">

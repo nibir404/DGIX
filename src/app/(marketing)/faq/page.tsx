@@ -71,7 +71,7 @@ export default function FaqPage() {
           </label>
         }
       >
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 85% 100%, #F6A11A40 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
       </PageHero>
 
       <Section className="flex flex-col items-start gap-10 pb-20 pt-12 md:pb-[112px] md:pt-20 lg:flex-row lg:gap-16">
@@ -91,7 +91,7 @@ export default function FaqPage() {
           </div>
           <div className="mt-6 hidden border-t border-mist pt-6 lg:flex">
             <Link href="/contact" className="flex w-full items-center gap-[14px] rounded-lg border border-mist bg-white p-[18px] shadow-[0_20px_40px_-24px_#0C1F454D] transition-transform hover:-translate-y-0.5">
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-night shadow-[0_0_0_3px_#fff,0_0_0_4.5px_#14804A]" style={{ backgroundImage: "linear-gradient(135deg, #FFD58A 0%, #F6A11A 100%)" }}>
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-night shadow-[0_0_0_3px_#fff,0_0_0_4.5px_#14804A]" style={{ backgroundImage: "linear-gradient(135deg, #7FB6FF 0%, #2F6BD8 100%)" }}>
                 AS
               </span>
               <span className="flex grow basis-0 flex-col gap-0.5">

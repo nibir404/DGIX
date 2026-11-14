@@ -79,7 +79,7 @@ export default function BuyerHome() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45 }}
         className="relative flex flex-col items-start gap-6 overflow-clip rounded-lg bg-night p-6 md:flex-row md:items-center md:justify-between md:gap-8 md:p-8"
-        style={{ backgroundImage: "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 90% at 70% 100%, #F6A11A4D 0%, #F6A11A00 70%)" }}
+        style={{ backgroundImage: "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%)" }}
       >
         <div className="relative z-10 flex flex-col gap-3">
           <div className="flex items-center gap-2">

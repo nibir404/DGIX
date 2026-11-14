@@ -42,5 +42,5 @@ export function HeroBg({ image }: { image: string }) {
 
 export const BG = {
   red: "radial-gradient(ellipse 60% 90% at 100% 10%, #E52A2A73 0%, #E52A2A00 60%), radial-gradient(ellipse 60% 90% at 0% 100%, #2C8C9E 0%, #2C8C9E00 70%), linear-gradient(135deg, #08152F 0%, #133A5E 100%)",
-  blue: "radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 85% 100%, #F6A11A4D 0%, #F6A11A00 65%), radial-gradient(ellipse 60% 90% at 0% 100%, #163C7E 0%, #163C7E00 70%), linear-gradient(#08152F, #08152F)",
+  blue: "radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 60% 90% at 0% 100%, #163C7E 0%, #163C7E00 70%), linear-gradient(#08152F, #08152F)",
 };

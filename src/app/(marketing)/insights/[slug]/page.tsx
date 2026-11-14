@@ -33,7 +33,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
           </div>
         }
       >
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 85% 100%, #F6A11A4D 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
       </PageHero>
 
       <Section className="py-14 md:py-[96px]">

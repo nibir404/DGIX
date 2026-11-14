@@ -26,7 +26,7 @@ export function VerifiedSection() {
   return (
     <Panel
       className="flex flex-col gap-12 rounded-lg bg-mist px-4 py-16 md:px-20 md:py-[120px] lg:flex-row lg:gap-[96px]"
-      style={{ backgroundImage: "radial-gradient(ellipse 60% 80% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%), radial-gradient(ellipse 40% 60% at 0% 100% in oklab, #F6A11A2E 0%, #F6A11A00 70%)" }}
+      style={{ backgroundImage: "radial-gradient(ellipse 60% 80% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%)" }}
     >
       <Reveal className="flex flex-col gap-6 px-2 md:px-0 lg:w-[480px] lg:shrink-0">
         <Eyebrow>Daffodil Verified</Eyebrow>

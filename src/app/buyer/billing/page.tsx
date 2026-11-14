@@ -73,7 +73,7 @@ export default function Billing() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-start justify-between gap-6 rounded-lg bg-night p-6 sm:flex-row sm:items-center md:p-7 lg:grow-[1.4] lg:basis-0"
-          style={{ backgroundImage: "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 90% at 70% 100%, #F6A11A4D 0%, #F6A11A00 70%)" }}
+          style={{ backgroundImage: "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%)" }}
         >
           {next ? (
             <>

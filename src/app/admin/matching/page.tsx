@@ -9,7 +9,7 @@ import { Checkbox, H1, useFlash } from "@/components/admin/kit";
 const tile: Record<string, string> = {
   healthcare: "bg-[linear-gradient(135deg,#BDE7E4,#7CC9C4)]",
   hr: "bg-[linear-gradient(135deg,#7FB6FF,#1E4FA3)]",
-  erp: "bg-[linear-gradient(135deg,#FFD58A,#F6A11A)]",
+  erp: "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)]",
 };
 
 export default function MatchingDesk() {

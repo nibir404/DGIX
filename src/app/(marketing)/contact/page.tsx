@@ -24,7 +24,7 @@ export default function ContactPage() {
   return (
     <>
       <PageHero>
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 0% 100%, #F6A11A47 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
         <div className="relative z-10 flex flex-col items-start gap-10 px-4 pb-6 pt-6 md:px-10 md:pb-12 md:pt-14 lg:flex-row lg:gap-14">
           <div className="flex grow basis-0 flex-col gap-8 px-2 md:px-0 lg:pt-6">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[15px] leading-[18px] text-white/70">Contact</motion.div>

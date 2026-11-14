@@ -13,7 +13,7 @@ const cards: Card[] = [
   {
     href: "/how-it-works", title: "For buyers", img: "/media/glass-buyers.webp",
     body: "Describe the need. Get a verified shortlist in a day. Sign one contract, pay per milestone.",
-    bg: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #7FB6FF 0%, #7FB6FF00 60%), radial-gradient(ellipse 50% 60% at 95% 100% in oklab, #F6A11A8C 0%, #F6A11A00 70%), linear-gradient(in oklab 135deg, #0C1F45 0%, #1E4FA3 70%)",
+    bg: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #7FB6FF 0%, #7FB6FF00 60%), linear-gradient(in oklab 135deg, #0C1F45 0%, #1E4FA3 70%)",
     dots: { c1: "#7FB6FF", c2: "#A9CCFF", sq: "#FFFFFF", accent: "#F6A11A", c3: "#A9CCFF" },
   },
   {
@@ -25,7 +25,7 @@ const cards: Card[] = [
   {
     href: "/verified", title: "Daffodil Verified", img: "/media/glass-verified.webp", light: true,
     body: "Eight checks. One hundred points. Only a perfect score is listed as globally ready.",
-    bg: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%), radial-gradient(ellipse 50% 60% at 90% 100% in oklab, #F6A11A47 0%, #F6A11A00 70%), linear-gradient(in oklab 135deg, #EEF3FB 0%, #DCE7FA 100%)",
+    bg: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #C9DCFF 0%, #C9DCFF00 60%), linear-gradient(in oklab 135deg, #EEF3FB 0%, #DCE7FA 100%)",
     dots: { c1: "#1E4FA3", c2: "#1E4FA3", sq: "#0C1F45", accent: "#F6A11A", c3: "#1E4FA3" },
   },
 ];

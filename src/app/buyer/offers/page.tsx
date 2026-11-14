@@ -145,7 +145,7 @@ function OffersInner() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
           className="flex min-w-0 flex-col gap-[18px] rounded-lg bg-night p-[26px] lg:grow lg:basis-0"
-          style={{ backgroundImage: "radial-gradient(ellipse 70% 50% at 100% 0%, #2F6BD8 0%, #2F6BD800 70%), radial-gradient(ellipse 60% 40% at 0% 100%, #F6A11A40 0%, #F6A11A00 70%)" }}
+          style={{ backgroundImage: "radial-gradient(ellipse 70% 50% at 100% 0%, #2F6BD8 0%, #2F6BD800 70%)" }}
         >
           <div className="text-[13px] leading-4 text-[#FFFFFFA6]">Total for year one</div>
           <div className="flex items-baseline gap-2">

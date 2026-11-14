@@ -103,7 +103,7 @@ export default function ProductReview() {
               <span className={"text-sm font-semibold " + (i === 3 ? "text-warning" : "")}>{FUNNEL[i]}</span>
               <motion.div
                 initial={{ height: 0 }} animate={{ height: (FUNNEL[i] / 21) * 96 }} transition={{ duration: 0.7, delay: i * 0.06 }}
-                className={"w-full rounded-lg " + (i < 2 ? "hatch-light" : i === 2 ? "hatch" : i === 3 ? "bg-[linear-gradient(180deg,#FFD58A,#F6A11A)]" : i === 4 ? "bg-cobalt" : "bg-primary")}
+                className={"w-full rounded-lg " + (i < 2 ? "hatch-light" : i === 2 ? "hatch" : i === 3 ? "bg-[linear-gradient(180deg,#7FB6FF,#2F6BD8)]" : i === 4 ? "bg-cobalt" : "bg-primary")}
               />
               <span className={"text-[11px] " + (i === 3 ? "font-semibold text-warning" : "text-muted")}>{g.id} · {g.name}</span>
             </div>

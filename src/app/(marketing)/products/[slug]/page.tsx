@@ -149,7 +149,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             className="flex w-full shrink-0 flex-col gap-[18px] rounded-lg border border-white/16 bg-white/7 p-7 lg:w-[360px]"
           >
             <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#FFD58A_0%,#F6A11A_100%)]">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)]">
                 <Svg name="check" size={20} color="#08152F" width={2} />
               </div>
               <div className="flex flex-col">

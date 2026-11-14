@@ -47,7 +47,7 @@ export default function VerificationPage() {
           const done = i < gateIdx;
           const current = i === gateIdx;
           const last = i === STEPS.length - 1;
-          const line = i + 1 < gateIdx ? "bg-success" : i + 1 === gateIdx && !complete ? "bg-[linear-gradient(90deg,#14804A_0%,#F6A11A_100%)]" : done && i + 1 <= gateIdx ? "bg-success" : "bg-[#E3E9F4]";
+          const line = i + 1 < gateIdx ? "bg-success" : i + 1 === gateIdx && !complete ? "bg-[linear-gradient(90deg,#14804A_0%,#2F6BD8_100%)]" : done && i + 1 <= gateIdx ? "bg-success" : "bg-[#E3E9F4]";
           return (
             <div key={label} className={clsx("flex flex-col gap-[10px]", last ? "lg:w-[120px] lg:shrink-0" : "lg:grow lg:basis-0")}>
               <div className="flex items-center">
@@ -55,7 +55,7 @@ export default function VerificationPage() {
                   className={clsx(
                     "flex size-7 shrink-0 items-center justify-center rounded-lg text-xs leading-4",
                     done && "bg-success text-paper",
-                    current && "bg-amber font-bold text-paper shadow-[0_0_0_6px_#F6A11A2E]",
+                    current && "bg-amber font-bold text-paper shadow-[0_0_0_6px_#2F6BD82E]",
                     !done && !current && "border-[1.5px] border-[#C9D4E8] text-[#9AA2B4]",
                   )}
                 >

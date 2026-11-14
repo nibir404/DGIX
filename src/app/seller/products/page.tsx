@@ -46,7 +46,7 @@ export default function ProductsPage() {
             <div className="text-[18px] leading-[22px] text-[#FFFFFF80]">/100</div>
           </div>
           <div className="flex h-2 shrink-0 rounded-lg bg-[#FFFFFF26]">
-            <motion.div key={p.id} initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="rounded-lg bg-[linear-gradient(90deg,#7FB6FF_0%,#FFD58A_100%)]" />
+            <motion.div key={p.id} initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="rounded-lg bg-[linear-gradient(90deg,#7FB6FF_0%,#7FB6FF_100%)]" />
           </div>
           <div className="text-xs leading-4 text-[#FFFFFF99]">Only 100/100 is listed as globally ready</div>
         </Panel>

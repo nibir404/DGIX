@@ -153,7 +153,7 @@ function MobileMenu() {
               ) : (
                 <>
                   <Link href="/contact" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
-                    Get my shortlist
+                    Get on board
                   </Link>
                   <Link href="/sign-in" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
                     Sign in
@@ -175,7 +175,7 @@ function SignedOut() {
         Sign in
       </Link>
       <Link href="/contact" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
-        Get my shortlist
+        Get on board
         <span className="flex size-[30px] items-center justify-center rounded-full bg-primary text-white transition-transform group-hover:rotate-45">
           <Icon name="arrowUpRight" size={12} strokeWidth={2.2} />
         </span>

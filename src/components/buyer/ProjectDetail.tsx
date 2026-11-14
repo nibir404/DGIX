@@ -76,7 +76,7 @@ export function ProjectDetail({ project }: { project: Project }) {
             {ms.map((m, i) => {
               const last = i === ms.length - 1;
               const nextDone = ms[i + 1]?.status === "done";
-              const line = m.status === "done" ? (nextDone ? "bg-[#7FE0AE]" : "bg-[linear-gradient(90deg,#7FE0AE_0%,#FFD58A_100%)]") : "bg-[#FFFFFF33]";
+              const line = m.status === "done" ? (nextDone ? "bg-[#7FE0AE]" : "bg-[linear-gradient(90deg,#7FE0AE_0%,#7FB6FF_100%)]") : "bg-[#FFFFFF33]";
               const s = sub(m);
               return (
                 <div key={m.id} className={clsx("flex flex-col gap-2.5", last ? "w-[140px] shrink-0" : "flex-1 basis-0")}>

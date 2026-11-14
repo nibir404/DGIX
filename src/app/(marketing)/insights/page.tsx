@@ -42,7 +42,7 @@ export default function InsightsPage() {
           </div>
         }
       >
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 85% 100%, #F6A11A4D 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
       </PageHero>
 
       <Section className="flex flex-col gap-5 pb-20 pt-10 md:pb-[112px] md:pt-[56px]">

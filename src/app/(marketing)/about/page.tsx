@@ -24,7 +24,7 @@ export default function AboutPage() {
         title={<>Bangladesh&apos;s products,<br className="hidden md:block" /> with Daffodil&apos;s name<br className="hidden md:block" /> behind every sale.</>}
         className="[&>div:nth-child(2)]:md:pt-[120px] [&>div:nth-child(2)]:md:pb-16"
       >
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 85% 100%, #F6A11A4D 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
         <motion.div
           aria-hidden
           initial={{ opacity: 0, x: 40 }}

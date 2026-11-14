@@ -323,7 +323,7 @@ export function sortProducts(list: Product[], sort: string) {
 export function AdvisorCard({ href = "/buyer/support" }: { href?: string }) {
   return (
     <div className="flex items-center gap-[14px] rounded-lg border border-mist bg-paper p-[18px] shadow-[0_20px_40px_-24px_#0C1F454D]">
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#FFD58A_0%,#F6A11A_100%)] shadow-[0_0_0_3px_#fff,0_0_0_4.5px_#14804A]">
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)] shadow-[0_0_0_3px_#fff,0_0_0_4.5px_#14804A]">
         <span className="text-[15px] font-bold leading-[18px] text-night">AS</span>
       </div>
       <div className="flex flex-1 flex-col gap-[2px]">

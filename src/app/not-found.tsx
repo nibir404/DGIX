@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <div className="flex min-h-svh flex-col bg-white pb-2 md:pb-4">
       <PageHero className="flex grow flex-col">
-        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 70% at 20% 100%, #F6A11A40 0%, #F6A11A00 65%), linear-gradient(#08152F,#08152F)" />
+        <HeroBg image="radial-gradient(ellipse 60% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), linear-gradient(#08152F,#08152F)" />
         <div
           aria-hidden
           className="pointer-events-none absolute bottom-[-120px] right-[-200px] h-[460px] w-[900px] max-w-none bg-cover bg-center opacity-55 [mask-image:radial-gradient(closest-side,#000_45%,transparent_100%)]"

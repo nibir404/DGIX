@@ -72,7 +72,7 @@ export function useFlash() {
 /* ---------- primitives (Paper portal values) ---------- */
 
 export const NIGHT_BANNER =
-  "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 90% at 70% 100%, #F6A11A4D 0%, #F6A11A00 70%)";
+  "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%)";
 export const NIGHT_CARD = "radial-gradient(ellipse 70% 90% at 100% 0%, #2F6BD8 0%, #2F6BD800 65%)";
 export const HATCH = "repeating-linear-gradient(135deg, rgb(127,182,255) 0px, rgb(127,182,255) 2px, rgb(227,237,253) 2px, rgb(227,237,253) 6px)";
 export const BTN_GRADIENT = "bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)]";

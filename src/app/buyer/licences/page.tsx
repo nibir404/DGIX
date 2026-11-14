@@ -156,7 +156,7 @@ export default function Licences() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
               className="flex min-h-[220px] flex-col justify-between gap-3 overflow-clip rounded-lg bg-night p-6 lg:grow lg:basis-0"
-              style={{ backgroundImage: "radial-gradient(ellipse 70% 80% at 100% 0%, #2F6BD8 0%, #2F6BD800 65%), radial-gradient(ellipse 50% 60% at 0% 100%, #F6A11A4D 0%, #F6A11A00 70%)" }}
+              style={{ backgroundImage: "radial-gradient(ellipse 70% 80% at 100% 0%, #2F6BD8 0%, #2F6BD800 65%)" }}
             >
               <div className="text-[13px] leading-4 text-glow-amber">{renewed[renewal.id] ? "Renewed · thank you" : `Renewal in ${Math.max(0, daysUntil(renewal.renews))} days`}</div>
               <div className="flex flex-col gap-1.5">

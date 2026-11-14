@@ -148,7 +148,7 @@ export function SearchResults() {
         <div className="relative z-10 flex flex-col items-center gap-6 px-4 pb-10 pt-8 md:px-10 md:pb-[44px] md:pt-12">
           <form
             onSubmit={submit}
-            className="flex w-full max-w-[900px] rounded-lg bg-[conic-gradient(from_210deg_at_50%_50%,#7FB6FF_0%,#1E4FA3_25%,#F6A11A_50%,#FFD58A_75%,#7FB6FF_100%)] p-[2px] shadow-[0_0_0_6px_#7FB6FF1F,0_0_48px_6px_#7FB6FF59,0_0_90px_10px_#F6A11A2E]"
+            className="flex w-full max-w-[900px] rounded-lg bg-[conic-gradient(from_210deg_at_50%_50%,#7FB6FF_0%,#1E4FA3_25%,#2F6BD8_50%,#7FB6FF_75%,#7FB6FF_100%)] p-[2px] shadow-[0_0_0_6px_#7FB6FF1F,0_0_48px_6px_#7FB6FF59,0_0_90px_10px_#2F6BD82E] transition-shadow duration-300 focus-within:shadow-[0_0_0_6px_#7FB6FF47,0_0_40px_8px_#7FB6FF8C,0_0_110px_14px_#2F6BD866]"
           >
             <div className="flex h-16 flex-1 items-center gap-[14px] rounded-lg bg-[linear-gradient(90deg,#0E1E40_0%,#142B57_100%)] pl-5 pr-2 md:h-[76px] md:pl-[26px] md:pr-[10px]">
               <Svg name="sparkle" size={20} color="#FFD58A" />
@@ -285,7 +285,7 @@ export function SearchResults() {
                       <div className="flex min-w-0 flex-col gap-2">
                         <div className="flex flex-wrap items-center gap-2">
                           {top ? (
-                            <span className="flex h-[26px] items-center gap-[6px] rounded-lg bg-[linear-gradient(135deg,#FFD58A_0%,#F6A11A_100%)] px-[10px]">
+                            <span className="flex h-[26px] items-center gap-[6px] rounded-lg bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)] px-[10px]">
                               <Svg name="sparkle" size={14} color="#08152F" width={2} />
                               <span className="text-xs font-semibold leading-4 text-night">{label}</span>
                             </span>
@@ -315,7 +315,7 @@ export function SearchResults() {
                     </div>
                     <div className="mt-auto flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#FFD58A_0%,#F6A11A_100%)] text-[11px] font-bold leading-[14px] text-night">AS</span>
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)] text-[11px] font-bold leading-[14px] text-night">AS</span>
                         <span className="text-[13px] leading-4 text-muted">Confirmed by Asha · 2h ago</span>
                       </div>
                       <div className="flex flex-wrap gap-[10px]">

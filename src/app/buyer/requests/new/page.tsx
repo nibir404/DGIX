@@ -147,7 +147,7 @@ export default function NewRequest() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4 rounded-lg border-[1.5px] border-transparent p-6 shadow-[0_0_0_6px_#7FB6FF24] [background-clip:padding-box,border-box] [background-origin:border-box]"
-            style={{ backgroundImage: "linear-gradient(#FFFFFF, #FFFFFF), conic-gradient(from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #F6A11A 50%, #FFD58A 75%, #7FB6FF 100%)" }}
+            style={{ backgroundImage: "linear-gradient(#FFFFFF, #FFFFFF), conic-gradient(from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #2F6BD8 50%, #7FB6FF 75%, #7FB6FF 100%)" }}
           >
             <textarea
               ref={area}
@@ -229,7 +229,7 @@ export default function NewRequest() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
           className="flex min-w-0 flex-col gap-3.5 overflow-clip rounded-lg bg-night p-6 lg:grow lg:basis-0"
-          style={{ backgroundImage: "radial-gradient(ellipse 70% 60% at 100% 0%, #2F6BD8 0%, #2F6BD800 70%), radial-gradient(ellipse 60% 50% at 0% 100%, #F6A11A47 0%, #F6A11A00 70%)" }}
+          style={{ backgroundImage: "radial-gradient(ellipse 70% 60% at 100% 0%, #2F6BD8 0%, #2F6BD800 70%)" }}
         >
           <div className="flex items-center gap-2">
             <Sparkle />

@@ -10,7 +10,7 @@ export function AuthShell({ headline, children }: { headline: string; children: 
     <div className="flex min-h-svh flex-col gap-4 bg-white p-2 md:p-4 lg:flex-row lg:gap-0">
       <div
         className="relative flex min-h-[260px] shrink-0 flex-col justify-between gap-10 overflow-hidden rounded-lg bg-night p-6 md:p-10 lg:min-h-0 lg:w-[44%] lg:max-w-[640px]"
-        style={{ backgroundImage: "radial-gradient(ellipse 60% 70% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 50% 60% at 0% 100%, #F6A11A4D 0%, #F6A11A00 70%)" }}
+        style={{ backgroundImage: "radial-gradient(ellipse 60% 70% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%)" }}
       >
         <motion.div
           aria-hidden

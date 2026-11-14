@@ -102,7 +102,7 @@ function ShortlistInner() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06, duration: 0.4 }}
                   className={clsx("flex min-w-0 flex-col overflow-clip", top ? "rounded-lg border-[1.5px] border-transparent shadow-[0_0_0_4px_#7FB6FF29] [background-clip:padding-box,border-box] [background-origin:border-box]" : "rounded-lg bg-paper")}
-                  style={top ? { backgroundImage: "linear-gradient(#FFFFFF, #FFFFFF), conic-gradient(from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #F6A11A 50%, #FFD58A 75%, #7FB6FF 100%)" } : undefined}
+                  style={top ? { backgroundImage: "linear-gradient(#FFFFFF, #FFFFFF), conic-gradient(from 210deg at 50% 50%, #7FB6FF 0%, #1E4FA3 25%, #2F6BD8 50%, #7FB6FF 75%, #7FB6FF 100%)" } : undefined}
                 >
                   <div className={clsx("relative flex h-[170px] shrink-0 items-start p-[18px]", top ? "justify-between" : "justify-end")}>
                     <Image src={thumb(p.visual)} alt="" fill sizes="(min-width:1280px) 33vw, 100vw" className="object-cover" />

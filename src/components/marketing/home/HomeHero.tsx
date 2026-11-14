@@ -18,11 +18,6 @@ const LIVE = [
   { route: "--", kicker: "Live · 40 min ago", time: "6h", title: "Milestone accepted by a clinic group in Doha", tags: ["Healthcare", "Paid on acceptance"] },
 ];
 
-const VERIFIED = [
-  { title: "Smart Hospital passed 100/100", sub: "Daffodil Verified · now listed for UAE, Qatar" },
-  { title: "RetailFlow POS re-verified", sub: "Major release v5 · still 100/100" },
-  { title: "AI HR Management passed 100/100", sub: "Daffodil Verified · now listed for UAE, KSA" },
-];
 
 const PROMPTS = ["HR and payroll for 400 staff in Riyadh", "Clinic billing for 3 sites in Doha", "POS for 12 stores in Dubai", "Read 30k invoices a month in New York"];
 
@@ -51,17 +46,71 @@ export function HomeHero() {
   const live = active ? LIVE.find((l) => l.route === active) ?? LIVE[i] : LIVE[i];
 
   return (
-    <section className="relative mx-2 mt-2 md:mx-4 md:mt-4 min-h-[760px] md:h-[880px] overflow-hidden rounded-lg bg-night-hero text-white">
-      {/* Globe */}
-      <div className="absolute left-[-30%] top-[46%] aspect-[1752/897] w-[160%] sm:left-[-12%] sm:top-[40%] sm:w-[124%] md:left-[30%] md:top-[8%] md:w-[86%] [mask-image:radial-gradient(closest-side,#000_70%,transparent_100%)]">
+    <section className="relative mx-2 mt-2 md:mx-4 md:mt-4 flex min-h-[760px] flex-col overflow-hidden rounded-lg bg-night-hero text-white md:h-[880px]">
+      {/* Background: globe centred behind the copy, rising from below */}
+      <div className="absolute left-1/2 top-[52%] aspect-[1752/897] w-[230%] -translate-x-1/2 sm:top-[46%] sm:w-[170%] md:top-[40%] md:w-[135%] lg:w-[118%] xl:w-[108%] [mask-image:radial-gradient(closest-side,#000_72%,transparent_100%)]">
         <Globe3D />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(180deg,transparent,rgba(8,21,47,0.55))]" />
+      {/* Readability: soft dark pool behind the centred copy, and a fade at the bottom */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_46%,rgba(8,21,47,0.78),rgba(8,21,47,0.35)_60%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-[linear-gradient(180deg,transparent,rgba(8,21,47,0.7))]" />
 
       <SiteNav />
 
-      {/* Live cards */}
-      <div className="pointer-events-none absolute right-14 top-[150px] z-20 hidden w-[292px] md:block">
+      {/* Foreground: everything centred */}
+      <div className="pointer-events-none relative z-10 mx-auto flex min-h-[calc(100%-104px)] max-w-[980px] flex-col items-center justify-center gap-7 px-4 pb-10 pt-6 text-center sm:px-6 md:gap-8 md:pb-[150px]">
+        <span className="hero-fade inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-[13px] text-white/85 backdrop-blur">
+          <span className="relative flex size-[7px]">
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#3DDC84]/70" />
+            <span className="relative size-[7px] rounded-full bg-[#3DDC84]" />
+          </span>
+          Daffodil Verified software · USA &amp; GCC
+        </span>
+        <h1 ref={headline} className="text-[44px] leading-[46px] sm:text-[64px] sm:leading-[66px] md:text-[84px] md:leading-[86px] lg:text-[100px] lg:leading-[100px] font-light tracking-[-0.05em]">
+          <span className="hl-line block overflow-hidden pb-2"><span className="block">Proven products.</span></span>
+          <span className="hl-line block overflow-hidden pb-2"><span className="block">Sold to the world.</span></span>
+        </h1>
+        <p className="hero-fade max-w-[620px] text-[17px] leading-[26px] text-white/75 sm:text-[19px] sm:leading-[29px]">
+          <span className="font-medium text-white">DGIX is Daffodil&apos;s global innovation exchange.</span> We verify products from Bangladesh, match them to your need, and deliver them under one contract.
+        </p>
+        <div className="pointer-events-auto flex w-full flex-col items-center gap-5">
+          <NeedBar />
+          {/* Compact film button for phones and tablets; large screens get the thumbnail card */}
+          <button onClick={() => setFilm(true)} className="hero-fade group flex items-center gap-3 rounded-full border border-white/25 bg-white/10 py-1.5 pl-1.5 pr-5 backdrop-blur transition-colors hover:bg-white/16 lg:hidden">
+            <span className="flex size-9 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105">
+              <Icon name="play" size={13} />
+            </span>
+            <span className="text-[15px] font-medium">Watch how DGIX works</span>
+            <span className="font-mono text-[13px] text-sky">1:10</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom-left corner: film thumbnail */}
+      <button
+        onClick={() => setFilm(true)}
+        aria-label="Watch how DGIX works, 1 minute 10 seconds"
+        className="hero-fade group absolute bottom-8 left-8 z-20 hidden w-[300px] items-center gap-4 rounded-lg border border-white/15 bg-[#0C1F45]/55 p-2.5 pr-5 text-left shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-colors hover:border-white/30 hover:bg-[#0C1F45]/75 lg:flex"
+      >
+        <span className="relative block aspect-video w-[118px] shrink-0 overflow-hidden rounded-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/media/dgix-film-poster.webp" alt="" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <span className="absolute inset-0 bg-night/25" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-9 items-center justify-center rounded-full bg-white/95 text-primary shadow-lg transition-transform group-hover:scale-110">
+              <Icon name="play" size={13} />
+            </span>
+          </span>
+          <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 font-mono text-[10px] leading-4 text-white">1:10</span>
+        </span>
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="text-[15px] font-semibold leading-5">How DGIX works</span>
+          <span className="text-[13px] leading-[18px] text-haze">From request to go-live, in one minute.</span>
+        </span>
+      </button>
+
+      {/* Bottom-right corner: live activity */}
+      <div className="pointer-events-none absolute bottom-8 right-8 z-20 hidden w-[300px] lg:block">
         <AnimatePresence mode="wait">
           <motion.div
             key={live.title}
@@ -69,7 +118,7 @@ export function HomeHero() {
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
             transition={{ duration: 0.45 }}
-            className="flex flex-col gap-3 rounded-lg border border-white/16 bg-[#0C1F45]/55 p-[18px] shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+            className="flex flex-col gap-3 rounded-lg border border-white/15 bg-[#0C1F45]/55 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl"
           >
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-xs text-haze">
@@ -81,59 +130,13 @@ export function HomeHero() {
               </span>
               <span className="font-mono text-xs text-sky">{live.time}</span>
             </div>
-            <div className="text-[17px] font-medium leading-[22px]">{live.title}</div>
+            <div className="text-[15px] font-medium leading-5">{live.title}</div>
             <div className="flex gap-1.5">
-              <span className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs">{live.tags[0]}</span>
-              <span className="rounded-lg bg-glow-amber px-2.5 py-1.5 text-xs font-semibold text-night">{live.tags[1]}</span>
+              <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs">{live.tags[0]}</span>
+              <span className="rounded-md bg-sky/20 px-2.5 py-1 text-xs font-semibold text-sky">{live.tags[1]}</span>
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
-      <div className="pointer-events-none absolute left-[calc(50%+280px)] top-[580px] z-20 hidden lg:block">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.4 }}
-            className="flex items-center gap-3 rounded-lg bg-white/95 py-3 pl-3 pr-[18px] shadow-[0_16px_40px_rgba(0,0,0,0.3)]"
-          >
-            <span className="flex size-9 items-center justify-center rounded-full bg-amber text-night">
-              <Icon name="check" size={16} strokeWidth={2.4} />
-            </span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold leading-[18px] text-ink">{VERIFIED[i].title}</span>
-              <span className="text-xs leading-[14px] text-muted">{VERIFIED[i].sub}</span>
-            </span>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-      <div className="hero-fade absolute right-14 top-[690px] z-20 hidden items-center gap-2 text-xs text-haze lg:flex">
-        <Icon name="drag" size={18} /> Drag to spin · tap a route
-      </div>
-
-      {/* Copy */}
-      <div className="pointer-events-none relative z-10 flex h-[calc(100%-104px)] flex-col justify-end gap-10 px-4 pb-6 sm:px-6 sm:pb-8 md:px-10">
-        <h1 ref={headline} className="text-[46px] leading-[48px] sm:text-[64px] sm:leading-[64px] lg:text-[104px] lg:leading-[104px] md:text-[80px] md:leading-[80px] md:leading-[104px] font-light tracking-[-0.05em]">
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">Proven products.</span></span>
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">Sold to the world.</span></span>
-        </h1>
-        <div className="pointer-events-auto flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <div className="flex max-w-[520px] flex-col gap-6">
-            <p className="hero-fade text-[19px] leading-[28px] text-white/72">
-              <span className="font-medium text-white">DGIX is Daffodil&apos;s global innovation exchange.</span> We verify products from Bangladesh, match them to your need, and deliver them under one contract.
-            </p>
-            <button onClick={() => setFilm(true)} className="hero-fade group flex items-center gap-3 self-start rounded-lg border border-white/28 bg-white/10 py-1.5 pl-1.5 pr-5 backdrop-blur transition-colors hover:bg-white/16">
-              <span className="flex size-10 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105">
-                <Icon name="play" size={14} />
-              </span>
-              <span className="text-[15px] font-medium">Watch how DGIX works</span>
-              <span className="font-mono text-[13px] text-sky">1:10</span>
-            </button>
-          </div>
-          <NeedBar />
-        </div>
       </div>
 
       <FilmModal open={film} onClose={() => setFilm(false)} />
@@ -176,9 +179,8 @@ function NeedBar() {
   return (
     <form
       onSubmit={submit}
-      className="hero-fade relative flex h-16 sm:h-20 w-full md:max-w-[680px] items-center gap-2 sm:gap-3 rounded-lg border border-sky/40 bg-[#0C1F45]/80 pl-4 sm:pl-7 pr-1.5 sm:pr-2 shadow-[0_0_0_1px_rgba(127,182,255,0.25),0_0_40px_rgba(47,107,216,0.25)] backdrop-blur-xl transition-[border-color,box-shadow,background-color] duration-300 hover:border-sky/70 focus-within:border-sky focus-within:bg-[#0C1F45]/95 focus-within:shadow-[0_0_0_4px_rgba(127,182,255,0.28),0_0_32px_rgba(127,182,255,0.55),0_0_90px_rgba(47,107,216,0.6)]"
+      className="hero-fade relative flex h-14 w-full max-w-[640px] items-center gap-2 rounded-full border border-white/70 bg-white pl-5 pr-1.5 shadow-[0_0_0_4px_rgba(127,182,255,0.12),0_18px_50px_-12px_rgba(0,0,0,0.55)] transition-shadow duration-300 focus-within:shadow-[0_0_0_5px_rgba(127,182,255,0.4),0_0_48px_rgba(127,182,255,0.45),0_18px_50px_-12px_rgba(0,0,0,0.55)] sm:h-16 sm:pl-7 sm:pr-2"
     >
-      <Icon name="sparkle" size={18} className="shrink-0 text-sky" />
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -186,10 +188,15 @@ function NeedBar() {
         onBlur={() => { focused.current = false; setIsFocused(false); setShown(""); }}
         aria-label="Describe what you need"
         placeholder={isFocused ? "" : shown + "│"}
-        className="min-w-0 flex-1 bg-transparent text-[15px] sm:text-[17px] text-white outline-none placeholder:text-white/85"
+        className="min-w-0 flex-1 bg-transparent text-left text-base text-ink outline-none placeholder:text-muted sm:text-[17px]"
       />
-      <button type="submit" className="flex h-12 sm:h-14 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] px-4 sm:px-6 text-[15px] sm:text-[17px] font-semibold shadow-[inset_0_1px_0_#FFFFFF55] transition hover:brightness-110" aria-label="Find my match">
-        <span className="hidden sm:inline">Find my match</span> <Icon name="arrowRight" size={16} />
+      <button
+        type="submit"
+        aria-label="Find my match"
+        title="Find my match"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] text-white shadow-[0_6px_16px_-6px_#1E4FA3] transition hover:brightness-110 active:scale-95 sm:size-12"
+      >
+        <Icon name="arrowRight" size={18} strokeWidth={2.2} className="-rotate-90" />
       </button>
     </form>
   );

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { gsap } from "gsap";
-import { preload } from "react-dom";
+import { createPortal, preload } from "react-dom";
 import { SiteNav } from "@/components/marketing/SiteNav";
 import { Icon } from "@/components/ui/Icon";
 
@@ -27,6 +27,7 @@ export function HomeHero() {
   const [i, setI] = useState(0);
   const [film, setFilm] = useState(false);
   const headline = useRef<HTMLHeadingElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (active) return;
@@ -68,7 +69,9 @@ export function HomeHero() {
           <span className="font-medium text-white">DGIX is Daffodil&apos;s global innovation exchange.</span> We verify products from Bangladesh, match them to your need, and deliver them under one contract.
         </p>
         <div className="pointer-events-auto flex w-full flex-col items-center gap-5">
-          <NeedBar />
+          <div ref={barRef} className="hero-fade flex w-full justify-center">
+            <NeedBar />
+          </div>
           {/* Compact film button for phones and tablets; large screens get the thumbnail card */}
           <button onClick={() => setFilm(true)} className="hero-fade group flex items-center gap-3 rounded-full border border-white/25 bg-white/10 py-1.5 pl-1.5 pr-5 backdrop-blur transition-colors hover:bg-white/16 lg:hidden">
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105">
@@ -134,11 +137,12 @@ export function HomeHero() {
       </div>
 
       <FilmModal open={film} onClose={() => setFilm(false)} />
+      <SearchDock anchor={barRef} />
     </section>
   );
 }
 
-function NeedBar() {
+function NeedBar({ autoFocus = false }: { autoFocus?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [shown, setShown] = useState("");
@@ -171,28 +175,64 @@ function NeedBar() {
   };
 
   return (
-    <form
-      onSubmit={submit}
-      className="hero-fade relative flex h-14 w-full max-w-[640px] items-center gap-2 rounded-full border border-white/70 bg-white pl-5 pr-1.5 shadow-[0_0_0_4px_rgba(127,182,255,0.12),0_18px_50px_-12px_rgba(0,0,0,0.55)] transition-shadow duration-300 focus-within:shadow-[0_0_0_5px_rgba(127,182,255,0.4),0_0_48px_rgba(127,182,255,0.45),0_18px_50px_-12px_rgba(0,0,0,0.55)] sm:h-16 sm:pl-7 sm:pr-2"
-    >
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onFocus={() => { focused.current = true; setIsFocused(true); }}
-        onBlur={() => { focused.current = false; setIsFocused(false); setShown(""); }}
-        aria-label="Describe what you need"
-        placeholder={isFocused ? "" : shown + "│"}
-        className="min-w-0 flex-1 bg-transparent text-left text-base text-ink outline-none placeholder:text-muted sm:text-[17px]"
-      />
-      <button
-        type="submit"
-        aria-label="Find my match"
-        title="Find my match"
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] text-white shadow-[0_6px_16px_-6px_#1E4FA3] transition hover:brightness-110 active:scale-95 sm:size-12"
+    <div className="w-full max-w-[656px] rounded-full bg-night/40 p-2 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] ring-1 ring-white/12 backdrop-blur-xl backdrop-saturate-150">
+      <form
+        onSubmit={submit}
+        className="relative flex h-14 w-full items-center gap-2 rounded-full border border-white/70 bg-white pl-5 pr-1.5 shadow-[0_0_0_4px_rgba(127,182,255,0.12),0_18px_50px_-12px_rgba(0,0,0,0.55)] transition-shadow duration-300 focus-within:shadow-[0_0_0_5px_rgba(127,182,255,0.4),0_0_48px_rgba(127,182,255,0.45),0_18px_50px_-12px_rgba(0,0,0,0.55)] sm:h-16 sm:pl-7 sm:pr-2"
       >
-        <Icon name="arrowRight" size={18} strokeWidth={2.2} className="-rotate-90" />
-      </button>
-    </form>
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={() => { focused.current = true; setIsFocused(true); }}
+          onBlur={() => { focused.current = false; setIsFocused(false); setShown(""); }}
+          aria-label="Describe what you need"
+          autoFocus={autoFocus}
+          placeholder={isFocused ? "" : shown + "│"}
+          className="min-w-0 flex-1 bg-transparent text-left text-base text-ink outline-none placeholder:text-muted sm:text-[17px]"
+        />
+        <button
+          type="submit"
+          aria-label="Find my match"
+          title="Find my match"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] text-white shadow-[0_6px_16px_-6px_#1E4FA3] transition hover:brightness-110 active:scale-95 sm:size-12"
+        >
+          <Icon name="arrowRight" size={18} strokeWidth={2.2} className="-rotate-90" />
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/** Floating copy of the search, pinned to the bottom of the screen once the hero search has scrolled out of view. */
+function SearchDock({ anchor }: { anchor: React.RefObject<HTMLDivElement | null> }) {
+  const [show, setShow] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const el = anchor.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setShow(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [anchor]);
+  if (!mounted) return null;
+  return createPortal(
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ y: 90, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 90, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 380, damping: 34 }}
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-4 sm:pb-5"
+        >
+          <div className="pointer-events-auto flex w-full justify-center">
+            <NeedBar />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }
 

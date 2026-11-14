@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useLookup } from "@/lib/store";
 import type { Demo, Product } from "@/lib/types";
 import { Btn, Dialog, Panel, firstName, timeGst, useBuyer, useFlash } from "@/components/buyer/kit";
+import { Icon } from "@/components/ui/Icon";
 
 const thumb = (v?: Product["visual"]) => (v === "people" ? "/media/buyer-req-hr.webp" : v === "bag" ? "/media/buyer-req-pos.webp" : "/media/buyer-req-ai.webp");
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Dubai" }).replace(",", "");
@@ -152,7 +153,7 @@ export default function Demos() {
               <div className="text-sm leading-5 text-muted">Your rating updates the shortlist ranking. Only {advisor} sees your notes.</div>
               {toRate.notes && <div className="text-[13px] italic leading-5 text-muted">“{toRate.notes}”</div>}
               <div className="flex gap-2">
-                {[["👎", "Not for us"], ["🤔", "Maybe"], ["👍", "Strong fit"]].map(([e, l]) => {
+                {([["thumbsDown", "Not for us"], ["help", "Maybe"], ["thumbsUp", "Strong fit"]] as const).map(([e, l]) => {
                   const on = ratings[toRate.id] === l;
                   return (
                     <button
@@ -160,7 +161,7 @@ export default function Demos() {
                       onClick={() => { setRatings((r) => ({ ...r, [toRate.id]: l })); flash(`Rated “${l}” · ${advisor} will see it`); }}
                       className={clsx("flex flex-1 basis-0 flex-col items-center gap-1.5 rounded-lg py-3.5 transition-colors", on ? "border-[1.5px] border-primary bg-mist" : "border border-[#E3E9F4] hover:border-[#C9D4E8]")}
                     >
-                      <span className="text-[22px] leading-7">{e}</span>
+                      <Icon name={e} size={22} className={on ? "text-primary" : "text-muted"} />
                       <span className={clsx("text-xs leading-4", on ? "font-semibold text-primary" : "text-muted")}>{l}</span>
                     </button>
                   );

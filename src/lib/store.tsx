@@ -36,6 +36,9 @@ type Ctx = {
   approveCheck: (productId: string, checkKey: string) => void;
   verifyPayment: (invoiceId: string) => void;
   markRead: (notificationId: string) => void;
+  // Account
+  updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
+  changePassword: (current: string, next: string) => boolean;
 };
 
 const StoreCtx = createContext<Ctx | null>(null);
@@ -118,6 +121,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     reset: () => {
       setDb(structuredClone(seed));
+    },
+
+    updateProfile: (patch) => {
+      if (!user) return;
+      update((d) => {
+        const u = d.users.find((x) => x.id === user.id);
+        if (!u) return;
+        Object.assign(u, patch);
+        if (patch.name) u.initials = patch.name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+      });
+    },
+    changePassword: (current, next) => {
+      if (!user || user.password !== current || next.length < 8) return false;
+      update((d) => {
+        const u = d.users.find((x) => x.id === user.id);
+        if (u) u.password = next;
+      });
+      return true;
     },
 
     createRequest: (input) => {

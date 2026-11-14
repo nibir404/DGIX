@@ -92,10 +92,9 @@ export function ContactForm() {
               <Field label="Company"><input required value={f.company} onChange={set("company")} className={inputCls} autoComplete="organization" /></Field>
               <Field label="Country">
                 <div className="relative">
-                  <select value={f.country} onChange={set("country")} className={clsx(inputCls, "w-full appearance-none pr-10")}>
+                  <select value={f.country} onChange={set("country")} className={clsx(inputCls, "w-full")}>
                     {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
                   </select>
-                  <Icon name="chevronDown" size={18} strokeWidth={1.75} className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-ink" />
                 </div>
               </Field>
             </div>

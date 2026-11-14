@@ -190,12 +190,12 @@ function SupportInner() {
 
       <Dialog open={report} onClose={() => setReport(false)} title="Report an issue">
         <form onSubmit={(e) => { e.preventDefault(); submitReport(); }} className="flex flex-col gap-3">
-          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title, e.g. Receipt printer down" className="h-11 rounded-lg border border-line px-3 text-sm outline-none focus:border-primary" />
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-11 rounded-lg border border-line bg-paper px-3 text-sm outline-none focus:border-primary">
+          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title, e.g. Receipt printer down" className="h-11 rounded-lg border border-line bg-white px-3.5 text-sm text-ink outline-none transition-colors placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/10" />
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-11 rounded-lg border border-line bg-white px-3.5 text-sm text-ink outline-none transition-colors placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/10">
             <option value="">Not about a project</option>
             {b.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="What happened? Where and since when?" className="resize-none rounded-lg border border-line p-3 text-sm outline-none focus:border-primary" />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="What happened? Where and since when?" className="resize-none py-3 rounded-lg border border-line bg-white px-3.5 text-sm text-ink outline-none transition-colors placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/10" />
           <Btn type="submit" disabled={!title.trim() || !body.trim()}>Send to {firstName(advisor?.name) || "support"}</Btn>
         </form>
       </Dialog>

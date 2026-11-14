@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useLookup, useStore } from "@/lib/store";
 import { Button, Empty } from "@/components/portal/ui";
 import { Checkbox, H1, useFlash } from "@/components/admin/kit";
+import { Icon } from "@/components/ui/Icon";
 
 const tile: Record<string, string> = {
   healthcare: "bg-[linear-gradient(135deg,#BDE7E4,#7CC9C4)]",
@@ -83,8 +84,8 @@ export default function MatchingDesk() {
                   <div className={"size-12 shrink-0 rounded-lg " + (tile[p?.category ?? ""] ?? tile.hr)} />
                   <div className="min-w-0 flex-1">
                     <div className="text-[15px] font-medium">{p?.name}</div>
-                    <div className={"truncate text-xs " + (s.gaps.length && s.fit < 85 ? "text-warning" : "text-muted")}>
-                      {s.gaps.length && s.fit < 85 ? "⚠ " + s.gaps.join(" · ") : `${p?.metricValue} ${p?.metricLabel.toLowerCase()} · ${s.strengths.join(" · ")}`}
+                    <div className={"flex min-w-0 items-center gap-1 text-xs " + (s.gaps.length && s.fit < 85 ? "text-warning" : "text-muted")}>
+                      {s.gaps.length && s.fit < 85 ? <><Icon name="alert" size={12} className="shrink-0" /><span className="truncate">{s.gaps.join(" · ")}</span></> : <span className="truncate">{`${p?.metricValue} ${p?.metricLabel.toLowerCase()} · ${s.strengths.join(" · ")}`}</span>}
                     </div>
                   </div>
                   <span className="w-10 text-center text-[22px] font-light">{s.fit}</span>

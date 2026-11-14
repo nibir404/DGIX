@@ -7,6 +7,7 @@ import { GATES } from "@/lib/seed";
 import type { Check, Product } from "@/lib/types";
 import { Empty } from "@/components/portal/ui";
 import { BTN_GRADIENT, Head, Panel, ProductTabs, pendingChecks, scoreOf, useFlash, useSeller } from "@/components/seller/kit";
+import { Icon } from "@/components/ui/Icon";
 
 const STEPS = ["Application", "Documents", "Product demo", "Technical review", "Agreement", "Listed"];
 
@@ -113,7 +114,7 @@ function UploadCard({ c, onFile }: { c: Check; onFile: (name: string) => void })
         onDrop={(e) => { e.preventDefault(); setDrag(false); take(e.dataTransfer.files[0]); }}
         className={clsx("flex h-[150px] shrink-0 flex-col items-center justify-center gap-2 rounded-lg border-[1.5px] border-dashed bg-[#F9FAFD] transition", drag ? "border-primary bg-mist" : "border-[#C9D4E8] hover:border-primary")}
       >
-        <span className="text-[22px] leading-7">⬆</span>
+        <span className="flex size-10 items-center justify-center rounded-full bg-mist text-primary"><Icon name="upload" size={20} /></span>
         <span className="text-sm leading-[18px] text-ink">
           Drop file or <span className="font-semibold text-primary">browse</span>
         </span>

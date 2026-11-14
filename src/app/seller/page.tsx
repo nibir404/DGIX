@@ -5,11 +5,12 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import { fmtMoney } from "@/lib/seed";
 import { BTN_GRADIENT, NIGHT_BANNER, Bars, Panel, anonBuyer, dayMonth, lastSixMonths, orderRef, pendingChecks, scoreOf, useFlash, useSeller } from "@/components/seller/kit";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-type Task = { id: string; icon: string; iconBg: string; title: string; sub: string; label: string; primary?: boolean; done?: boolean; run: () => void };
+type Task = { id: string; icon: IconName; iconBg: string; title: string; sub: string; label: string; primary?: boolean; done?: boolean; run: () => void };
 
 export default function SellerHome() {
   const s = useSeller();
@@ -38,8 +39,8 @@ export default function SellerHome() {
     const uploaded = !!c.note?.startsWith("Uploaded");
     tasks.push({
       id: "c-" + c.key,
-      icon: "🛡",
-      iconBg: "bg-[#FFF3DC]",
+      icon: "shield",
+      iconBg: "bg-[#FFF3DC] text-[#A35F00]",
       title: c.key === "security" ? "Upload penetration test report" : `Upload evidence · ${c.label}`,
       sub: `${c.label.split(" ")[0]} check · ${c.max - c.score} points`,
       label: uploaded ? "Uploaded" : "Upload",
@@ -58,8 +59,8 @@ export default function SellerHome() {
       const at = new Date(d.at);
       tasks.push({
         id: d.id,
-        icon: "📅",
-        iconBg: "bg-mist",
+        icon: "calendar",
+        iconBg: "bg-mist text-primary",
         title: `Confirm demo · ${anonBuyer(db.companies.find((c) => c.id === d.buyerId))}`,
         sub: `${DAYS[at.getUTCDay()].slice(0, 3)} ${dayMonth(d.at)} · ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" })} GST / ${at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" })} BST`,
         label: "Confirm",
@@ -75,8 +76,8 @@ export default function SellerHome() {
     const m = pr.milestones[idx];
     tasks.push({
       id: pr.id + m.id,
-      icon: "✓",
-      iconBg: "bg-[#E6F4EC]",
+      icon: "check",
+      iconBg: "bg-[#E6F4EC] text-success",
       title: `Submit milestone ${idx + 1} for review`,
       sub: `Order ${orderRef(db, pr)} · due ${dayMonth(m.due)}`,
       label: "Submit",
@@ -102,7 +103,7 @@ export default function SellerHome() {
       {/* Next-step banner */}
       <Panel className="flex flex-col items-start gap-6 rounded-lg bg-night p-6 md:flex-row md:items-center md:justify-between md:gap-8 md:p-8" style={{ backgroundImage: NIGHT_BANNER }}>
         <div className="flex flex-col gap-3">
-          <div className="text-[13px] leading-4 text-glow-amber">✦ Next step · {focus?.name ?? "Your products"}</div>
+          <div className="flex items-center gap-1.5 text-[13px] leading-4 text-glow-amber"><Icon name="sparkle" size={13} /> Next step · {focus?.name ?? "Your products"}</div>
           <div className="text-[24px] leading-[30px] md:text-[32px] md:leading-[38px] font-light tracking-[-0.03em] text-paper">
             {pending.length > 0 ? (
               <>
@@ -151,7 +152,7 @@ export default function SellerHome() {
           {tasks.length === 0 && <div className="py-6 text-sm text-muted">You&apos;re all caught up.</div>}
           {tasks.map((t, i) => (
             <motion.div key={t.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className={clsx("flex items-center gap-3 py-[14px]", i < tasks.length - 1 && "border-b border-[#F1F4FA]")}>
-              <div className={clsx("flex size-9 shrink-0 items-center justify-center rounded-lg text-[15px] leading-[18px]", t.iconBg)}>{t.icon}</div>
+              <div className={clsx("flex size-9 shrink-0 items-center justify-center rounded-lg", t.iconBg)}><Icon name={t.icon} size={18} /></div>
               <div className="flex min-w-0 grow basis-0 flex-col">
                 <div className="text-sm font-medium leading-[18px] text-ink">{t.title}</div>
                 <div className="text-xs leading-4 text-muted">{t.sub}</div>

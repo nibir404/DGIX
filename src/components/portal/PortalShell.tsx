@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
+import { AccountMenu } from "./AccountMenu";
 import { useLookup, useStore } from "@/lib/store";
 import type { Db, Role } from "@/lib/types";
 
@@ -86,7 +87,7 @@ export const portalConfig: Record<Role, Config> = {
 };
 
 export function PortalShell({ role, children }: { role: Role; children: React.ReactNode }) {
-  const { db, user, ready, signOut } = useStore();
+  const { db, user, ready } = useStore();
   const { company, user: findUser } = useLookup();
   const pathname = usePathname();
   const router = useRouter();
@@ -108,7 +109,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
 
   return (
     <div className="flex min-h-screen bg-[#F5F8FC] text-ink">
-      <aside className={clsx("sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto border-r border-line bg-white px-4 py-5 lg:flex transition-[width]", collapsed ? "w-[84px]" : "w-64")}>
+      <aside className={clsx("sticky top-0 z-30 hidden h-screen shrink-0 flex-col border-r border-line bg-white px-4 py-5 lg:flex transition-[width]", collapsed ? "w-[84px]" : "w-64")}>
         <div className="flex items-center justify-between px-1 pb-6">
           <Link href="/" aria-label="DGIX website">
             <Image src="/brand/dgix-logo-full.png" alt="DGIX" width={140} height={37} className={clsx("h-9 w-auto", collapsed && "hidden")} />
@@ -138,7 +139,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             </div>
           )}
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="-mx-1 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {cfg.groups.map((g, gi) => (
             <div key={gi} className="flex flex-col gap-1">
               {g.label && !collapsed && <div className="px-3 pb-2 pt-5 text-[11px] leading-[14px] text-subtle">{g.label}</div>}
@@ -171,19 +172,15 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             </div>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-3 border-t border-line pt-4">
-          {advisor && (
+        <div className="flex flex-col gap-3 border-t border-line pt-4">
+          {advisor && role !== "staff" && (
             <div className={clsx("flex items-center gap-3 px-1", collapsed && "justify-center")}>
               <Avatar user={advisor} size={36} />
               {!collapsed && (
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold leading-[18px]">{advisor.name}</div>
                   <div className="text-xs leading-4 text-muted">
-                    {role === "staff" ? (
-                      advisor.title
-                    ) : (
-                      <span className="text-success">● {role === "buyer" ? "Your advisor" : "Partner manager"} · online</span>
-                    )}
+                    <span className="text-success">● {role === "buyer" ? "Your advisor" : "Partner manager"} · online</span>
                   </div>
                 </div>
               )}
@@ -194,11 +191,9 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
               Message
             </Link>
           )}
-          {!collapsed && (
-            <button onClick={() => { signOut(); router.push("/"); }} className="flex items-center gap-2 px-1 text-xs text-subtle hover:text-ink">
-              <Icon name="logout" size={14} /> Sign out
-            </button>
-          )}
+          <div className={clsx(role !== "staff" && "border-t border-line pt-3")}>
+            <AccountMenu variant="sidebar" collapsed={collapsed} />
+          </div>
         </div>
       </aside>
 
@@ -218,11 +213,15 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             <kbd className="hidden sm:block rounded-lg bg-mist px-1.5 py-0.5 font-mono text-[11px] text-muted">⌘K</kbd>
           </label>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <Link href={cfg.primary.href} className="hidden sm:flex h-11 items-center gap-2 rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_-8px_#1E4FA3B3]">
-              {cfg.primary.label.startsWith("+") ? cfg.primary.label : <><Icon name="plus" size={16} /> {cfg.primary.label}</>}
+            {/* Global shortcut, so it's secondary: each page keeps the one solid primary button for its own action. */}
+            <Link
+              href={cfg.primary.href}
+              className="hidden h-11 items-center gap-2 rounded-lg border border-primary/25 bg-white px-4 text-[15px] font-semibold text-primary shadow-[0_1px_2px_rgba(12,31,69,0.04)] transition-colors hover:border-primary/50 hover:bg-mist sm:flex"
+            >
+              <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
             </Link>
             <NotificationBell count={unread} />
-            <span className="hidden sm:block"><Avatar user={user} size={44} /></span>
+            <AccountMenu />
           </div>
         </header>
         <main className="min-w-0 flex-1 px-4 pb-12 pt-5 sm:px-5 sm:pt-6 lg:px-8">{children}</main>
@@ -240,15 +239,15 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
-            <div className="mb-4 flex items-center gap-3 px-1">
+            <Link href={`${homeHref}/account#profile`} onClick={() => setMenuOpen(false)} className="mb-4 flex items-center gap-3 rounded-lg p-1 hover:bg-mist/70">
               <Avatar user={user} size={36} />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{user.name}</div>
                 <div className="truncate text-xs text-muted">{co?.name}</div>
               </div>
-            </div>
-            <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] text-[15px] font-semibold text-white sm:hidden">
-              {cfg.primary.label}
+            </Link>
+            <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-white text-[15px] font-semibold text-primary sm:hidden">
+              <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
             </Link>
             <nav className="flex flex-col gap-1">
               {cfg.groups.map((g, gi) => (
@@ -272,9 +271,6 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
               {role !== "staff" && (
                 <Link href={`/${role}/support`} onClick={() => setMenuOpen(false)} className="flex h-10 items-center justify-center rounded-lg bg-mist text-sm font-medium text-primary">Message advisor</Link>
               )}
-              <button onClick={() => { setMenuOpen(false); signOut(); router.push("/"); }} className="flex h-10 items-center gap-2 px-1 text-sm text-subtle hover:text-ink">
-                <Icon name="logout" size={14} /> Sign out
-              </button>
             </div>
           </div>
         </div>

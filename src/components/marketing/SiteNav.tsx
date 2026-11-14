@@ -261,7 +261,7 @@ function SignedIn() {
             ))}
             <div className="my-1 h-px bg-line" />
             <Link href={menu.footer.href} onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-[11px] text-sm text-ink hover:bg-mist">
-              <span className="flex size-6 items-center justify-center rounded-full bg-mist text-[10px] font-bold text-primary">{menu.footer.icon}</span>
+              <span className="flex size-6 items-center justify-center rounded-full bg-mist text-[10px] font-bold text-primary">{menu.footer.icon === "swap" ? <Icon name="swap" size={12} /> : menu.footer.icon}</span>
               {menu.footer.label}
             </Link>
             <button
@@ -340,6 +340,6 @@ function buildMenu(role: "buyer" | "seller" | "staff", db: ReturnType<typeof use
       { label: "Product review", href: "/admin/review" },
       { label: "Finance", href: "/admin/finance" },
     ],
-    footer: { label: "View as buyer or partner", href: "/sign-in", icon: "⇄" },
+    footer: { label: "View as buyer or partner", href: "/sign-in", icon: "swap" },
   };
 }

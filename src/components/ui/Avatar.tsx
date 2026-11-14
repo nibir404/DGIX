@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { User } from "@/lib/types";
 
 const tones: Record<User["avatarTone"], string> = {
-  amber: "bg-[linear-gradient(135deg,#2F6BD8,#7FB6FF)] text-night",
+  amber: "bg-[linear-gradient(135deg,#1E4FA3,#4C85EE)] text-white",
   green: "bg-[linear-gradient(135deg,#14804A,#3DDC84)] text-white",
   blue: "bg-[linear-gradient(135deg,#163C7E,#7FB6FF)] text-white",
   rose: "bg-[linear-gradient(135deg,#C2416B,#F7A4BC)] text-white",

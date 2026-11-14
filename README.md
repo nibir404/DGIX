@@ -2,6 +2,8 @@
 
 Frontend for **DGIX**, Daffodil's global innovation exchange: verified software from Bangladesh, matched to buyers in the USA and GCC, delivered under one contract.
 
+**Live site:** [dgix-rho.vercel.app](https://dgix-rho.vercel.app) · deployed on Vercel from `main`. Sign in with the test accounts at [/sign-in](https://dgix-rho.vercel.app/sign-in) to try the portals.
+
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff), built as a 1-1 implementation of the DGIX Paper design file. All data comes from local seed data, so every flow can be tested end to end without a backend.
 
 > **Status:** v1.2.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.

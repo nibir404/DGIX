@@ -70,51 +70,70 @@ function PhoneMock() {
   );
 }
 
+const FEATURES = [
+  {
+    title: "One sign-in",
+    body: "Same account and two-factor protection as the web.",
+    icon: <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" />,
+  },
+  {
+    title: "Fingerprint",
+    body: "Unlock with a touch. Lasts 30 days per phone.",
+    icon: <path d="M12 11c0 3-1 6-3 8M8 6.5A6 6 0 0 1 18 11c0 2-.3 4-1 6M6 9a6 6 0 0 0-1 3v1M12 15c0 2-.5 3.5-1.5 5" />,
+  },
+  {
+    title: "Always current",
+    body: "Updates arrive through Google Play.",
+    icon: <><path d="M20 11a8 8 0 0 0-14.9-3.9M4 13a8 8 0 0 0 14.9 3.9" /><path d="M4 4v4h4M20 20v-4h-4" /></>,
+  },
+];
+
 export function DownloadApp() {
   return (
     <Panel id="download-app" className="rounded-lg bg-night text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(80%_60%_at_85%_10%,#1E4FA366,transparent)]" aria-hidden />
-      <div className="relative grid grid-cols-1 items-center gap-12 px-6 py-16 md:px-12 md:py-20 lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:px-20 lg:py-24">
-        <Reveal className="flex flex-col gap-7">
-          <span className="inline-flex items-center gap-2 self-start rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[13px] text-white/80">
-            <span className="size-1.5 rounded-full bg-success" /> New · Android app
-          </span>
-          <h2 className="text-[36px] leading-[40px] md:text-[52px] md:leading-[56px] font-light tracking-tight">
-            DGIX is now on
-            <br />
-            Google Play
-          </h2>
-          <p className="max-w-[520px] text-[17px] leading-[26px] text-haze">
-            Enrol your organisation, follow projects, invoices and licences, and keep approvals and alerts moving from your phone. One sign-in, same rules as the web.
+      <div className="absolute inset-0 bg-[radial-gradient(60%_70%_at_80%_45%,#1E4FA355,transparent)]" aria-hidden />
+      <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-14 px-6 py-16 md:px-12 md:py-24 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-20">
+        <Reveal className="flex min-w-0 flex-col">
+          <div className="text-[15px] leading-[18px] text-white/60">Android app</div>
+          <h2 className="mt-5 text-[36px] leading-[40px] md:text-[52px] md:leading-[56px] font-light tracking-tight">DGIX is now on Google Play</h2>
+          <p className="mt-5 max-w-[560px] text-[17px] leading-[27px] text-haze">
+            Enrol your organisation, follow projects, invoices and licences, and keep approvals moving from your phone.
           </p>
-          <ul className="flex flex-col gap-3">
-            {ANDROID_APP.highlights.map((h) => (
-              <li key={h} className="flex items-center gap-3 text-[15px] text-white/90">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-sky">
-                  <Icon name="check" size={14} strokeWidth={2.4} />
+
+          <ul className="mt-10 grid grid-cols-1 gap-5 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-8">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="flex gap-4 sm:flex-col sm:gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white/8 text-sky">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{f.icon}</svg>
                 </span>
-                {h}
+                <span className="flex min-w-0 flex-col gap-1 sm:gap-3">
+                  <span className="text-[15px] font-semibold">{f.title}</span>
+                  <span className="text-sm leading-[21px] text-haze">{f.body}</span>
+                </span>
               </li>
             ))}
           </ul>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+
+          <div className="mt-10 flex flex-col gap-6 sm:flex-row sm:items-center">
             <PlayButton className="self-start" />
-            <Link href="/app" className="inline-flex items-center gap-2 text-[15px] font-medium text-white/80 hover:text-white">
-              More about the app <Icon name="arrowRight" size={14} />
-            </Link>
+            <div className="hidden items-center gap-3 md:flex">
+              <span className="rounded-md bg-white p-1.5">
+                <Image src={ANDROID_APP.qr} alt="QR code for the DGIX app on Google Play" width={56} height={56} unoptimized />
+              </span>
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-semibold">Scan to install</span>
+                <span className="text-[13px] text-haze">Point your phone camera here</span>
+              </span>
+            </div>
           </div>
-          <div className="hidden items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-3 pr-5 md:flex md:self-start">
-            <div className="rounded-md bg-white p-2">
-              <Image src={ANDROID_APP.qr} alt="QR code for the DGIX app on Google Play" width={84} height={84} unoptimized />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[15px] font-semibold">Scan to install</span>
-              <span className="text-[13px] text-haze">Point your phone camera at the code.</span>
-              <span className="text-[12px] text-white/50">v{ANDROID_APP.version} · {ANDROID_APP.size} · {ANDROID_APP.minAndroid}</span>
-            </div>
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-white/50">
+            <Link href="/app" className="inline-flex items-center gap-1.5 font-medium text-white/80 hover:text-white">
+              More about the app <Icon name="arrowRight" size={13} />
+            </Link>
+            <span>v{ANDROID_APP.version} · {ANDROID_APP.size} · {ANDROID_APP.minAndroid}</span>
           </div>
         </Reveal>
-        <Reveal>
+        <Reveal className="flex justify-center">
           <PhoneMock />
         </Reveal>
       </div>

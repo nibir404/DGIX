@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 
 import dynamic from "next/dynamic";
 
-const Globe3D = dynamic(() => import("@/components/marketing/globe/Globe3D"), { ssr: false });
+const Globe = dynamic(() => import("@/components/marketing/globe/GlobeLines"), { ssr: false });
 
 const LIVE = [
   { route: "-", kicker: "Live · just now", time: "4h 12m", title: "Shortlist sent to a retail group in Riyadh", tags: ["HR & payroll", "3 verified matches"] },
@@ -48,24 +48,18 @@ export function HomeHero() {
   return (
     <section className="relative mx-2 mt-2 md:mx-4 md:mt-4 flex min-h-[760px] flex-col overflow-hidden rounded-lg bg-night-hero text-white md:h-[880px]">
       {/* Background: globe centred behind the copy, rising from below */}
-      <div className="absolute left-1/2 top-[52%] aspect-[1752/897] w-[230%] -translate-x-1/2 sm:top-[46%] sm:w-[170%] md:top-[40%] md:w-[135%] lg:w-[118%] xl:w-[108%] [mask-image:radial-gradient(closest-side,#000_72%,transparent_100%)]">
-        <Globe3D />
+      <div className="absolute left-1/2 top-[52%] aspect-[1752/897] w-[230%] -translate-x-1/2 sm:top-[46%] sm:w-[170%] md:top-[40%] md:w-[135%] lg:w-[118%] xl:w-[108%] [mask-image:linear-gradient(180deg,#000_55%,transparent_100%)]">
+        <Globe />
       </div>
       {/* Readability: soft dark pool behind the centred copy, and a fade at the bottom */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_46%,rgba(8,21,47,0.78),rgba(8,21,47,0.35)_60%,transparent_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-[linear-gradient(180deg,transparent,rgba(8,21,47,0.7))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_38%_at_50%_38%,rgba(8,21,47,0.82),rgba(8,21,47,0.3)_60%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-[linear-gradient(180deg,transparent,rgba(8,21,47,0.45))]" />
 
       <SiteNav />
 
       {/* Foreground: everything centred */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[calc(100%-104px)] max-w-[980px] flex-col items-center justify-center gap-7 px-4 pb-10 pt-6 text-center sm:px-6 md:gap-8 md:pb-[150px]">
-        <span className="hero-fade inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-[13px] text-white/85 backdrop-blur">
-          <span className="relative flex size-[7px]">
-            <span className="absolute inset-0 animate-ping rounded-full bg-[#3DDC84]/70" />
-            <span className="relative size-[7px] rounded-full bg-[#3DDC84]" />
-          </span>
-          Daffodil Verified software · USA &amp; GCC
-        </span>
+        <div className="hero-fade text-[15px] leading-[18px] text-white/70">Daffodil Verified software for the USA &amp; GCC</div>
         <h1 ref={headline} className="text-[44px] leading-[46px] sm:text-[64px] sm:leading-[66px] md:text-[84px] md:leading-[86px] lg:text-[100px] lg:leading-[100px] font-light tracking-[-0.05em]">
           <span className="hl-line block overflow-hidden pb-2"><span className="block">Proven products.</span></span>
           <span className="hl-line block overflow-hidden pb-2"><span className="block">Sold to the world.</span></span>

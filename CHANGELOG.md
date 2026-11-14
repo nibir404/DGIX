@@ -3,6 +3,42 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+Nothing yet.
+
+## [1.1.0] — 2026-11-14
+
+Mobile and tablet support across the whole product, the Android app on the marketing site, an account menu with a settings page, and a security upgrade.
+
+### Security
+- Upgraded Next.js from 15.5.4 to 15.5.29 and React / React DOM from 19.1.0 to 19.1.10 to patch the React Server Components remote code execution flaw ([CVE-2025-66478](https://nextjs.org/blog/CVE-2025-66478)). Vercel was blocking deploys of the vulnerable version.
+
+### Added
+- **Mobile menu on the marketing site.** Below 1024px the nav links collapse into a full-screen menu with all pages, Sign in and the main call to action.
+- **Mobile and tablet menu in the portals.** Below 1024px the buyer, seller and staff sidebars become a slide-out drawer.
+- **Android app.** A "DGIX is now on Google Play" section on the home page (Play Store button, QR code, phone mock-up) and a new `/app` page with install steps, safety notes and a direct APK download with its SHA-256 checksum. App details live in `src/lib/app.ts`.
+- **Account menu** for buyer, seller and staff, opened from the avatar in the top bar or the user row in the sidebar: name, email, company, Profile, Account settings, Help & support and Sign out.
+- **Profile & settings page** at `/buyer/account`, `/seller/account` and `/admin/account`: edit name, job title and email, change password, two-factor status, notification preferences and sign out. Saved to the local demo data.
+- **Icons for the six product gates** on the Daffodil Verified page, plus calendar, thumbs up/down and help icons in the shared icon set.
+
+### Changed
+- The nav call to action now reads **"Get on board"** (was "Get my shortlist").
+- The top-bar shortcut in the portals (New request / Add product / New shortlist) is now a secondary outline button, so each screen has one solid primary action.
+- The yellow and amber glows and gradients are removed site-wide; fills that used them now use the blue brand gradient.
+- "Find my match" search boxes glow blue while focused, and the hero box hides its typing example while you type.
+- The favicon is now the official DGIX symbol on a transparent background, with a white-backed icon for iOS home screens.
+- Every dropdown uses the same chevron, inset from the edge; form fields in dialogs share padding and focus styles.
+- Emoji used as icons are replaced with line icons.
+- The "amber" avatar tone is now white text on deep blue for better contrast.
+
+### Fixed
+- Pages no longer lose their right edge on 320px phones (minimum width lowered from 353px to 280px).
+- Staff Today, Finance and Matching desk no longer overflow the screen on phones.
+- The notifications panel and portal search box fit narrow screens.
+- "Economics" no longer splits mid-word in the product gates; the gate grid sizes to its own container (2, 3 or 6 columns).
+- Removed an unused variable that produced the only lint warning.
+
 ## [1.0.0] — 2026-11-14
 
 First complete release of the DGIX frontend.
@@ -23,4 +59,6 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nibir404/DGIX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nibir404/DGIX/releases/tag/v1.0.0

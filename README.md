@@ -4,7 +4,7 @@ Frontend for **DGIX**, Daffodil's global innovation exchange: verified software 
 
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff), built as a 1-1 implementation of the DGIX Paper design file. All data comes from local seed data, so every flow can be tested end to end without a backend.
 
-> **Status:** v1.0.0 — complete UI with mock data and a mock sign-in. There is no real backend, authentication or payments yet.
+> **Status:** v1.1.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ---
 
@@ -72,21 +72,23 @@ src/
   app/
     (marketing)/        Public site: home, solutions, products, markets, search,
                         how it works, verified, sell, pricing, about, insights,
-                        contact, faq, legal
+                        contact, faq, legal, app (Android download)
     (auth)/             Sign in, create account
-    buyer/              Buyer portal (9 screens)
-    seller/             Seller portal (8 screens)
-    admin/              Staff console (7 screens)
+    buyer/              Buyer portal (9 screens + account)
+    seller/             Seller portal (8 screens + account)
+    admin/              Staff console (7 screens + account)
     not-found.tsx       404
   components/
     marketing/          Nav, footer, hero, globe, page sections, catalogue
-    portal/             PortalShell (sidebar + top bar) and shared UI primitives
+    portal/             PortalShell (sidebar + top bar), AccountMenu, AccountPage
+                        and shared UI primitives
     buyer/ seller/ admin/ auth/   Role-specific components
     ui/                 Icon, Avatar
   lib/
     types.ts            Domain types
     seed.ts             Seed data for all users and modules
     store.tsx           Client store: session, persistence, flow actions
+    app.ts              Android app links, version and checksum
   middleware.ts         Role-based route protection
 public/
   brand/                Logos and favicons
@@ -96,13 +98,14 @@ scripts/
   gen-globe-dots.mjs    Generates globe-dots.bin from Natural Earth data
 docs/
   BUILD_GUIDE.md        Conventions for turning Paper artboards into code
+  RELEASING.md          Versioning, changelog and tagging process
 ```
 
 ## Design system
 
 - **Tokens** live in `src/app/globals.css` (`@theme`): colours (`ink`, `primary`, `mist`, `line`, `night`, `sky`, `amber`, …), type sizes, tracking and radius.
 - **Radius:** one 8px radius is used everywhere. Only true circles (avatars, dots, round icon buttons) use `rounded-full`.
-- **Responsive:** layouts work from 353px wide. Above 2400px the page scales up proportionally (QHD to 4K), so large screens keep the 1440–1920 design proportions.
+- **Responsive:** layouts work from 280px wide (small phones and folded screens). Below 1024px the site nav and the portal sidebars become menus. Above 2400px the page scales up proportionally (QHD to 4K), so large screens keep the 1440–1920 design proportions.
 - **Motion:** respects `prefers-reduced-motion`. Lenis drives the GSAP ticker, so ScrollTrigger and Framer Motion reveals stay in sync with smooth scrolling.
 
 ## Performance notes
@@ -112,10 +115,15 @@ docs/
 
 ## Versioning
 
-This project follows [Semantic Versioning](https://semver.org). Each release is tagged `vMAJOR.MINOR.PATCH` and recorded in [CHANGELOG.md](CHANGELOG.md).
+This project follows [Semantic Versioning](https://semver.org). Each release is tagged `vMAJOR.MINOR.PATCH` and recorded in [CHANGELOG.md](CHANGELOG.md). The full process (commit prefixes, when to bump which number, how to tag and publish) is in [docs/RELEASING.md](docs/RELEASING.md).
+
+| Version | Date | Highlights |
+| --- | --- | --- |
+| v1.1.0 | 2026-11-14 | Mobile and tablet support, Android app section, account menu and settings, Next.js security upgrade |
+| v1.0.0 | 2026-11-14 | First complete release |
 
 ## Known limitations
 
 - No backend. Data lives in the browser's `localStorage` per device.
-- Create account does not save a new user. Some secondary actions (demo rating, reschedule, licence seats) only update the page until reload.
+- Create account does not save a new user. Profile, password and notification changes are saved only in this browser's demo data. Some secondary actions (demo rating, reschedule, licence seats) only update the page until reload.
 - Some charts on the Staff and Seller dashboards use fixed values from the design rather than seed data.

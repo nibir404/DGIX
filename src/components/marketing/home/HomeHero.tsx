@@ -147,6 +147,7 @@ function NeedBar() {
   const [shown, setShown] = useState("");
   const [p, setP] = useState(0);
   const focused = useRef(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Typewriter placeholder that cycles through real requests
   useEffect(() => {
@@ -168,7 +169,7 @@ function NeedBar() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = value || PROMPTS[p];
+    const q = value.trim() || PROMPTS[p];
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
@@ -181,10 +182,10 @@ function NeedBar() {
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onFocus={() => (focused.current = true)}
-        onBlur={() => (focused.current = false)}
+        onFocus={() => { focused.current = true; setIsFocused(true); }}
+        onBlur={() => { focused.current = false; setIsFocused(false); setShown(""); }}
         aria-label="Describe what you need"
-        placeholder={shown + "│"}
+        placeholder={isFocused ? "" : shown + "│"}
         className="min-w-0 flex-1 bg-transparent text-[15px] sm:text-[17px] text-white outline-none placeholder:text-white/85"
       />
       <button type="submit" className="flex h-12 sm:h-14 shrink-0 items-center gap-2 rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] px-4 sm:px-6 text-[15px] sm:text-[17px] font-semibold shadow-[inset_0_1px_0_#FFFFFF55] transition hover:brightness-110" aria-label="Find my match">

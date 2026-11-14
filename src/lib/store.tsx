@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { seed } from "./seed";
-import type { BuyerRequest, Db, Role, User } from "./types";
+import { CHECK_META, seed } from "./seed";
+import type { BuyerRequest, Category, Db, Demo, Offer, Role, User } from "./types";
 
 const KEY = "dgix-db-v1";
 const SESSION_COOKIE = "dgix_uid";
@@ -36,6 +36,11 @@ type Ctx = {
   approveCheck: (productId: string, checkKey: string) => void;
   verifyPayment: (invoiceId: string) => void;
   markRead: (notificationId: string) => void;
+  // Workflow completion
+  completeDemo: (demoId: string) => void;
+  rateDemo: (demoId: string, rating: NonNullable<Demo["rating"]>, notes?: string) => void;
+  createOffer: (input: { requestId: string; productId: string; price: number; sla: string; warranty: string; exit: string; milestones: { title: string; amount: number }[]; send: boolean }) => Offer;
+  addProduct: (input: { name: string; category: Category; tagline: string; description: string; markets: string[]; priceFrom: number }) => string;
   // Account
   updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
   changePassword: (current: string, next: string) => boolean;
@@ -98,9 +103,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return u;
   };
 
-  const notify = (d: Db, userId: string, title: string, body: string, href: string) => {
+  const notify = (d: Db, userId: string | undefined, title: string, body: string, href: string) => {
+    if (!userId) return;
     d.notifications.unshift({ id: "n-" + uid(), userId, title, body, href, at: today(), read: false });
   };
+  const buyerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "buyer")?.id;
+  const sellerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "seller")?.id;
+  const advisorOf = (d: Db, companyId?: string) => d.companies.find((c) => c.id === companyId)?.advisorId ?? "u-asha";
 
   const value: Ctx = {
     db,
@@ -204,12 +213,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             milestones: o.milestones.map((m, i) => ({ id: "m" + (i + 1), title: m.title, amount: m.amount, status: i === 0 ? "in_progress" : "upcoming", due: new Date(Date.now() + (i + 1) * 21 * 864e5).toISOString().slice(0, 10) })),
           });
         }
-        notify(d, "u-asha", "Offer accepted", `${o.ref} · ${p.name}`, "/admin/offers");
+        notify(d, advisorOf(d, o.buyerId), "Offer accepted", `${o.ref} · ${p.name}`, "/admin/offers");
+        notify(d, sellerUser(d, p.partnerId), "New order won", `${p.name} · ${d.companies.find((c) => c.id === o.buyerId)?.name} · first milestone started`, "/seller/orders");
       }),
     declineOffer: (offerId) =>
       update((d) => {
         const o = d.offers.find((x) => x.id === offerId);
-        if (o) o.status = "declined";
+        if (!o) return;
+        o.status = "declined";
+        const r = d.requests.find((x) => x.id === o.requestId);
+        if (r) r.status = "closed";
+        notify(d, advisorOf(d, o.buyerId), "Offer declined", `${o.ref} · ${d.companies.find((c) => c.id === o.buyerId)?.name}`, "/admin/offers");
       }),
     acceptMilestone: (projectId, milestoneId) =>
       update((d) => {
@@ -220,7 +234,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         m.acceptedOn = today().slice(0, 10);
         const next = pr.milestones.find((x) => x.status === "upcoming");
         if (next) next.status = "in_progress";
-        d.invoices.unshift({ id: "i-" + uid(), ref: "INV-00" + (45 + d.invoices.length), buyerId: pr.buyerId, projectId, milestone: m.title, amount: m.amount, due: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), status: "due" });
+        const ref = "INV-00" + (45 + d.invoices.length);
+        d.invoices.unshift({ id: "i-" + uid(), ref, buyerId: pr.buyerId, projectId, milestone: m.title, amount: m.amount, due: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), status: "due" });
+        notify(d, sellerUser(d, pr.partnerId), "Milestone accepted", `${pr.name} · ${m.title} · invoice ${ref} raised`, "/seller/orders");
+        notify(d, buyerUser(d, pr.buyerId), "Invoice ready", `${ref} · $${m.amount.toLocaleString()} for ${m.title}`, "/buyer/billing");
+        // Handover: when every milestone is accepted, the licence starts
+        if (pr.milestones.every((x) => x.status === "done")) {
+          pr.health = "on_track";
+          pr.daysLate = undefined;
+          if (!d.licences.some((l) => l.buyerId === pr.buyerId && l.productId === pr.productId)) {
+            const r = d.requests.find((x) => x.id === d.offers.find((o) => o.id === pr.offerId)?.requestId);
+            const seats = parseInt(r?.users ?? "", 10) || 50;
+            d.licences.unshift({ id: "l-" + uid(), buyerId: pr.buyerId, productId: pr.productId, seats, used: 0, renews: new Date(Date.now() + 365 * 864e5).toISOString().slice(0, 10), status: "active" });
+          }
+          notify(d, buyerUser(d, pr.buyerId), "Handover complete · licence active", `${pr.name} · licence starts today`, "/buyer/licences");
+          notify(d, sellerUser(d, pr.partnerId), "Project delivered", `${pr.name} · all milestones accepted`, "/seller/orders");
+          notify(d, advisorOf(d, pr.buyerId), "Project delivered", pr.name, "/admin/delivery");
+        }
       }),
     payInvoice: (invoiceId) =>
       update((d) => {
@@ -250,6 +280,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const p = d.products.find((x) => x.id === productId);
         const c = p?.checks.find((x) => x.key === checkKey);
         if (c) c.note = "Uploaded · awaiting review";
+        // Once every open check has evidence, the next move is DGIX's
+        if (p && p.checks.every((x) => x.score >= x.max || x.note?.startsWith("Uploaded"))) p.waitingOn = "DGIX review";
         notify(d, "u-asha", "Evidence uploaded", `${p?.name} · ${c?.label}`, "/admin/review");
       }),
     confirmDemo: (demoId) =>
@@ -268,7 +300,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (!pr || !m) return;
         m.status = "in_review";
         const buyer = d.users.find((u) => u.companyId === pr.buyerId && u.role === "buyer");
-        if (buyer) notify(d, buyer.id, "Milestone ready to review", `${pr.name} · ${m.title}`, "/buyer/projects");
+        if (buyer) notify(d, buyer.id, "Milestone ready to review", `${pr.name} · ${m.title}`, `/buyer/projects/${pr.id}`);
+        notify(d, advisorOf(d, pr.buyerId), "Milestone submitted", `${pr.name} · ${m.title}`, "/admin/delivery");
       }),
 
     confirmShortlist: (requestId, productIds) =>
@@ -321,15 +354,79 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const pr = d.projects.find((x) => x.id === inv.projectId);
         if (pr) {
           const fee = Math.round(inv.amount * 0.15);
-          d.payouts.unshift({ id: "po-" + uid(), partnerId: pr.partnerId, invoiceId: inv.id, gross: inv.amount, fee, net: inv.amount - fee, status: "scheduled", date: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) });
+          d.payouts.unshift({ id: "po-" + uid(), partnerId: pr.partnerId, invoiceId: inv.id, gross: inv.amount, fee, net: inv.amount - fee, status: "scheduled", date: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10) });
+          notify(d, sellerUser(d, pr.partnerId), "Payout scheduled", `$${(inv.amount - fee).toLocaleString()} net for ${inv.milestone} · in 14 days`, "/seller/payouts");
         }
+        notify(d, buyerUser(d, inv.buyerId), "Payment verified · receipt ready", `${inv.ref} · $${inv.amount.toLocaleString()}`, "/buyer/billing");
       }),
     approvePayouts: (ids) =>
       update((d) => {
         d.payouts.forEach((p) => {
-          if (ids.includes(p.id)) p.status = "paid";
+          if (!ids.includes(p.id) || p.status === "paid") return;
+          p.status = "paid";
+          p.date = today().slice(0, 10);
+          notify(d, sellerUser(d, p.partnerId), "Payout sent", `$${p.net.toLocaleString()} net · payout advice available`, "/seller/payouts");
         });
       }),
+    completeDemo: (demoId) =>
+      update((d) => {
+        const dm = d.demos.find((x) => x.id === demoId);
+        if (!dm) return;
+        dm.status = "done";
+        const p = d.products.find((x) => x.id === dm.productId);
+        notify(d, buyerUser(d, dm.buyerId), "How was the demo?", `${p?.name} · rate it so your advisor can prepare an offer`, "/buyer/demos");
+      }),
+    rateDemo: (demoId, rating, notes) =>
+      update((d) => {
+        const dm = d.demos.find((x) => x.id === demoId);
+        if (!dm) return;
+        dm.rating = rating;
+        if (notes) dm.notes = notes;
+        dm.status = "done";
+        const p = d.products.find((x) => x.id === dm.productId);
+        const co = d.companies.find((c) => c.id === dm.buyerId);
+        notify(d, advisorOf(d, dm.buyerId), `Demo rated “${rating}”`, `${co?.name} × ${p?.name}${rating === "Strong fit" ? " · ready for an offer" : ""}`, "/admin/offers");
+      }),
+    createOffer: (input) => {
+      const r = db.requests.find((x) => x.id === input.requestId);
+      const offer: Offer = {
+        id: "o-" + uid().toLowerCase(),
+        ref: "OFF-00" + (28 + db.offers.length),
+        requestId: input.requestId,
+        productId: input.productId,
+        buyerId: r?.buyerId ?? "",
+        price: input.price,
+        sla: input.sla,
+        warranty: input.warranty,
+        exit: input.exit,
+        milestones: input.milestones,
+        status: input.send ? "sent" : "draft",
+        rating: db.demos.find((x) => x.requestId === input.requestId && x.productId === input.productId)?.rating,
+        sentAt: input.send ? today().slice(0, 10) : undefined,
+      };
+      update((d) => {
+        d.offers.unshift(offer);
+        const req = d.requests.find((x) => x.id === input.requestId);
+        if (req && input.send) req.status = "offer";
+        if (input.send) notify(d, buyerUser(d, offer.buyerId), "New offer to review", `${offer.ref} · $${offer.price.toLocaleString()}`, "/buyer/offers");
+      });
+      return offer;
+    },
+    addProduct: (input) => {
+      const id = "p-" + uid().toLowerCase();
+      const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + id.slice(2, 6);
+      update((d) => {
+        d.products.unshift({
+          id, slug, name: input.name, partnerId: user?.companyId ?? "", category: input.category, tagline: input.tagline, description: input.description,
+          version: "1.0", markets: input.markets, gate: "PG0", status: "in_review",
+          checks: CHECK_META.map((m) => ({ ...m, score: 0, note: "Evidence needed" })),
+          metricLabel: "Live customers", metricValue: "New", visual: "ledger", goLive: "6–8 weeks", priceFrom: input.priceFrom,
+          waitingOn: "Partner evidence",
+        });
+        notify(d, advisorOf(d, user?.companyId), "New product submitted", `${input.name} · ${d.companies.find((c) => c.id === user?.companyId)?.name}`, "/admin/review");
+      });
+      return id;
+    },
     markRead: (id) =>
       update((d) => {
         const n = d.notifications.find((x) => x.id === id);

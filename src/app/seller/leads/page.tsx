@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import { Empty } from "@/components/portal/ui";
 import { HATCH, Head, NIGHT_CARD, Panel, Pill, anonBuyer, dayMonth, useFlash, useSeller } from "@/components/seller/kit";
+import { Icon } from "@/components/ui/Icon";
 
 type Lead = { id: string; kind: "requested" | "booked" | "done" | "shortlisted"; fit?: number; buyer: string; sub: string; foot?: string; demoId?: string; at?: string; product: string };
 
@@ -11,7 +12,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const gst = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" });
 
 export default function LeadsPage() {
-  const { db, demos, products, productIds, confirmDemo, openCase, focus } = useSeller();
+  const { db, demos, products, productIds, confirmDemo, completeDemo, openCase, focus } = useSeller();
   const { flash, toast } = useFlash();
 
   const fitFor = (productId: string, requestId?: string) => db.requests.find((r) => r.id === requestId)?.shortlist.find((s) => s.productId === productId)?.fit;
@@ -100,6 +101,19 @@ export default function LeadsPage() {
                       Other time
                     </button>
                   </motion.div>
+                ) : l.kind === "booked" && l.demoId ? (
+                  <div className="mt-[6px] flex flex-col gap-3">
+                    {l.foot && <div className="text-[13px] leading-4 text-muted">{l.foot}</div>}
+                    <button
+                      onClick={() => {
+                        completeDemo(l.demoId!);
+                        flash("Demo marked as held · buyer asked to rate it");
+                      }}
+                      className="inline-flex h-10 items-center gap-2 self-start rounded-lg border border-line bg-white px-4 text-[13px] font-semibold text-ink transition-colors hover:border-primary/50 hover:bg-mist"
+                    >
+                      <Icon name="check" size={14} /> Mark demo held
+                    </button>
+                  </div>
                 ) : (
                   l.foot && <div className={clsx("mt-[6px] text-[13px] leading-4", l.kind === "done" ? "text-primary" : "text-muted")}>{l.foot}</div>
                 )}

@@ -105,6 +105,7 @@ export type Demo = {
   status: "requested" | "booked" | "done" | "cancelled";
   notes?: string;
   questions: number;
+  rating?: "Not for us" | "Maybe" | "Strong fit";
 };
 
 export type Offer = {

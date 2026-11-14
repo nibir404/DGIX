@@ -31,7 +31,6 @@ export default function Demos() {
   const b = useBuyer();
   const lk = useLookup();
   const { flash, toast } = useFlash();
-  const [ratings, setRatings] = useState<Record<string, string>>({});
   const [extra, setExtra] = useState<Record<string, string[]>>({});
   const [resched, setResched] = useState<Demo | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
@@ -44,7 +43,7 @@ export default function Demos() {
   const hero = upcoming.find((d) => d.status === "booked") ?? upcoming[0];
   const rest = upcoming.filter((d) => d !== hero);
   const done = b.demos.filter((d) => d.status === "done").sort((a, c) => at(c).localeCompare(at(a)));
-  const toRate = done.find((d) => !ratings[d.id]) ?? done[0];
+  const toRate = done.find((d) => !d.rating) ?? done[0];
   const advisor = firstName(lk.user(b.company?.advisorId)?.name) || "your advisor";
 
   const syncCal = () => {
@@ -69,7 +68,7 @@ export default function Demos() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] leading-4 text-muted">{upcoming.length} upcoming · {done.filter((d) => !ratings[d.id]).length} to rate</div>
+          <div className="text-[13px] leading-4 text-muted">{upcoming.length} upcoming · {done.filter((d) => !d.rating).length} to rate</div>
           <h1 className="text-[32px] font-light leading-10 tracking-tight text-ink md:text-[36px] md:leading-[44px]">Demos</h1>
         </div>
         <Btn variant="outline" onClick={syncCal} className="self-start border-[#C9D4E8] md:self-auto">Sync to calendar</Btn>
@@ -154,11 +153,11 @@ export default function Demos() {
               {toRate.notes && <div className="text-[13px] italic leading-5 text-muted">“{toRate.notes}”</div>}
               <div className="flex gap-2">
                 {([["thumbsDown", "Not for us"], ["help", "Maybe"], ["thumbsUp", "Strong fit"]] as const).map(([e, l]) => {
-                  const on = ratings[toRate.id] === l;
+                  const on = toRate.rating === l;
                   return (
                     <button
                       key={l}
-                      onClick={() => { setRatings((r) => ({ ...r, [toRate.id]: l })); flash(`Rated “${l}” · ${advisor} will see it`); }}
+                      onClick={() => { b.rateDemo(toRate.id, l); flash(`Rated “${l}” · ${advisor} will see it`); }}
                       className={clsx("flex flex-1 basis-0 flex-col items-center gap-1.5 rounded-lg py-3.5 transition-colors", on ? "border-[1.5px] border-primary bg-mist" : "border border-[#E3E9F4] hover:border-[#C9D4E8]")}
                     >
                       <Icon name={e} size={22} className={on ? "text-primary" : "text-muted"} />

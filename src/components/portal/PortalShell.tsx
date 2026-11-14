@@ -40,7 +40,7 @@ export const portalConfig: Record<Role, Config> = {
     ],
   },
   seller: {
-    primary: { label: "+ Add product", href: "/seller/products" },
+    primary: { label: "+ Add product", href: "/seller/products?new=1" },
     search: "Search leads, orders, payouts",
     groups: [
       {

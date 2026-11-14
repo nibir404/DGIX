@@ -44,7 +44,7 @@ export default function MatchingDesk() {
   const dueH = req.dueAt ? Math.max(1, Math.round((new Date(req.dueAt).getTime() - Date.parse("2026-11-13T13:00:00Z")) / 3600e3)) : null;
 
   const send = () => {
-    confirmShortlist(req.id);
+    confirmShortlist(req.id, Object.keys(picked).filter((id) => picked[id]));
     flash(`Shortlist sent to ${buyer?.name}`);
   };
 
@@ -63,7 +63,7 @@ export default function MatchingDesk() {
           <H1>{req.title} · {buyer?.country === "United Arab Emirates" ? "UAE" : buyer?.country}</H1>
         </div>
         <div className="flex flex-wrap gap-2">
-          {[`${req.users} users`, req.need.split(",")[0].slice(0, 28), "Arabic + English", `Before ${req.goLive}`].map((t) => (
+          {[`${req.users} users`, req.need.split(",")[0].slice(0, 28), "Arabic + English", /^(flexible|asap)$/i.test(req.goLive.trim()) ? `Go-live ${req.goLive.toLowerCase()}` : `Before ${req.goLive}`].map((t) => (
             <span key={t} className="rounded-full bg-white px-3 py-2 text-[13px]">{t}</span>
           ))}
         </div>

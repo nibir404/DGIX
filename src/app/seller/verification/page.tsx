@@ -95,7 +95,7 @@ function CardHead({ title, c }: { title: string; c: Check }) {
 }
 
 function Uploaded({ c }: { c: Check }) {
-  return c.note?.startsWith("Uploaded") ? <div className="text-[13px] font-medium leading-4 text-success">✓ {c.note}</div> : null;
+  return c.note?.startsWith("Uploaded") ? <div className="inline-flex items-center gap-1.5 text-[13px] font-medium leading-4 text-success"><Icon name="check" size={14} /> {c.note}</div> : null;
 }
 
 function UploadCard({ c, onFile }: { c: Check; onFile: (name: string) => void }) {
@@ -120,6 +120,11 @@ function UploadCard({ c, onFile }: { c: Check; onFile: (name: string) => void })
         </span>
       </button>
       <input ref={input} type="file" accept=".pdf,.xlsx,.doc,.docx" className="hidden" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ""; }} />
+      {!c.note?.startsWith("Uploaded") && (
+        <button type="button" onClick={() => onFile(`${c.key}-evidence.pdf`)} className="-mt-1 self-start text-xs font-medium text-primary hover:underline">
+          Use sample document
+        </button>
+      )}
       <Uploaded c={c} />
     </Panel>
   );

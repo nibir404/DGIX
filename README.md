@@ -58,12 +58,26 @@ Go to **/sign-in**. The **Test accounts** panel lists every seed user with a one
 
 ## End-to-end flow to try
 
-1. **Buyer (Omar):** create a request at `/buyer/requests/new`, open the shortlist and book a demo.
-2. **Staff (Asha):** confirm a shortlist in **Matching desk**, then send the AI HR offer to the buyer in **Offers & contracts**.
-3. **Buyer:** accept and sign the offer, accept a milestone in **Projects**, then pay the invoice in **Billing**.
-4. **Staff (Farhan or Asha):** verify the payment in **Finance**. This schedules the partner payout, minus the DGIX fee.
-5. **Seller (Rahim):** see the payout in **Payouts**, upload verification evidence, and confirm demos.
-6. **Staff:** approve a product's open checks in **Product review** until it reaches 100/100 and is listed.
+Every hand-off below is a real action that updates the shared demo data and notifies the next person. For a presenter's click-by-click version, see **[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)**.
+
+**Buying, delivery and money**
+
+1. **Buyer (Omar):** describe a need at `/buyer/requests/new`. AI ranks matching products.
+2. **Staff (Asha):** in **Matching desk**, tick the products to share and send the shortlist.
+3. **Buyer:** on the shortlist, **Book demo**.
+4. **Seller (the product's partner, e.g. Nadia for Smart Hospital):** in **Leads & demos**, confirm the time, then **Mark demo held**.
+5. **Buyer:** in **Demos**, rate it (**Strong fit**).
+6. **Staff (Asha):** in **Offers & contracts → Ready for an offer**, **Draft offer** and **Send to buyer**.
+7. **Buyer:** sign and accept the offer. A project starts with milestone 1 in progress.
+8. **Seller:** in **Orders & delivery**, attach sign-off evidence and **Submit for buyer review**.
+9. **Buyer:** **Accept milestone** (this raises the invoice), then pay it in **Billing**.
+10. **Staff (Farhan or Asha):** in **Finance**, **Verify payment**, then **Approve payouts**. The seller's net (minus the 15% DGIX fee) shows as paid in **Payouts**.
+11. Repeat steps 8–9 for each milestone. When the last one is accepted, the buyer's licence becomes active in **Licences**.
+
+**Seller onboarding**
+
+1. **Seller (Rahim):** **Add product** (top bar), then upload evidence for each check in **Verification**.
+2. **Staff (Asha):** in **Product review**, approve each check. At 100/100 the product is listed in the public catalogue.
 
 ## Project structure
 
@@ -99,6 +113,7 @@ scripts/
 docs/
   BUILD_GUIDE.md        Conventions for turning Paper artboards into code
   RELEASING.md          Versioning, changelog and tagging process
+  DEMO_SCRIPT.md        Click-by-click script for presenting the full workflow
 ```
 
 ## Design system

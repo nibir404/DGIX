@@ -1,18 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { Empty } from "@/components/portal/ui";
+import { Button, Empty } from "@/components/portal/ui";
+import { AddProductDialog } from "@/components/seller/AddProductDialog";
+import { Icon } from "@/components/ui/Icon";
+import { useFlash } from "@/components/admin/kit";
 import { Head, NIGHT_CARD, Panel, ProductTabs, scoreOf, useSeller } from "@/components/seller/kit";
 
 export default function ProductsPage() {
+  return (
+    <Suspense>
+      <Products />
+    </Suspense>
+  );
+}
+
+function Products() {
   const { products, focus } = useSeller();
   const [sel, setSel] = useState<string>();
+  const [adding, setAdding] = useState(false);
+  const { flash, toast } = useFlash();
   const p = products.find((x) => x.id === sel) ?? focus;
 
-  if (!p) return <Empty title="No products yet" body="Ask your partner manager to start a product passport." action={<Link className="text-primary" href="/seller/support">Contact DGIX</Link>} />;
+  // "+ Add product" in the top bar links here with ?new=1 (also while already on this page)
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (params.get("new") !== "1") return;
+    setAdding(true);
+    router.replace(pathname, { scroll: false });
+  }, [params, router, pathname]);
+
+  const dialog = (
+    <>
+      <AddProductDialog
+        open={adding}
+        onClose={() => setAdding(false)}
+        onAdded={(id, name) => {
+          setAdding(false);
+          setSel(id);
+          flash(`${name} submitted · upload evidence in Verification`);
+        }}
+      />
+      {toast}
+    </>
+  );
+  const addBtn = (
+    <Button onClick={() => setAdding(true)} className="shrink-0">
+      <Icon name="plus" size={16} /> Add product
+    </Button>
+  );
+
+  if (!p)
+    return (
+      <>
+        <Empty title="No products yet" body="Add your first product to start its passport. DGIX checks it before buyers see it." action={addBtn} />
+        {dialog}
+      </>
+    );
 
   const score = scoreOf(p);
   const listed = p.status === "listed";
@@ -81,6 +131,7 @@ export default function ProductsPage() {
           );
         })}
       </Panel>
+      {dialog}
     </div>
   );
 }

@@ -5,7 +5,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Nothing yet.
+The whole DGIX workflow now runs end to end for buyer, seller and staff, with no dead ends, ready to present live.
+
+### Added
+- **Demo outcome:** sellers can **Mark demo held**, and the buyer's rating (Not for us / Maybe / Strong fit) is saved and sent to their advisor.
+- **Offer drafting for staff:** a **Ready for an offer** list in Offers & contracts shows requests with a shortlist or demo but no offer. **Draft offer** opens a pre-filled offer (price, SLA, warranty, exit terms, 30/40/30 milestones) to save as a draft or send to the buyer.
+- **Add product for sellers:** a dialog (also opened from the top-bar shortcut) creates a product at PG0 with every check open, ready for evidence and DGIX review.
+- **Licence at handover:** accepting the last milestone completes the project and starts an active licence for the buyer.
+- **Notifications at every hand-off:** order won, milestone accepted, invoice ready, payment verified, payout scheduled and sent, offer declined, project delivered, new product submitted, demo rated.
+- "Use sample document" shortcuts on seller evidence and sign-off uploads, so a live demo doesn't need the file picker.
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md): a presenter's script for the full workflow.
+
+### Fixed
+- **Approve payouts** in Finance now marks payouts as paid for the seller (it only changed the screen before).
+- Matching desk sends only the products that are ticked (it sent all of them).
+- The go-live chip on Matching desk reads "Go-live flexible" instead of "Before Flexible".
+- After a seller uploads evidence for every open check, the product waits on "DGIX review" instead of "Partner evidence".
+- Declining an offer closes the request and tells the advisor.
 
 ## [1.1.0] — 2026-11-14
 

@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import { Empty } from "@/components/portal/ui";
 import { BTN_GRADIENT, Head, Panel, Pill, anonBuyer, dayMonth, orderRef, useFlash, useSeller } from "@/components/seller/kit";
+import { Icon } from "@/components/ui/Icon";
 
 export default function OrdersPage() {
   const { db, projects, submitMilestone } = useSeller();
@@ -112,9 +113,18 @@ export default function OrdersPage() {
                   Drop files or <span className="font-semibold text-primary">browse</span>
                 </span>
                 {attached.map((n) => (
-                  <span key={n} className="text-xs text-success">✓ {n}</span>
+                  <span key={n} className="inline-flex items-center gap-1 text-xs text-success"><Icon name="check" size={12} /> {n}</span>
                 ))}
               </button>
+              {!attached.length && (
+                <button
+                  type="button"
+                  onClick={() => setFiles((s) => ({ ...s, [key]: [`signoff-${cur.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`] }))}
+                  className="-mt-1 self-start text-xs font-medium text-primary hover:underline"
+                >
+                  Use sample sign-off document
+                </button>
+              )}
               <input
                 ref={input}
                 type="file"

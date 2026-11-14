@@ -10,18 +10,17 @@ import { H1, Kicker, useFlash } from "@/components/admin/kit";
 const MONTHS = [14, 22, 19, 26, 21, 30, 27, 34, 32, 38, 48.6];
 
 export default function Finance() {
-  const { db, verifyPayment } = useStore();
+  const { db, verifyPayment, approvePayouts } = useStore();
   const L = useLookup();
   const { flash, toast } = useFlash();
   const [mode, setMode] = useState<"monthly" | "yearly">("yearly");
-  const [paid, setPaid] = useState<Record<string, boolean>>({});
 
   const toVerify = db.invoices.filter((i) => i.status === "paid");
   const collected = db.invoices.filter((i) => i.status === "paid" || i.status === "verified").reduce((s, i) => s + i.amount, 0);
   const fee = db.payouts.reduce((s, p) => s + p.fee, 0);
   const owed = db.payouts.filter((p) => p.status !== "paid").reduce((s, p) => s + p.net, 0);
   const overdue = db.invoices.filter((i) => i.status === "overdue" || (i.status === "due" && i.due < "2026-11-13")).length;
-  const scheduled = db.payouts.filter((p) => p.status === "scheduled" && !paid[p.id]);
+  const scheduled = db.payouts.filter((p) => p.status === "scheduled");
   const partnerShare = Math.round((owed / (owed + fee || 1)) * 100);
 
   const verify = (id: string) => {
@@ -37,7 +36,7 @@ export default function Finance() {
           <Kicker>Buyers pay DGIX · DGIX keeps its fee · partners get the rest</Kicker>
           <H1>Finance</H1>
         </div>
-        <Button size="lg" disabled={!scheduled.length} onClick={() => { setPaid((x) => ({ ...x, ...Object.fromEntries(scheduled.map((p) => [p.id, true])) })); flash(`${scheduled.length} payouts approved`); }}>
+        <Button size="lg" disabled={!scheduled.length} onClick={() => { approvePayouts(scheduled.map((p) => p.id)); flash(`${scheduled.length} payout${scheduled.length > 1 ? "s" : ""} released · partners notified`); }}>
           Approve payouts ({scheduled.length})
         </Button>
       </div>
@@ -70,7 +69,7 @@ export default function Finance() {
               );
             })}
             {db.payouts.map((po) => {
-              const st = paid[po.id] ? "paid" : po.status;
+              const st = po.status;
               return (
                 <motion.li layout key={po.id} className="flex items-center gap-3 border-t border-line py-3.5">
                   <div className="min-w-0 flex-1"><div className="text-[15px]">{L.company(po.partnerId)?.name}</div><div className="text-xs text-muted">{fmtMoney(po.gross)} − 15% fee · {dateShort(po.date)}</div></div>

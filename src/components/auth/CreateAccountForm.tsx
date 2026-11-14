@@ -61,7 +61,7 @@ export function CreateAccountForm() {
       setCreatedUser(u);
       setStep(2);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not register account against Keycloak/IAM.");
+      setError(err instanceof Error ? err.message : "Could not create your account. Please check your details and try again.");
     } finally {
       setBusy(false);
     }
@@ -91,8 +91,8 @@ export function CreateAccountForm() {
               <h2 className="text-[34px] leading-[42px] md:text-[40px] md:leading-12 font-light tracking-tight text-ink">Create your account</h2>
               <p className="text-[15px] leading-[18px] text-muted">
                 {mode === "buy"
-                  ? "Free for enterprise buyers. Provisions your Keycloak OIDC & IAM profile immediately."
-                  : "Apply to list software. Provisions your Partner Admin & KYB workspace immediately."}
+                  ? "Free for enterprise buyers. Submit software requirements and book product demos."
+                  : "Apply to list your software and start verification for global markets."}
               </p>
             </div>
             <div className="flex rounded-full bg-mist p-1">
@@ -162,7 +162,7 @@ export function CreateAccountForm() {
               </span>
             </label>
             <PrimaryButton disabled={!agree || f.password.length < 8 || busy}>
-              {busy ? "Provisioning Keycloak & IAM profile..." : "Create account"} <Icon name="arrowRight" size={18} strokeWidth={1.75} />
+              {busy ? "Creating account..." : "Create account"} <Icon name="arrowRight" size={18} strokeWidth={1.75} />
             </PrimaryButton>
             <p className="text-center text-sm leading-[18px] text-muted">
               Already registered? <Link href="/sign-in" className="font-semibold text-ink underline underline-offset-2">Sign in</Link>
@@ -173,13 +173,13 @@ export function CreateAccountForm() {
             <span className="flex size-14 items-center justify-center rounded-full bg-[#E6F4EC] text-success"><Icon name="check" size={28} strokeWidth={2} /></span>
             <h2 className="text-[34px] leading-[42px] font-light tracking-tight text-ink">Welcome to DGIX, {f.name.split(" ")[0] || "there"}.</h2>
             <p className="text-[15px] leading-6 text-muted">
-              Your Keycloak OIDC identity (<span className="text-ink font-medium">{f.email}</span>) and DGIX IAM profile for{" "}
-              <span className="text-ink font-medium">{f.company}</span> ({f.country}) are active and signed in.
+              Your account (<span className="text-ink font-medium">{f.email}</span>) for{" "}
+              <span className="text-ink font-medium">{f.company}</span> is ready and signed in.
             </p>
             <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] px-4 py-3 text-[13px] leading-5 text-[#145C36]">
               {mode === "buy"
-                ? "Buyer role bound in IAM-KYB. You can submit structured software requirements and book product demos immediately."
-                : "Partner Admin role & KYB onboarding record created in IAM-KYB. Legal will run sanctions screening & Daffodil overlap triage before PG0."}
+                ? "You can now submit software requirements, review matched shortlists, and book live product demos."
+                : "Your partner onboarding workspace is active. Our team will review your company details and guide you through product verification."}
             </div>
             <div className="flex flex-wrap gap-3">
               <button

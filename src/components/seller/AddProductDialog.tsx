@@ -55,11 +55,11 @@ export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; on
     <Dialog open={open} onClose={onClose} title="Add a product">
       <form onSubmit={submit} className="flex flex-col gap-4">
         <p className="text-sm text-muted">
-          DGIX reviews every claim across gates PG0–PG5 before buyers see it. Unsubstantiated superlatives (&ldquo;ultimate&rdquo;) are blocked by FR-CAT-03.
+          Every product claim is reviewed by our assurance team before buyers see it. Please use clear, verifiable statements rather than unsubstantiated superlatives.
         </p>
         {prohibited && (
           <div className="rounded-lg border border-[#F2B8B8] bg-[#FFF5F5] px-3.5 py-2.5 text-xs font-medium text-danger">
-            FR-CAT-03 Violation: Claim wording cannot contain &ldquo;ultimate&rdquo;. Please use objective, verifiable phrasing.
+            Product claims cannot contain the word &ldquo;ultimate&rdquo;. Please use specific, verifiable phrasing.
           </div>
         )}
         <label className="flex flex-col gap-1.5">

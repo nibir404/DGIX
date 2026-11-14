@@ -107,7 +107,7 @@ export function Catalogue() {
         <div className="flex items-start gap-3 rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] px-4 py-3 text-[13px] leading-5 text-[#2C3E66]">
           <Svg name="info" size={18} color="#1E4FA3" className="mt-0.5" />
           <div>
-            <span className="font-semibold text-ink">Verification Scope Notice (FR-CAT-02): </span>
+            <span className="font-semibold text-ink">Verification note: </span>
             {catalogueDisclaimer}
           </div>
         </div>
@@ -153,14 +153,14 @@ export function Catalogue() {
               onClick={() => void refreshLive()}
               className="shrink-0 rounded bg-white px-3 py-1 text-xs font-semibold text-ink shadow-sm"
             >
-              Retry Live Sync
+              Try again
             </button>
           </div>
         )}
         {shown.length === 0 && (
           <div className="rounded-lg border border-dashed border-line px-6 py-14 text-center text-muted">
             {syncing && pub.length === 0
-              ? "Syncing live verified regional listings from DGIX Commercial & Governance services…"
+              ? "Loading verified products…"
               : `No verified products match yet${chip ? ` in ${chip.label}` : ""}. Try another country or describe your need below.`}
           </div>
         )}

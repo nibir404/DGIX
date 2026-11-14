@@ -79,7 +79,7 @@ export default function VerificationPage() {
       } else {
         uploadEvidence(p.id, c.key);
       }
-      flash(`${file?.name ?? fallbackName} uploaded · SHA-256 & ClamAV scan queued`);
+      flash(`${file?.name ?? fallbackName} uploaded`);
     } catch (err) {
       flash(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -91,7 +91,7 @@ export default function VerificationPage() {
     e.preventDefault();
     if (!claimStmt.trim() || claimBusy) return;
     if (hasProhibitedUltimateWording(claimStmt)) {
-      flash("FR-CAT-03: Claims cannot contain the word 'ultimate'.");
+      flash("Claims cannot contain the word 'ultimate'. Please use verifiable statements.");
       return;
     }
     const cleanEvList = productEvidence.filter((ev) => String(ev.scan_status) === "clean");
@@ -102,14 +102,14 @@ export default function VerificationPage() {
     if (!chosenEvId) {
       flash(
         claimLabel === "certified" || claimLabel === "verified"
-          ? "Certified & Verified claims require selecting a clean primary evidence artifact."
-          : "Upload and ClamAV-scan at least one primary evidence artifact before recording a claim.",
+          ? "Certified and Verified claims require selecting a verified supporting document."
+          : "Upload at least one supporting document before adding a product claim.",
       );
       return;
     }
     const verId = p.versionId ?? (live.versionsByProduct[livePid]?.[0] ? String(live.versionsByProduct[livePid][0].version_id) : "");
     if (!verId) {
-      flash("No active semver product version found.");
+      flash("No active product version found.");
       return;
     }
     setClaimBusy(true);
@@ -126,7 +126,7 @@ export default function VerificationPage() {
       });
       setClaimStmt("");
       await refreshLive();
-      flash("Labelled claim recorded in Evidence & Claim Vault");
+      flash("Product claim saved");
     } catch (err) {
       flash(err instanceof Error ? err.message : "Could not record claim");
     } finally {
@@ -157,7 +157,7 @@ export default function VerificationPage() {
               <Icon name="info" size={18} className="mt-0.5 shrink-0 text-[#B86E00]" />
               <div className="flex flex-col gap-1.5">
                 <div className="text-sm font-semibold text-[#6B4A12]">
-                  Reviewer Evidence Gap Letter Issued ({totalItems} remediation item{totalItems === 1 ? "" : "s"})
+                  Additional verification requested ({totalItems} item{totalItems === 1 ? "" : "s"})
                 </div>
                 {gap.summary ? <div className="text-xs text-[#6B4A12]">{String(gap.summary)}</div> : null}
                 <ul className="list-disc space-y-1 pl-4 text-xs text-[#6B4A12]">
@@ -166,8 +166,8 @@ export default function VerificationPage() {
                   ))}
                   {items.map((it, idx) => (
                     <li key={`g-${idx}`}>
-                      <span className="font-mono font-semibold">{String(it.criterion_id ?? it.gate_code ?? "Gate")}:</span>{" "}
-                      {String(it.remediation ?? it.description ?? "Upload primary evidence artifact")}
+                      <span className="font-semibold">{String(it.criterion_id ?? it.gate_code ?? "Item")}:</span>{" "}
+                      {String(it.remediation ?? it.description ?? "Upload supporting document")}
                     </li>
                   ))}
                 </ul>
@@ -177,7 +177,7 @@ export default function VerificationPage() {
         );
       })}
 
-      {/* Gate progress PG0–PG5 */}
+      {/* Review progress */}
       <Panel className="grid grid-cols-2 gap-y-6 rounded-lg bg-paper p-6 sm:grid-cols-3 md:p-7 lg:flex lg:items-start">
         {STEPS.map((label, i) => {
           const done = i < gateIdx;
@@ -201,7 +201,7 @@ export default function VerificationPage() {
               </div>
               <div className={clsx("text-sm leading-[18px]", done || current ? "font-semibold text-ink" : "text-muted")}>{label}</div>
               <div className={clsx("text-xs leading-4", done ? "text-muted" : current ? "text-warning" : "text-[#9AA2B4]")}>
-                {done ? `${GATES[i]?.id ?? "PG"} · passed` : current ? `${pending.length} item${pending.length === 1 ? "" : "s"} open` : i === gateIdx + 1 ? "Next" : last ? "Goes live" : GATES[i]?.id}
+                {done ? "Completed" : current ? `${pending.length} item${pending.length === 1 ? "" : "s"} open` : i === gateIdx + 1 ? "Next" : last ? "Goes live" : "Upcoming"}
               </div>
             </div>
           );
@@ -227,29 +227,30 @@ export default function VerificationPage() {
         </div>
       )}
 
-      {/* Live Binary Evidence Vault & Claim Builder */}
+      {/* Supporting Documents & Product Claims */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel className="flex flex-col gap-3 bg-paper p-6">
           <div className="flex items-center justify-between">
-            <div className="text-base font-semibold text-ink">Immutable Evidence Vault (SHA-256 &amp; ClamAV)</div>
+            <div className="text-base font-semibold text-ink">Submitted documents</div>
             <span className="rounded bg-mist px-2 py-0.5 text-xs font-semibold text-primary">{productEvidence.length} files</span>
           </div>
           {productEvidence.length === 0 ? (
-            <p className="text-xs text-muted">No binary artifacts uploaded for this product yet. Drop any PDF above to hash &amp; scan.</p>
+            <p className="text-xs text-muted">No supporting documents uploaded for this product yet. Upload a document above to begin verification.</p>
           ) : (
             <div className="flex flex-col divide-y divide-line">
               {productEvidence.map((ev) => {
                 const evId = String(ev.evidence_id);
                 const fname = String(ev.filename ?? `${ev.evidence_type}.pdf`);
-                const sha = String(ev.sha256 ?? "");
                 const scan = String(ev.scan_status ?? "pending");
                 return (
                   <div key={evId} className="flex items-center justify-between gap-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-ink">{fname}</div>
-                      <div className="truncate font-mono text-[11px] text-muted">
-                        SHA-256: {sha.slice(0, 18)}… · ClamAV:{" "}
-                        <span className={scan === "clean" ? "font-semibold text-success" : "font-semibold text-warning"}>{scan}</span>
+                      <div className="truncate text-xs text-muted">
+                        Status:{" "}
+                        <span className={scan === "clean" ? "font-semibold text-success" : "font-semibold text-warning"}>
+                          {scan === "clean" ? "Verified" : "Pending check"}
+                        </span>
                       </div>
                     </div>
                     <button
@@ -268,7 +269,7 @@ export default function VerificationPage() {
 
         <Panel className="flex flex-col gap-3 bg-paper p-6">
           <div className="flex items-center justify-between">
-            <div className="text-base font-semibold text-ink">Labelled Product Claims (FR-CAT-03)</div>
+            <div className="text-base font-semibold text-ink">Product claims</div>
             <span className="rounded bg-mist px-2 py-0.5 text-xs font-semibold text-primary">{productClaims.length} claims</span>
           </div>
           <form onSubmit={submitClaim} className="flex flex-col gap-2.5">
@@ -284,9 +285,9 @@ export default function VerificationPage() {
                 onChange={(e) => setClaimLabel(e.target.value as typeof claimLabel)}
                 className="h-10 rounded-lg border border-line bg-white px-3 text-xs font-medium outline-none"
               >
-                <option value="declared">Declared (Partner self-attested)</option>
-                <option value="verified">Verified (Requires clean evidence)</option>
-                <option value="certified">Certified (Requires ISO/SOC2 evidence)</option>
+                <option value="declared">Declared (Self-attested)</option>
+                <option value="verified">Verified (Backed by document)</option>
+                <option value="certified">Certified (ISO / SOC 2 certificate)</option>
                 <option value="inferred">Inferred</option>
                 <option value="estimated">Estimated</option>
               </select>
@@ -298,7 +299,7 @@ export default function VerificationPage() {
                 }}
                 className="h-10 rounded-lg border border-line bg-white px-3 text-xs outline-none"
               >
-                <option value="">Link clean evidence (optional for Declared)</option>
+                <option value="">Link supporting document (optional for Declared)</option>
                 {productEvidence
                   .filter((ev) => String(ev.scan_status) === "clean")
                   .map((ev) => (
@@ -313,7 +314,7 @@ export default function VerificationPage() {
               disabled={claimBusy || !claimStmt.trim()}
               className={clsx("inline-flex h-10 items-center justify-center self-start rounded-lg px-4 text-xs font-semibold text-white disabled:opacity-50", BTN_GRADIENT)}
             >
-              {claimBusy ? "Recording..." : "+ Add labelled claim"}
+              {claimBusy ? "Saving..." : "+ Add product claim"}
             </button>
           </form>
           {productClaims.length > 0 && (
@@ -350,7 +351,7 @@ function Uploaded({ c }: { c: Check }) {
 function UploadCard({ c, busy, onFile }: { c: Check; busy?: boolean; onFile: (file: File | null, fallbackName: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
-  const meta = EVIDENCE[c.key] ?? { title: c.label, body: "Upload supporting evidence. PDF, max 20 MB." };
+  const meta = EVIDENCE[c.key] ?? { title: c.label, body: "Upload supporting document. PDF, max 20 MB." };
   const take = (f?: File) => f && onFile(f, f.name);
   return (
     <Panel className="flex flex-col gap-4 bg-paper p-6">
@@ -366,15 +367,10 @@ function UploadCard({ c, busy, onFile }: { c: Check; busy?: boolean; onFile: (fi
       >
         <span className="flex size-10 items-center justify-center rounded-full bg-mist text-primary"><Icon name="upload" size={20} /></span>
         <span className="text-sm leading-[18px] text-ink">
-          {busy ? "Hashing & uploading binary..." : <>Drop file or <span className="font-semibold text-primary">browse</span></>}
+          {busy ? "Uploading document..." : <>Drop file or <span className="font-semibold text-primary">browse</span></>}
         </span>
       </button>
       <input ref={input} type="file" accept=".pdf,.xlsx,.doc,.docx,.txt" className="hidden" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ""; }} />
-      {!c.note?.startsWith("Uploaded") && (
-        <button type="button" disabled={busy} onClick={() => onFile(null, `${c.key}-evidence.pdf`)} className="-mt-1 self-start text-xs font-medium text-primary hover:underline">
-          Upload generated PDF artifact
-        </button>
-      )}
       <Uploaded c={c} />
     </Panel>
   );

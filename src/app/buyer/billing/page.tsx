@@ -12,8 +12,8 @@ import { Btn, Dialog, Panel, daysUntil, dayMonth, money, useBuyer, useFlash } fr
 const statusChip = (i: Invoice) =>
   i.status === "due" ? { t: `Due ${dayMonth(i.due)}`, c: "bg-[#FFF3DC] text-warning" }
   : i.status === "overdue" ? { t: "Overdue", c: "bg-[#FBE7E7] text-danger" }
-  : i.status === "paid" ? { t: "Captured · awaiting settle", c: "bg-mist text-primary" }
-  : { t: "Settled & Posted", c: "bg-[#E6F4EC] text-[#0E6439]" };
+  : i.status === "paid" ? { t: "Paid · processing", c: "bg-mist text-primary" }
+  : { t: "Paid", c: "bg-[#E6F4EC] text-[#0E6439]" };
 
 function BillingInner() {
   const b = useBuyer();
@@ -72,7 +72,7 @@ function BillingInner() {
   const pay = () => {
     if (!paying) return;
     b.payInvoice(paying.id);
-    flash(`Redirecting to PCI SAQ A Hosted Gateway for ${paying.ref}…`);
+    flash(`Opening secure checkout for ${paying.ref}…`);
     setPaying(null);
   };
 
@@ -82,13 +82,13 @@ function BillingInner() {
     <div className="flex flex-col gap-5">
       {justPaid && (
         <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] px-4 py-3 text-sm text-[#145C36]">
-          <strong>Hosted Gateway Payment Captured:</strong> Signed HMAC-SHA256 gateway webhook verified and balanced double-entry ledger journal posted in <code>payments-delivery</code>.
+          <strong>Payment confirmed:</strong> Thank you. Your online payment has been received and your invoice status has been updated.
         </div>
       )}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] leading-4 text-muted">Tax-compliant e-invoicing (UAE FTA / KSA ZATCA) · PCI DSS v4.0.1 SAQ A Hosted Checkout</div>
+          <div className="text-[13px] leading-4 text-muted">Invoices, tax e-invoicing &amp; payment history</div>
           <h1 className="text-[32px] font-light leading-10 tracking-tight text-ink md:text-[36px] md:leading-[44px]">Billing</h1>
         </div>
         <Btn variant="outline" onClick={exportCsv} className="self-start border-[#C9D4E8] md:self-auto">Export statement</Btn>
@@ -115,9 +115,9 @@ function BillingInner() {
               </div>
               <div className="flex w-full flex-col gap-2.5 sm:w-auto">
                 <button onClick={() => setPaying(next)} className="inline-flex h-[52px] items-center justify-center rounded-lg bg-paper px-7 text-[15px] font-semibold leading-[18px] text-night hover:bg-mist">
-                  Pay via Hosted Gateway
+                  Pay invoice
                 </button>
-                <div className="text-center text-xs leading-4 text-[#FFFFFF8C]">PCI SAQ A · Zero card data on DGIX</div>
+                <div className="text-center text-xs leading-4 text-[#FFFFFF8C]">Encrypted online checkout</div>
               </div>
             </>
           ) : (
@@ -130,7 +130,7 @@ function BillingInner() {
         </motion.div>
 
         <Panel className="flex flex-col gap-3.5 p-6 lg:grow lg:basis-0" delay={0.05}>
-          <div className="text-[13px] leading-4 text-muted">Settled &amp; captured this year</div>
+          <div className="text-[13px] leading-4 text-muted">Paid this year</div>
           <div className="text-[40px] font-light leading-12 tracking-tight text-ink">{money(spent)}</div>
           <div className="flex h-2.5 gap-1">
             {b.projects.map((p, i) => {
@@ -207,19 +207,19 @@ function BillingInner() {
             </div>
           </Panel>
           <Panel className="flex flex-col gap-3 p-5" delay={0.2}>
-            <div className="text-base font-medium leading-5 text-ink">PCI DSS SAQ A Hosted Architecture</div>
+            <div className="text-base font-medium leading-5 text-ink">Online payment &amp; tax receipts</div>
             <div className="rounded-lg bg-[linear-gradient(135deg,#0C1F45_0%,#1E4FA3_100%)] p-3.5 text-paper">
               <div className="text-[13px] font-semibold">Stripe · Adyen · Checkout.com · SSLCommerz</div>
               <div className="mt-1 text-[11px] leading-4 text-[#FFFFFFB3]">
-                Cardholder PAN/CVV never touches DGIX servers. Payments redirect to the gateway&apos;s hosted session and settle via HMAC-SHA256 webhooks.
+                Payments are processed through encrypted online checkout with instant confirmation and downloadable statements.
               </div>
             </div>
-            <div className="text-xs leading-4 text-muted">Cleared tax e-invoices go to finance@{b.user?.email.split("@")[1] ?? "company.com"}</div>
+            <div className="text-xs leading-4 text-muted">Tax e-invoices and receipts are sent to finance@{b.user?.email.split("@")[1] ?? "company.com"}</div>
           </Panel>
         </div>
       </div>
 
-      <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Hosted Gateway Checkout · ${paying?.ref ?? ""}`}>
+      <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Pay invoice · ${paying?.ref ?? ""}`}>
         {paying && (
           <div className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between">
@@ -227,9 +227,9 @@ function BillingInner() {
               <div className="text-2xl font-light text-ink">{money(paying.amount)}</div>
             </div>
             <div className="rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] p-3.5 text-xs leading-5 text-[#2C3E66]">
-              <strong>PCI DSS v4.0.1 SAQ A Compliant:</strong> You will be redirected to the isolated Hosted Gateway Checkout page. Upon capture, an HMAC-signed webhook posts a balanced double-entry journal (`gateway_clearing` Dr / `deferred_revenue` Cr) and returns you here.
+              You will be directed to our encrypted online checkout page to complete payment by corporate card or supported regional payment method.
             </div>
-            <Btn onClick={pay} size="lg">Proceed to Hosted Gateway ({money(paying.amount)}) →</Btn>
+            <Btn onClick={pay} size="lg">Continue to checkout ({money(paying.amount)}) →</Btn>
           </div>
         )}
       </Dialog>

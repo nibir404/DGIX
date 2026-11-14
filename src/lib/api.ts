@@ -1,8 +1,5 @@
 /**
- * Typed BFF API & Keycloak OIDC Session Client for Masum's 9-Microservice DGIX Platform (:18118).
- *
- * All browser traffic goes exclusively through `portal-ui` BFF (`/bff/auth/*` and `/bff/v1/*`).
- * Never stores or transmits raw cardholder PAN/CVV (PCI DSS v4.0.1 SAQ A).
+ * Typed BFF API & OIDC Session Client for the DGIX Platform.
  */
 
 const configuredBff =
@@ -34,20 +31,6 @@ export type DgixRole =
   | "partner_admin"
   | "pao"
   | "buyer";
-
-export interface PersonaSummary {
-  username: string;
-  email: string;
-  full_name: string;
-  portal_role: PortalRole;
-  primary_dgix_role: DgixRole | string;
-  roles: string[];
-  title: string;
-  sod_pair_hint?: string | null;
-  partner_id?: string | null;
-  buyer_id?: string | null;
-  company_name: string;
-}
 
 export interface AuthActor {
   sub: string;
@@ -186,19 +169,6 @@ async function ensureFreshToken(): Promise<string | null> {
           body: JSON.stringify({ refresh_token: session.refresh_token }),
         });
         if (!resp.ok) {
-          // In local UAT mode, if the persona exists in UAT_PERSONAS, seamlessly re-issue token
-          if (session.user.username) {
-            const pResp = await fetch(`${BFF_BASE}/bff/auth/persona-login`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username: session.user.username }),
-            });
-            if (pResp.ok) {
-              const pData = (await pResp.json()) as AuthSession;
-              saveStoredSession(pData);
-              return pData;
-            }
-          }
           return null;
         }
         const refreshed = (await resp.json()) as AuthSession;
@@ -298,25 +268,11 @@ export async function safeGet<T>(path: string, fallback: T, auth = true): Promis
 
 /* ---------- Auth BFF Endpoints ---------- */
 
-export async function fetchUatPersonas(): Promise<PersonaSummary[]> {
-  return safeGet<PersonaSummary[]>("/bff/auth/personas", [], false);
-}
-
 export async function loginWithPassword(identifier: string, password: string): Promise<AuthSession> {
   const session = await apiFetch<AuthSession>("/bff/auth/login", {
     method: "POST",
     auth: false,
     body: { identifier, password },
-  });
-  saveStoredSession(session);
-  return session;
-}
-
-export async function loginAsUatPersona(username: string): Promise<AuthSession> {
-  const session = await apiFetch<AuthSession>("/bff/auth/persona-login", {
-    method: "POST",
-    auth: false,
-    body: { username },
   });
   saveStoredSession(session);
   return session;
@@ -329,6 +285,7 @@ export async function registerOrganization(input: {
   password: string;
   company_name: string;
   country_code?: string;
+  skip_partner_bootstrap?: boolean;
 }): Promise<AuthSession> {
   const session = await apiFetch<AuthSession>("/bff/auth/register", {
     method: "POST",
@@ -340,6 +297,24 @@ export async function registerOrganization(input: {
   });
   saveStoredSession(session);
   return session;
+}
+
+export async function submitPublicInquiry(input: {
+  mode: "buy" | "sell";
+  full_name: string;
+  email: string;
+  company: string;
+  country: string;
+  need: string;
+}): Promise<{ status: string; reference: string; requirement_id?: string | null }> {
+  return apiFetch<{ status: string; reference: string; requirement_id?: string | null }>(
+    "/bff/v1/public/inquiries",
+    {
+      method: "POST",
+      auth: Boolean(loadStoredSession()),
+      body: input,
+    },
+  );
 }
 
 /* ---------- Public Catalogue & Evidence Binary Helpers ---------- */

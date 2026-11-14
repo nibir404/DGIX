@@ -24,8 +24,6 @@ const SPLIT = [
 ];
 type Draft = { request: BuyerRequest; product: Product; price: string; sla: string; warranty: string; exit: string };
 
-const PIPE = [180, 190, 186, 215, 210, 240, 236, 272, 268, 310, 322, 360];
-
 export default function Offers() {
   const { db, sendOffer, createOffer } = useStore();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -34,11 +32,25 @@ export default function Offers() {
   const short = (c?: string) => (c === "United Arab Emirates" ? "UAE" : c);
   const open = db.offers.filter((o) => o.status === "draft" || o.status === "sent").reduce((s, o) => s + o.price, 0);
   const signed = db.offers.filter((o) => o.status === "accepted").reduce((s, o) => s + o.price, 0);
+  const totalPipeline = open + signed;
   const decided = db.offers.filter((o) => o.status === "accepted" || o.status === "declined");
   const win = decided.length ? Math.round((decided.filter((o) => o.status === "accepted").length / decided.length) * 100) : 0;
 
-  const W = 400, H = 120, max = 380;
-  const pts = PIPE.map((v, i) => `${(i / 11) * W},${H - (v / max) * H}`);
+  const nowMs = Date.now();
+  const startLabel = new Date(nowMs - 11 * 7 * 864e5).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const pipeSeries = Array.from({ length: 12 }, (_, idx) => {
+    const cutoff = nowMs - (11 - idx) * 7 * 864e5;
+    return db.offers
+      .filter((o) => {
+        if (o.status === "declined") return false;
+        const iso = o.sentAt ?? o.signedAt;
+        if (!iso) return idx === 11;
+        return new Date(iso).getTime() <= cutoff;
+      })
+      .reduce((s, o) => s + o.price, 0);
+  });
+  const W = 400, H = 120, max = Math.max(1, ...pipeSeries);
+  const pts = pipeSeries.map((v, i) => `${(i / 11) * W},${H - (v / max) * (H - 12) - 6}`);
 
   // Requests that reached shortlist or demo but have no offer yet
   const ready = db.requests
@@ -141,14 +153,14 @@ export default function Offers() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-lg bg-white p-6">
-          <div className="flex justify-between"><h2 className="text-lg">Pipeline value · 12 weeks</h2><span className="text-xs text-success">▲ 22%</span></div>
+          <div className="flex justify-between"><h2 className="text-lg">Pipeline value · 12 weeks</h2><span className="text-xs text-muted">{db.offers.filter((o) => o.status !== "declined").length} active deals</span></div>
           <svg viewBox={`0 0 ${W} ${H + 10}`} className="mt-4 h-[150px] w-full overflow-visible" preserveAspectRatio="none">
             <defs><linearGradient id="pv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2F6BD8" stopOpacity=".25" /><stop offset="1" stopColor="#2F6BD8" stopOpacity="0" /></linearGradient></defs>
             {[0.25, 0.5, 0.75].map((f) => <line key={f} x1={0} x2={W} y1={H * f} y2={H * f} stroke="#EEF3FB" />)}
             <motion.path d={`M${pts.join(" L")} L${W},${H + 10} L0,${H + 10} Z`} fill="url(#pv)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} />
             <motion.path d={`M${pts.join(" L")}`} fill="none" stroke="#1E4FA3" strokeWidth={2} vectorEffect="non-scaling-stroke" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1 }} />
           </svg>
-          <div className="mt-2 flex justify-between text-[11px]"><span className="text-subtle">25 Aug</span><span className="font-semibold">Now · $412k</span></div>
+          <div className="mt-2 flex justify-between text-[11px]"><span className="text-subtle">{startLabel}</span><span className="font-semibold">Now · {fmtMoney(totalPipeline)}</span></div>
         </section>
         <section className="rounded-lg bg-white p-6">
           <h2 className="text-lg">Win rate</h2>

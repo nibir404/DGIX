@@ -119,17 +119,39 @@ export function ProjectDetail({ project }: { project: Project }) {
               </div>
             ))}
           </div>
-          <div className="flex flex-1 flex-col gap-2.5 rounded-lg bg-[linear-gradient(180deg,#F6F8FC_0%,#FFFFFF_100%)] p-4">
+          <div className="flex flex-1 flex-col gap-3 rounded-lg bg-[linear-gradient(180deg,#F6F8FC_0%,#FFFFFF_100%)] p-4">
             <div className="flex justify-between">
-              <div className="text-xs leading-4 text-muted">Daily transactions · {product?.name}</div>
-              <div className="text-xs font-semibold leading-4 text-success">+18% wk</div>
+              <div className="text-xs leading-4 text-muted">Milestone schedule · {product?.name}</div>
+              <div className="text-xs font-semibold leading-4 text-ink">
+                {money(paid)} of {money(total)} settled
+              </div>
             </div>
-            <svg width="100%" height="120" viewBox="0 0 520 120" preserveAspectRatio="none" className="block w-full">
-              <defs><linearGradient id="bpd-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4C85EE" stopOpacity="0.35" /><stop offset="1" stopColor="#4C85EE" stopOpacity="0" /></linearGradient></defs>
-              <path d="M0 95 L40 88 L80 90 L120 72 L160 76 L200 60 L240 64 L280 48 L320 52 L360 38 L400 42 L440 28 L480 30 L520 18 L520 120 L0 120Z" fill="url(#bpd-area)" />
-              <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1 }} d="M0 95 L40 88 L80 90 L120 72 L160 76 L200 60 L240 64 L280 48 L320 52 L360 38 L400 42 L440 28 L480 30 L520 18" fill="none" stroke="#1E4FA3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              <circle cx="514" cy="18" r="5" fill="#F6A11A" />
-            </svg>
+            <div className="flex flex-col gap-2.5">
+              {ms.map((m) => {
+                const share = total > 0 ? Math.max(8, Math.round((m.amount / total) * 100)) : Math.round(100 / Math.max(1, ms.length));
+                const tone =
+                  m.status === "done"
+                    ? "bg-success"
+                    : m.status === "in_review"
+                      ? "bg-amber"
+                      : m.status === "in_progress"
+                        ? "bg-primary"
+                        : "bg-[#DCE4F2]";
+                return (
+                  <div key={m.id} className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate font-medium text-ink">{m.title}</span>
+                      <span className="shrink-0 text-muted">
+                        {money(m.amount)} · {m.status === "done" ? "Accepted" : m.status === "in_review" ? "In review" : `Due ${dayMonth(m.due)}`}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-[#EAF0FA]">
+                      <div className={clsx("h-full rounded-full transition-all", tone)} style={{ width: `${share}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="mt-auto flex flex-wrap gap-2.5">
             {current?.status === "in_review" && (

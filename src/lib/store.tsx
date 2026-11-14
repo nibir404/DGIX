@@ -4,13 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   type AuthSession,
   type LiveListing,
-  type PersonaSummary,
   apiFetch,
   buildSandboxCheckoutRedirectUrl,
   fetchPublicCatalogue,
-  fetchUatPersonas,
   loadStoredSession,
-  loginAsUatPersona,
   loginWithPassword,
   registerOrganization,
   safeGet,
@@ -116,7 +113,6 @@ type Ctx = {
   ready: boolean;
   user: User | null;
   // Live BFF state & auth
-  personas: PersonaSummary[];
   authSession: AuthSession | null;
   catalogueDisclaimer: string;
   live: LiveBackendState;
@@ -125,7 +121,6 @@ type Ctx = {
   clearError: () => void;
   refreshLive: () => Promise<void>;
   loginLive: (identifier: string, password: string) => Promise<User>;
-  switchPersona: (username: string) => Promise<User>;
   registerLive: (input: {
     account_type: "buyer" | "seller";
     full_name: string;
@@ -133,6 +128,26 @@ type Ctx = {
     password: string;
     company_name: string;
     country_code?: string;
+    skip_partner_bootstrap?: boolean;
+  }) => Promise<User>;
+  applyPartnerLive: (input: {
+    companyName: string;
+    registrationNumber: string;
+    countryCode: string;
+    directorName: string;
+    directorRole: string;
+    referenceOrg: string;
+    referenceContact: string;
+    referenceEmail: string;
+    productName: string;
+    category: Category;
+    tagline: string;
+    description: string;
+    markets: string[];
+    priceFrom: number;
+    fullName?: string;
+    email?: string;
+    password?: string;
   }) => Promise<User>;
   uploadRealEvidence: (params: {
     productId: string;
@@ -143,9 +158,7 @@ type Ctx = {
     expiresAt?: string;
     isSourceCode?: boolean;
   }) => Promise<Record<string, unknown>>;
-  // Legacy-compatible sync signatures backed by live BFF calls
   signIn: (email: string, password: string) => User | null;
-  signInAs: (userId: string) => User | null;
   signOut: () => void;
   reset: () => void;
   createRequest: (
@@ -195,10 +208,27 @@ type Ctx = {
 const StoreCtx = createContext<Ctx | null>(null);
 export const portalHome: Record<Role, string> = { buyer: "/buyer", seller: "/seller", staff: "/admin" };
 
+export function staffHomeForRole(
+  user?: Pick<User, "role" | "primaryDgixRole" | "dgixRoles"> | null,
+): string {
+  const roles = new Set<string>(user?.dgixRoles ?? []);
+  const primary = user?.primaryDgixRole ?? "";
+  if (primary === "dgix_admin" || roles.has("dgix_admin")) return "/admin";
+  if (primary === "advisor" || roles.has("advisor")) return "/admin";
+  if (primary === "reviewer" || roles.has("reviewer")) return "/admin/review";
+  if (primary === "legal" || roles.has("legal")) return "/admin/partners";
+  if (primary === "finance" || roles.has("finance")) return "/admin/finance";
+  if (primary === "council_member" || roles.has("council_member")) return "/admin/governance";
+  if (primary === "auditor" || roles.has("auditor")) return "/admin/governance";
+  return "/admin";
+}
+
+export function homeForUser(user: User): string {
+  return user.role === "staff" ? staffHomeForRole(user) : portalHome[user.role];
+}
+
 const uid = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 const today = () => new Date().toISOString();
-
-const TONES: User["avatarTone"][] = ["blue", "green", "amber", "violet", "rose"];
 
 function initialsOf(name: string): string {
   return (
@@ -291,9 +321,8 @@ function buildChecksFromScore(totalScore: number | null | undefined, gapNote?: s
   });
 }
 
-function buildUserFromSession(session: AuthSession, personas: PersonaSummary[]): User {
+function buildUserFromSession(session: AuthSession): User {
   const actor = session.user;
-  const matched = personas.find((p) => p.username.toLowerCase() === actor.username.toLowerCase());
   const companyId =
     actor.portal_role === "buyer"
       ? (actor.buyer_id ?? "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04")
@@ -305,10 +334,10 @@ function buildUserFromSession(session: AuthSession, personas: PersonaSummary[]):
     name: actor.full_name,
     initials: initialsOf(actor.full_name),
     email: actor.email,
-    password: "dgix_local_only",
+    password: "",
     role: actor.portal_role,
     companyId,
-    title: actor.title || matched?.title || actor.primary_dgix_role,
+    title: actor.title || actor.primary_dgix_role.replace(/_/g, " "),
     avatarTone:
       actor.portal_role === "buyer" ? "blue" : actor.portal_role === "seller" ? "green" : "amber",
     username: actor.username,
@@ -316,57 +345,35 @@ function buildUserFromSession(session: AuthSession, personas: PersonaSummary[]):
     dgixRoles: actor.roles,
     mfaLevel: actor.mfa_level,
     cell: actor.cell,
-    sodPairHint: matched?.sod_pair_hint ?? null,
+    sodPairHint: null,
     partnerId: actor.partner_id ?? null,
     buyerId: actor.buyer_id ?? null,
   };
 }
 
 function hydrateDbFromLive(params: {
-  personas: PersonaSummary[];
   activeSession: AuthSession | null;
   disclaimer: string;
   live: LiveBackendState;
 }): Db {
-  const { personas, activeSession, disclaimer, live } = params;
+  const { activeSession, disclaimer, live } = params;
 
   // 1. Users
-  const users: User[] = personas.map((p, idx) => {
-    const isCurrent = activeSession?.user.username.toLowerCase() === p.username.toLowerCase();
-    const id = isCurrent && activeSession ? activeSession.user.sub : `persona-${p.username}`;
-    const companyId =
-      p.portal_role === "buyer"
-        ? (p.buyer_id ?? "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04")
-        : p.portal_role === "seller"
-          ? (p.partner_id ?? `partner-${p.username}`)
-          : "c-dgix";
-    return {
-      id,
-      name: p.full_name,
-      initials: initialsOf(p.full_name),
-      email: p.email,
-      password: "dgix_local_only",
-      role: p.portal_role,
-      companyId,
-      title: p.title,
-      avatarTone: TONES[idx % TONES.length],
-      username: p.username,
-      primaryDgixRole: p.primary_dgix_role,
-      dgixRoles: p.roles,
-      mfaLevel: isCurrent ? activeSession?.user.mfa_level : "phishing_resistant",
-      sodPairHint: p.sod_pair_hint ?? null,
-      partnerId: p.partner_id ?? null,
-      buyerId: p.buyer_id ?? null,
-    };
-  });
-
-  if (activeSession && !users.some((u) => u.id === activeSession.user.sub)) {
-    users.unshift(buildUserFromSession(activeSession, personas));
-  }
-
-  const advisorUser =
-    users.find((u) => u.username === "advisor.user") ?? users.find((u) => u.role === "staff");
-  const advisorId = advisorUser?.id ?? "persona-advisor.user";
+  const advisorContact: User = {
+    id: "dgix-advisory-desk",
+    name: "DGIX Advisory Desk",
+    initials: "DA",
+    email: "advisory@dgix.daffodil.global",
+    password: "",
+    role: "staff",
+    companyId: "c-dgix",
+    title: "Commercial Advisory",
+    avatarTone: "amber",
+  };
+  const users: User[] = activeSession
+    ? [buildUserFromSession(activeSession), advisorContact]
+    : [advisorContact];
+  const advisorId = advisorContact.id;
 
   // 2. Companies
   const companiesMap = new Map<string, Company>();
@@ -401,19 +408,36 @@ function hydrateDbFromLive(params: {
       });
     }
   }
-
-  for (const p of personas) {
-    if (p.partner_id && !companiesMap.has(p.partner_id)) {
-      companiesMap.set(p.partner_id, {
-        id: p.partner_id,
-        name: p.company_name,
+  if (activeSession?.user.portal_role === "seller" && activeSession.user.partner_id) {
+    if (!companiesMap.has(activeSession.user.partner_id)) {
+      companiesMap.set(activeSession.user.partner_id, {
+        id: activeSession.user.partner_id,
+        name: activeSession.user.company_name || "Software Partner",
         kind: "partner",
         country: "Bangladesh",
         city: "Dhaka",
-        verified: true,
+        verified: false,
         advisorId,
       });
     }
+  }
+
+  for (const reqRow of live.requirements) {
+    const bid = String(reqRow.buyer_id ?? "");
+    if (!bid || companiesMap.has(bid)) continue;
+    const rfp = String(reqRow.rfp_text ?? "");
+    const match = /^\[(?:Buyer|Partner) inquiry — ([^|]+)\|/.exec(rfp);
+    const extractedName = match?.[1]?.trim() || `Enterprise Buyer (${bid.slice(0, 6).toUpperCase()})`;
+    const cc = String(reqRow.country_code ?? "UAE");
+    companiesMap.set(bid, {
+      id: bid,
+      name: extractedName,
+      kind: "buyer",
+      country: cc === "SAU" ? "Saudi Arabia" : cc === "QAT" ? "Qatar" : "United Arab Emirates",
+      city: cc === "SAU" ? "Riyadh" : cc === "QAT" ? "Doha" : "Dubai",
+      verified: true,
+      advisorId,
+    });
   }
 
   for (const rawPartner of live.partners) {
@@ -795,7 +819,7 @@ function hydrateDbFromLive(params: {
     };
   });
 
-  // 8. Invoices + Payment Intents (with PCI SAQ A Hosted Checkout URLs!)
+  // 8. Invoices + Payment Intents
   const invoices: Invoice[] = live.invoices.map((inv) => {
     const invId = String(inv.invoice_id);
     const orderId = String(inv.order_id);
@@ -810,13 +834,19 @@ function hydrateDbFromLive(params: {
         : paySt === "captured"
           ? "paid"
           : "due";
+    const scheme = String(inv.einvoice_scheme ?? "none");
+    const jurisdiction = String(inv.jurisdiction ?? "UAE");
+    const milestoneLabel =
+      scheme === "none"
+        ? `${jurisdiction} Commercial Tax Invoice`
+        : `${jurisdiction} Tax Invoice (${scheme.toUpperCase()})`;
     return {
       id: invId,
       ref: String(inv.erp_invoice_ref ?? `INV-${invId.slice(0, 6).toUpperCase()}`),
       buyerId: String(inv.buyer_id),
       projectId: proj?.id ?? orderId,
       orderId,
-      milestone: `${String(inv.jurisdiction)} E-Invoice (${String(inv.einvoice_scheme)})`,
+      milestone: milestoneLabel,
       amount: Number(inv.gross_amount ?? inv.net_amount ?? 0),
       currency: String(inv.currency ?? "USD"),
       due: new Date(new Date(String(inv.created_at ?? today())).getTime() + 14 * 864e5)
@@ -831,7 +861,7 @@ function hydrateDbFromLive(params: {
         pay && typeof pay.sandbox_checkout_url === "string" ? pay.sandbox_checkout_url : undefined,
       gatewayCheckoutUrl:
         pay && typeof pay.checkout_url === "string" ? pay.checkout_url : undefined,
-      einvoiceScheme: String(inv.einvoice_scheme ?? "none"),
+      einvoiceScheme: scheme,
       einvoiceClearanceId: (inv.einvoice_clearance_id as string | null) ?? null,
       journalId: String(inv.journal_id ?? ""),
     };
@@ -871,18 +901,29 @@ function hydrateDbFromLive(params: {
     };
   });
 
-  // 10. Licences (derived from accepted Commercial Orders)
-  const licences: Licence[] = live.orders.map((ord) => ({
-    id: String(ord.order_id),
-    buyerId: String(ord.buyer_id),
-    productId: String(ord.product_id),
-    seats: 250,
-    used: 184,
-    renews: new Date(new Date(String(ord.created_at ?? today())).getTime() + 365 * 864e5)
-      .toISOString()
-      .slice(0, 10),
-    status: "active",
-  }));
+  // 10. Licences (derived from accepted Commercial Orders & Delivery Milestones)
+  const licences: Licence[] = live.orders.map((ord) => {
+    const linkedOffer = live.offers.find((o) => String(o.offer_id) === String(ord.offer_id));
+    const qty = Number(linkedOffer?.quantity ?? 1);
+    const seats = qty > 1 ? qty : 100;
+    const proj = projects.find((p) => p.orderId === String(ord.order_id));
+    const doneRatio =
+      proj && proj.milestones.length > 0
+        ? proj.milestones.filter((m) => m.status === "done").length / proj.milestones.length
+        : 0.5;
+    const used = Math.max(1, Math.min(seats, Math.round(seats * Math.max(0.25, doneRatio))));
+    return {
+      id: String(ord.order_id),
+      buyerId: String(ord.buyer_id),
+      productId: String(ord.product_id),
+      seats,
+      used,
+      renews: new Date(new Date(String(ord.created_at ?? today())).getTime() + 365 * 864e5)
+        .toISOString()
+        .slice(0, 10),
+      status: "active",
+    };
+  });
 
   // 11. Support Cases (derived from Delivery Incidents)
   const cases: SupportCase[] = live.incidents.map((inc, idx) => {
@@ -901,7 +942,7 @@ function hydrateDbFromLive(params: {
       ref: `CASE-0${120 + idx}`,
       companyId,
       projectId: inc.project_id ? String(inc.project_id) : undefined,
-      title: `${String(inc.category ?? "sla").toUpperCase()} · ${String(inc.summary ?? "").slice(0, 52)}`,
+      title: String(inc.summary ?? "Support request").slice(0, 64),
       priority,
       status: "open",
       opened: String(inc.created_at ?? today()),
@@ -914,7 +955,7 @@ function hydrateDbFromLive(params: {
         {
           from: advisorId,
           at: String(inc.created_at ?? today()),
-          body: "Logged in DGIX Delivery & Continuous Assurance Ledger. Assigned to regional SLA desk.",
+          body: "Your support case has been received and assigned to your delivery advisor.",
         },
       ],
     };
@@ -952,11 +993,14 @@ async function runBatchedTasks<T>(tasks: Array<() => Promise<T>>, concurrency = 
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [personas, setPersonas] = useState<PersonaSummary[]>([]);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [catalogueDisclaimer, setCatalogueDisclaimer] = useState<string>(DEFAULT_DISCLAIMER);
   const [live, setLive] = useState<LiveBackendState>(EMPTY_LIVE);
   const [localNotifications, setLocalNotifications] = useState<Db["notifications"]>([]);
+  const [caseOverrides, setCaseOverrides] = useState<
+    Record<string, { extraMessages: SupportCase["messages"]; status?: SupportCase["status"] }>
+  >({});
+  const [declinedOffers, setDeclinedOffers] = useState<Record<string, boolean>>({});
   const [ready, setReady] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -969,30 +1013,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const refreshLiveForSession = useCallback(
-    async (sessionArg: AuthSession | null, personasArg?: PersonaSummary[]) => {
-      setSyncing(true);
-      try {
-        const [pList, pubCat] = await Promise.all([
-          personasArg && personasArg.length > 0 ? Promise.resolve(personasArg) : fetchUatPersonas(),
-          apiFetch<{ disclaimer: string; count: number; listings: LiveListing[] }>(
-            "/bff/v1/public/listings",
-            { method: "GET", auth: false },
-          ).catch((err) => {
-            if (mountedRef.current) {
-              setLastError(
-                err instanceof Error
-                  ? `BFF connection error: ${err.message}`
-                  : "Could not reach DGIX BFF Gateway (:18118)",
-              );
-            }
-            return fetchPublicCatalogue();
-          }),
-        ]);
+  const refreshLiveForSession = useCallback(async (sessionArg: AuthSession | null) => {
+    setSyncing(true);
+    try {
+      const pubCat = await apiFetch<{ disclaimer: string; count: number; listings: LiveListing[] }>(
+        "/bff/v1/public/listings",
+        { method: "GET", auth: false },
+      ).catch((err) => {
+        if (mountedRef.current) {
+          setLastError(
+            err instanceof Error ? err.message : "Could not reach DGIX services.",
+          );
+        }
+        return fetchPublicCatalogue();
+      });
 
-        if (!mountedRef.current) return;
-        if (pList.length > 0) setPersonas(pList);
-        if (pubCat.disclaimer) setCatalogueDisclaimer(pubCat.disclaimer);
+      if (!mountedRef.current) return;
+      if (pubCat.disclaimer) setCatalogueDisclaimer(pubCat.disclaimer);
 
         if (!sessionArg) {
           setLive({ ...EMPTY_LIVE, listings: pubCat.listings });
@@ -1236,39 +1273,45 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
         document.cookie = "dgix_role=; path=/; max-age=0";
       }
-      const pList = await fetchUatPersonas();
-      if (mountedRef.current && pList.length > 0) {
-        setPersonas(pList);
-      }
-      await refreshLiveForSession(stored, pList);
+      await refreshLiveForSession(stored);
       if (mountedRef.current) setReady(true);
     })();
   }, [refreshLiveForSession]);
 
   const refreshLive = useCallback(async () => {
-    await refreshLiveForSession(loadStoredSession() ?? authSession, personas);
-  }, [authSession, personas, refreshLiveForSession]);
+    await refreshLiveForSession(loadStoredSession() ?? authSession);
+  }, [authSession, refreshLiveForSession]);
 
   const db = useMemo<Db>(() => {
     const hydrated = hydrateDbFromLive({
-      personas,
       activeSession: authSession,
       disclaimer: catalogueDisclaimer,
       live,
     });
+    const mergedCases = hydrated.cases.map((c) => {
+      const ov = caseOverrides[c.id];
+      if (!ov) return c;
+      return {
+        ...c,
+        status: ov.status ?? c.status,
+        messages: [...c.messages, ...ov.extraMessages],
+      };
+    });
+    const mergedOffers = hydrated.offers.map((o) =>
+      declinedOffers[o.id] ? { ...o, status: "declined" as const } : o,
+    );
     return {
       ...hydrated,
+      cases: mergedCases,
+      offers: mergedOffers,
       notifications: localNotifications,
     };
-  }, [personas, authSession, catalogueDisclaimer, live, localNotifications]);
+  }, [authSession, catalogueDisclaimer, live, localNotifications, caseOverrides, declinedOffers]);
 
   const user = useMemo<User | null>(() => {
     if (!authSession) return null;
-    return (
-      db.users.find((u) => u.id === authSession.user.sub) ??
-      buildUserFromSession(authSession, personas)
-    );
-  }, [authSession, db.users, personas]);
+    return db.users.find((u) => u.id === authSession.user.sub) ?? buildUserFromSession(authSession);
+  }, [authSession, db.users]);
 
   const setSessionCookies = (u: User) => {
     if (typeof document === "undefined") return;
@@ -1297,25 +1340,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setLastError(null);
       const session = await loginWithPassword(identifier, password);
       setAuthSession(session);
-      const u = buildUserFromSession(session, personas);
+      const u = buildUserFromSession(session);
       setSessionCookies(u);
-      await refreshLiveForSession(session, personas);
+      await refreshLiveForSession(session);
       return u;
     },
-    [personas, refreshLiveForSession],
-  );
-
-  const switchPersona = useCallback(
-    async (username: string): Promise<User> => {
-      setLastError(null);
-      const session = await loginAsUatPersona(username);
-      setAuthSession(session);
-      const u = buildUserFromSession(session, personas);
-      setSessionCookies(u);
-      await refreshLiveForSession(session, personas);
-      return u;
-    },
-    [personas, refreshLiveForSession],
+    [refreshLiveForSession],
   );
 
   const registerLive = useCallback(
@@ -1326,16 +1356,135 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       password: string;
       company_name: string;
       country_code?: string;
+      skip_partner_bootstrap?: boolean;
     }): Promise<User> => {
       setLastError(null);
       const session = await registerOrganization(input);
       setAuthSession(session);
-      const u = buildUserFromSession(session, personas);
+      const u = buildUserFromSession(session);
       setSessionCookies(u);
-      await refreshLiveForSession(session, personas);
+      await refreshLiveForSession(session);
       return u;
     },
-    [personas, refreshLiveForSession],
+    [refreshLiveForSession],
+  );
+
+  const applyPartnerLive = useCallback(
+    async (input: {
+      companyName: string;
+      registrationNumber: string;
+      countryCode: string;
+      directorName: string;
+      directorRole: string;
+      referenceOrg: string;
+      referenceContact: string;
+      referenceEmail: string;
+      productName: string;
+      category: Category;
+      tagline: string;
+      description: string;
+      markets: string[];
+      priceFrom: number;
+      fullName?: string;
+      email?: string;
+      password?: string;
+    }): Promise<User> => {
+      setLastError(null);
+      let activeSession = loadStoredSession() ?? authSession;
+      const isoCountry = toIsoCountry(input.countryCode);
+
+      if (!activeSession || activeSession.user.portal_role !== "seller") {
+        if (!input.email || !input.password || !input.fullName) {
+          throw new Error("Please enter your full name, work email, and password to create your partner account.");
+        }
+        activeSession = await registerOrganization({
+          account_type: "seller",
+          full_name: input.fullName.trim(),
+          email: input.email.trim(),
+          password: input.password,
+          company_name: input.companyName.trim(),
+          country_code: isoCountry,
+          skip_partner_bootstrap: true,
+        });
+        setAuthSession(activeSession);
+      }
+
+      const u = buildUserFromSession(activeSession);
+      setSessionCookies(u);
+
+      const summaryText = `${input.tagline.trim()} — ${input.description.trim()}`.slice(0, 3900);
+      await apiFetch("/bff/v1/partners", {
+        method: "POST",
+        body: {
+          legal_name: input.companyName.trim(),
+          registration_number: input.registrationNumber.trim(),
+          country_code: isoCountry,
+          directors: [
+            {
+              full_name: input.directorName.trim(),
+              country_code: isoCountry,
+              role_title: input.directorRole.trim() || "Managing Director",
+            },
+          ],
+          references: [
+            {
+              organisation: input.referenceOrg.trim(),
+              contact_name: input.referenceContact.trim(),
+              contact_email: input.referenceEmail.trim(),
+            },
+          ],
+          product_summary:
+            summaryText.length >= 10
+              ? summaryText
+              : `${input.productName.trim()} enterprise software solution by ${input.companyName.trim()}.`,
+        },
+      }).catch((err: unknown) => {
+        if (err instanceof Error && !err.message.toLowerCase().includes("already exists")) {
+          throw err;
+        }
+      });
+
+      const createdProd = await apiFetch<Record<string, unknown>>("/bff/v1/products", {
+        method: "POST",
+        body: {
+          name: input.productName.trim(),
+          category: input.category,
+          pao_user_id: u.id,
+          daffodil_owned: false,
+        },
+      });
+      const pid = String(createdProd.product_id);
+      const createdVer = await apiFetch<Record<string, unknown>>(
+        `/bff/v1/products/${pid}/versions`,
+        {
+          method: "POST",
+          body: { semver: "1.0.0", material_change: false },
+        },
+      );
+      await apiFetch("/bff/v1/iam/pao-bindings", {
+        method: "POST",
+        body: {
+          product_id: pid,
+          pao_user_id: u.id,
+          no_conflict_declared: true,
+        },
+      }).catch(() => undefined);
+
+      const countryCodes = input.markets.map(toIsoCountry);
+      await apiFetch("/bff/v1/governance/assessments", {
+        method: "POST",
+        body: {
+          product_id: pid,
+          product_version_id: String(createdVer.version_id),
+          pao_user_id: u.id,
+          country_codes: countryCodes.length > 0 ? countryCodes : [isoCountry],
+        },
+      }).catch(() => undefined);
+
+      await refreshLiveForSession(activeSession);
+      return u;
+    },
+    [authSession, refreshLiveForSession],
   );
 
   const uploadRealEvidence = useCallback(
@@ -1381,7 +1530,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     db,
     ready,
     user,
-    personas,
     authSession,
     catalogueDisclaimer,
     live,
@@ -1390,31 +1538,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     clearError: () => setLastError(null),
     refreshLive,
     loginLive,
-    switchPersona,
     registerLive,
+    applyPartnerLive,
     uploadRealEvidence,
 
     signIn: (email, password) => {
       void loginLive(email, password).catch((err) => {
         setLastError(err instanceof Error ? err.message : "Invalid credentials");
       });
-      const candidate = db.users.find(
-        (u) =>
-          u.email.toLowerCase() === email.trim().toLowerCase() ||
-          u.username?.toLowerCase() === email.trim().toLowerCase(),
-      );
-      return candidate ?? null;
-    },
-
-    signInAs: (idOrUsername) => {
-      const target = db.users.find(
-        (u) => u.id === idOrUsername || u.username === idOrUsername,
-      );
-      const uname = target?.username ?? idOrUsername.replace(/^persona-/, "");
-      void switchPersona(uname).catch((err) => {
-        setLastError(err instanceof Error ? err.message : "Persona login failed");
-      });
-      return target ?? null;
+      return null;
     },
 
     signOut: () => {
@@ -1424,7 +1556,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         document.cookie = "dgix_role=; path=/; max-age=0";
       }
       setAuthSession(null);
-      void refreshLiveForSession(null, personas);
+      void refreshLiveForSession(null);
     },
 
     reset: () => {
@@ -1432,7 +1564,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     updateProfile: () => {
-      // Managed in Keycloak OIDC
+      // Managed via identity profile
     },
     changePassword: () => true,
 
@@ -1510,8 +1642,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
 
-    declineOffer: () => {
-      // Buyer decline stays client-side unless staff withdraws
+    declineOffer: (offerId) => {
+      setDeclinedOffers((prev) => ({ ...prev, [offerId]: true }));
     },
 
     acceptMilestone: (projectId, milestoneId) => {
@@ -1520,7 +1652,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           `/bff/v1/finance/delivery/projects/${projectId}/milestones/${milestoneId}/accept`,
           {
             method: "POST",
-            body: { notes: "Accepted via DGIX Buyer Delivery Console." },
+            body: { notes: "Milestone accepted." },
           },
         );
       });
@@ -1570,11 +1702,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
 
-    replyCase: () => {
-      // Incident follow-up notes
+    replyCase: (caseId, body) => {
+      const trimmed = body.trim();
+      if (!trimmed) return;
+      setCaseOverrides((prev) => {
+        const cur = prev[caseId] ?? { extraMessages: [] };
+        return {
+          ...prev,
+          [caseId]: {
+            ...cur,
+            extraMessages: [
+              ...cur.extraMessages,
+              { from: user?.id ?? "", at: today(), body: trimmed },
+            ],
+          },
+        };
+      });
     },
-    resolveCase: () => {
-      // Incident resolution
+
+    resolveCase: (caseId) => {
+      setCaseOverrides((prev) => {
+        const cur = prev[caseId] ?? { extraMessages: [] };
+        return {
+          ...prev,
+          [caseId]: {
+            ...cur,
+            status: "resolved",
+          },
+        };
+      });
     },
 
     uploadEvidence: (productId, checkKey) => {
@@ -1609,7 +1765,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     submitMilestone: () => {
-      // Milestones created on project are immediately visible to Buyer for acceptance
+      void refreshLive();
     },
 
     confirmShortlist: (requestId, productIds) => {
@@ -1624,7 +1780,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await apiFetch(`/bff/v1/commercial/matching/shortlists/${req.shortlistId}/approve`, {
           method: "POST",
           body: {
-            advisor_notes: "4-eyes shortlist review approved via DGIX Advisor Console.",
+            advisor_notes: "Shortlist reviewed and approved by your DGIX Advisor.",
             ...(selectedListingIds && selectedListingIds.length > 0
               ? { selected_listing_ids: selectedListingIds }
               : {}),
@@ -1645,11 +1801,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     sendOffer: () => {
-      // Offers created via POST /bff/v1/commercial/offers are immediately sent
+      void refreshLive();
     },
 
-    approveCheck: () => {
-      // Detailed gate decisions handled in /admin/review
+    approveCheck: (productId, checkKey) => {
+      const prod = db.products.find((p) => p.id === productId);
+      if (!prod?.assessmentId) return;
+      const gateMap: Record<string, Gate> = {
+        security: "PG1",
+        privacy: "PG2",
+        hosting: "PG3",
+        quality: "PG4",
+        delivery: "PG4",
+        commercial: "PG5",
+      };
+      const gate = gateMap[checkKey] ?? prod.gate;
+      runBg(async () => {
+        await apiFetch(
+          `/bff/v1/governance/assessments/${prod.assessmentId}/gates/${gate}/decisions`,
+          {
+            method: "POST",
+            body: {
+              decision: "passed",
+              rationale: `${checkKey} verification approved.`,
+              domain_scores: {},
+              evidence_ids: [],
+              findings: [],
+            },
+          },
+        );
+      });
     },
 
     verifyPayment: (invoiceId) => {

@@ -14,18 +14,6 @@ import { CAT_LABEL, MARKETS, chipFor, score } from "@/components/marketing/catal
 import { AdvisorCard, Svg } from "@/components/marketing/catalogue/ui";
 
 type Badge = "verified" | "certified" | "declared" | "inferred" | "estimated" | "review";
-const CLAIMS: Record<string, { label: string; badge: Badge }[]> = {
-  "smart-hospital": [
-    { label: "Multi-clinic billing with insurance claims", badge: "verified" },
-    { label: "Electronic medical records, HL7 / FHIR", badge: "verified" },
-    { label: "ISO 27001 information security", badge: "certified" },
-    { label: "Arabic interface", badge: "declared" },
-    { label: "Live in 40+ clinics across Bangladesh", badge: "verified" },
-  ],
-};
-const LIMITS: Record<string, string> = {
-  "smart-hospital": "Custom reports need configuration. Arabic is declared by the partner and will be checked in your demo.",
-};
 
 function claimsFor(p: Product): { label: string; badge: Badge }[] {
   if (p.claimsSnapshot && p.claimsSnapshot.length > 0) {
@@ -38,7 +26,6 @@ function claimsFor(p: Product): { label: string; badge: Badge }[] {
       return { label: c.statement, badge };
     });
   }
-  if (CLAIMS[p.slug]) return CLAIMS[p.slug];
   return p.checks.map((c) => ({
     label: c.score >= c.max ? c.label : `${c.label}${c.note ? ` — ${c.note}` : ""}`,
     badge: (c.score >= c.max ? (c.key === "security" ? "certified" : "verified") : "review") as Badge,
@@ -114,9 +101,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const steps = [
     { title: "Passport approved", sub: p.reviewedOn ? dateShort(p.reviewedOn) : "Pending", done: !!p.reviewedOn },
-    { title: `Claims verified · ${full}/${p.checks.length}`, sub: "Independent reviewer & 2-member council", done: full === p.checks.length },
+    { title: `Claims verified · ${full}/${p.checks.length}`, sub: "Independent review & council sign-off", done: full === p.checks.length },
     { title: "Live demo run", sub: listed ? "Run by DGIX · passed" : "Pilot evaluation", done: listed, bold: true },
-    { title: `Readiness score · ${s}/100`, sub: isPilot ? "Pilot-Eligible — Not Globally Ready (BR-05)" : "Globally Ready (≥90/100)", done: s >= 90 },
+    { title: `Readiness score · ${s}/100`, sub: isPilot ? "Pilot-Eligible" : "Globally Ready (90+/100)", done: s >= 90 },
     { title: `${listed ? "Listed" : isPilot ? "Pilot-Eligible" : "In review"} · ${p.markets.join(", ")}`, done: listed },
   ];
 
@@ -207,7 +194,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <div className="flex items-start gap-3 rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] px-5 py-3.5 text-sm leading-5 text-[#2C3E66]">
             <Svg name="info" size={18} color="#1E4FA3" className="mt-0.5" />
             <div>
-              <span className="font-semibold text-ink">Verification Scope Notice (FR-CAT-02): </span>
+              <span className="font-semibold text-ink">Verification note: </span>
               {catalogueDisclaimer}
             </div>
           </div>
@@ -228,7 +215,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <h2 className="text-[32px] font-light leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-12">What your offer will include.</h2>
             <div className="flex flex-col gap-4 md:flex-row">
               {[
-                { icon: "card", t: "Exact price", d: "Approved above verified cost floor with 4-eyes commercial sign-off." },
+                { icon: "card", t: "Exact price", d: "Transparent commercial pricing reviewed and approved by DGIX." },
                 { icon: "clock", t: "Signed SLA", d: p.supportSummary || "1 business-day response, 99.9% uptime." },
                 { icon: "shield", t: "Warranty & exit", d: "Milestone-backed warranty and full structured data export if you leave." },
               ].map((x) => (
@@ -244,7 +231,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               <div className="text-sm leading-[22px] text-[#6B4A12]">
                 <span className="font-semibold">Known limits &amp; scope.</span>{" "}
                 {p.knownLimits ??
-                  LIMITS[p.slug] ??
                   (p.checks.filter((c) => c.note).map((c) => c.note).join(". ") ||
                     "Custom integrations require milestone scoping. Declared items are verified during your live demo.")}
               </div>
@@ -256,7 +242,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <AdvisorCard href={user?.role === "buyer" ? "/buyer/support" : "/contact"} />
           <div className="flex flex-col rounded-lg bg-mist bg-[radial-gradient(ellipse_70%_90%_at_100%_0%,#C9DCFF_0%,#C9DCFF00_60%)] p-7">
             <div className="pb-5 text-[13px] leading-4 text-muted">
-              Quality gate · {listed ? "Ed25519 Council Approved" : isPilot ? "Pilot-Eligible (80–89)" : "in progress"}
+              Quality gate · {listed ? "Council Approved" : isPilot ? "Pilot-Eligible (80–89)" : "In progress"}
             </div>
             {steps.map((st, i) => {
               const last = i === steps.length - 1;

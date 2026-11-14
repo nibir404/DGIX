@@ -98,7 +98,7 @@ export default function Partners() {
         }),
       });
       await refreshLive();
-      flash("Draft Commercial Agreement created · switch to legal.signer for 4-eyes execution");
+      flash("Draft commercial agreement created · awaiting second legal countersignature");
     } catch (err) {
       flash(err instanceof Error ? err.message : "Failed to draft agreement");
     } finally {
@@ -113,9 +113,9 @@ export default function Partners() {
         method: "POST",
       });
       await refreshLive();
-      flash("Commercial Agreement signed via 4-Eyes Legal Sign-Off!");
+      flash("Commercial agreement countersigned");
     } catch (err) {
-      flash(err instanceof Error ? err.message : "4-Eyes Violation: Switch to legal.signer to countersign");
+      flash(err instanceof Error ? err.message : "A second authorised legal counsel must countersign this agreement.");
     } finally {
       setBusyId(null);
     }
@@ -125,7 +125,7 @@ export default function Partners() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
-          <Kicker>Legal KYB Sanctions, Portfolio Triage &amp; 4-Eyes Commercial Rights ({authSession?.user.username ?? "staff"})</Kicker>
+          <Kicker>Partner KYB screening, portfolio review &amp; commercial distribution agreements</Kicker>
           <H1>Legal, KYB &amp; Partners</H1>
         </div>
         <div className="flex self-start rounded-lg bg-white p-1 text-[13px] md:self-auto">
@@ -137,15 +137,15 @@ export default function Partners() {
         </div>
       </div>
 
-      {/* Live KYB Onboarding & Commercial Rights 4-Eyes Desk */}
+      {/* Live KYB Onboarding & Commercial Rights Desk */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-lg bg-white p-6">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-medium">Partner KYB &amp; Sanctions Queue</h2>
-            <span className="text-xs text-muted">Role: legal / dgix_admin</span>
+            <span className="text-xs text-muted">Legal &amp; compliance review</span>
           </div>
           {live.partners.length === 0 ? (
-            <p className="text-xs text-muted">No live partner records fetched yet.</p>
+            <p className="text-xs text-muted">No partner records pending review.</p>
           ) : (
             <div className="flex flex-col divide-y divide-line">
               {live.partners.map((pt) => {
@@ -161,14 +161,14 @@ export default function Partners() {
                       </div>
                     </div>
                     {cleared ? (
-                      <Chip tone="success">KYB &amp; Triage Cleared</Chip>
+                      <Chip tone="success">KYB Cleared</Chip>
                     ) : (
                       <Button
                         size="sm"
                         disabled={busyId === pid}
                         onClick={() => void runKybAndTriage(pid, String(pt.legal_name))}
                       >
-                        {busyId === pid ? "Screening..." : "Screen Sanctions & Accept"}
+                        {busyId === pid ? "Screening..." : "Verify KYB & Accept"}
                       </Button>
                     )}
                   </div>
@@ -180,8 +180,8 @@ export default function Partners() {
 
         <section className="rounded-lg bg-white p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-medium">4-Eyes Commercial Agreements</h2>
-            <span className="text-xs text-muted">Maker: legal.user · Checker: legal.signer</span>
+            <h2 className="text-lg font-medium">Commercial Agreements</h2>
+            <span className="text-xs text-muted">Two-person legal sign-off</span>
           </div>
           <form onSubmit={draftAgreement} className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-[#F8FAFE] p-3 text-xs">
             <select
@@ -235,7 +235,7 @@ export default function Partners() {
               const aid = String(ag.agreement_id);
               const st = String(ag.status ?? "draft");
               const prod = live.products.find((p) => String(p.product_id) === String(ag.product_id));
-              const sameMaker = authSession?.user.sub && String(ag.created_by) === authSession.user.sub;
+              const sameMaker = Boolean(authSession?.user.sub && String(ag.created_by) === authSession.user.sub);
               return (
                 <div key={aid} className="flex items-center justify-between gap-2 py-2.5 text-xs">
                   <div className="min-w-0 flex-1">
@@ -247,15 +247,15 @@ export default function Partners() {
                     </div>
                   </div>
                   {st === "signed" ? (
-                    <Chip tone="success">Signed (4-Eyes)</Chip>
+                    <Chip tone="success">Signed</Chip>
                   ) : (
                     <Button
                       size="sm"
                       variant={sameMaker ? "outline" : "primary"}
-                      disabled={busyId === aid}
+                      disabled={sameMaker || busyId === aid}
                       onClick={() => void signAgreement(aid)}
                     >
-                      {sameMaker ? "Switch to legal.signer" : "Sign (4-Eyes)"}
+                      {sameMaker ? "Awaiting countersignature" : "Countersign"}
                     </Button>
                   )}
                 </div>
@@ -268,7 +268,7 @@ export default function Partners() {
       <section className="overflow-x-auto rounded-lg bg-white p-6">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead><tr className="border-b border-line text-xs font-medium uppercase tracking-[0.06em] text-subtle">
-            <th className="pb-3">{tab === "partner" ? "Partner" : "Buyer"}</th><th className="pb-3">{tab === "partner" ? "Products" : "Requests"}</th><th className="pb-3">Live deals</th><th className="pb-3">{tab === "partner" ? "SLA" : "Advisor"}</th><th className="pb-3 text-right">{tab === "partner" ? "Paid out" : "Invoiced"}</th>
+            <th className="pb-3">{tab === "partner" ? "Partner" : "Buyer"}</th><th className="pb-3">{tab === "partner" ? "Products" : "Requests"}</th><th className="pb-3">Live deals</th><th className="pb-3">{tab === "partner" ? "Standing" : "Advisor"}</th><th className="pb-3 text-right">{tab === "partner" ? "Paid out" : "Invoiced"}</th>
           </tr></thead>
           <motion.tbody key={tab} initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.05 } } }}>
             {companies.map((c, i) => {
@@ -284,7 +284,7 @@ export default function Partners() {
                   </td>
                   <td className="pr-4">{tab === "partner" ? s.products.map((p) => p.name).join(", ") || "—" : db.requests.filter((r) => r.buyerId === c.id).length}</td>
                   <td className="pr-4">{tab === "partner" ? s.projects.length : buyerProjects.length}</td>
-                  <td className={"pr-4 " + (tab === "partner" ? (s.watch ? "text-warning" : "text-success") : "")}>{tab === "partner" ? (s.watch ? "98.9%" : s.projects.length ? "99.8%" : "100%") : L.user(c.advisorId)?.name}</td>
+                  <td className={"pr-4 " + (tab === "partner" ? (s.watch ? "text-warning" : "text-success") : "")}>{tab === "partner" ? (s.watch ? "At risk" : "On track") : L.user(c.advisorId)?.name}</td>
                   <td className="text-right text-[15px] font-semibold">{fmtMoney(tab === "partner" ? s.paid : db.invoices.filter((x) => x.buyerId === c.id).reduce((a, x) => a + x.amount, 0))}</td>
                 </motion.tr>
               );
@@ -295,9 +295,9 @@ export default function Partners() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-lg bg-white p-6">
-          <div className="text-sm text-muted">Products in gate pipeline</div>
+          <div className="text-sm text-muted">Products in review pipeline</div>
           <div className="mt-2 text-[34px] font-light">{db.products.length}</div>
-          <Link href="/admin/review" className="text-[13px] text-primary">Open gate review →</Link>
+          <Link href="/admin/review" className="text-[13px] text-primary">Open product review →</Link>
         </section>
         <section className="rounded-lg bg-white p-6">
           <div className="text-sm text-muted">Buyers by country</div>
@@ -307,9 +307,9 @@ export default function Partners() {
           </div>
         </section>
         <section className="relative overflow-hidden rounded-lg bg-night-hero p-6 text-white">
-          <div className="text-sm text-haze">Re-reviews &amp; gap letters</div>
+          <div className="text-sm text-haze">Open verification notices</div>
           <div className="mt-2 text-[34px] font-light">{live.gapLetters.length || reReview.length}</div>
-          <Link href="/admin/review" className="text-[13px] text-glow-amber">Inspect evidence &amp; gates →</Link>
+          <Link href="/admin/review" className="text-[13px] text-glow-amber">Open product review →</Link>
         </section>
       </div>
 
@@ -330,7 +330,7 @@ export default function Partners() {
           <h2 className="text-lg">Signed agreements</h2>
           <div className="mt-4 flex flex-col gap-2 text-[13px]">
             <div><span className="text-primary">●</span> Active signed agreements · {live.agreements.filter((a) => a.status === "signed").length}</div>
-            <div><span className="text-sky">●</span> Pending 4-eyes signature · {live.agreements.filter((a) => a.status !== "signed").length}</div>
+            <div><span className="text-sky">●</span> Pending countersignature · {live.agreements.filter((a) => a.status !== "signed").length}</div>
             <div><span className="text-glow-amber">●</span> Cleared KYB partners · {live.partners.length}</div>
           </div>
         </section>

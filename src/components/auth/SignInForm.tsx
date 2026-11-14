@@ -5,14 +5,13 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Field, inputCls, PrimaryButton, safeNext } from "./AuthShell";
-import { TestAccounts } from "./TestAccounts";
-import { portalHome, useStore } from "@/lib/store";
+import { homeForUser, useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
 export function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const { loginLive, signIn } = useStore();
+  const { loginLive } = useStore();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -20,7 +19,7 @@ export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const go = (u: User) => router.push(safeNext(params.get("next")) ?? portalHome[u.role]);
+  const go = (u: User) => router.push(safeNext(params.get("next")) ?? homeForUser(u));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,12 +31,7 @@ export function SignInForm() {
       const u = await loginLive(identifier.trim(), password);
       go(u);
     } catch (err) {
-      const fallback = signIn(identifier.trim(), password);
-      if (fallback) {
-        go(fallback);
-        return;
-      }
-      setError(err instanceof Error ? err.message : "Invalid email/username or password.");
+      setError(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
       setBusy(false);
     }
@@ -45,7 +39,7 @@ export function SignInForm() {
 
   const sso = (p: string) =>
     setNotice(
-      `${p} enterprise federation connects through Keycloak OIDC in production. Use your work email/username or pick any live Keycloak UAT persona below.`,
+      `Single sign-on with ${p} is enabled for organisations with federated enterprise SSO configured. Sign in below with your work email or username.`,
     );
 
   return (
@@ -53,7 +47,7 @@ export function SignInForm() {
       <div className="flex flex-col gap-2">
         <h2 className="text-[34px] leading-[42px] md:text-[40px] md:leading-12 font-light tracking-tight text-ink">Sign in</h2>
         <p className="text-[15px] leading-[18px] text-muted">
-          Buyers, software partners and DGIX governance staff authenticate via Keycloak OIDC.
+          Sign in to your buyer, partner, or advisor workspace.
         </p>
       </div>
       <div className="flex flex-col gap-3">
@@ -68,11 +62,11 @@ export function SignInForm() {
       </div>
       <div className="flex items-center gap-3">
         <div className="h-px grow bg-mist" />
-        <span className="text-[13px] leading-4 text-[#9AA2B4]">or with email / username</span>
+        <span className="text-[13px] leading-4 text-[#9AA2B4]">or with email</span>
         <div className="h-px grow bg-mist" />
       </div>
       <form onSubmit={submit} className="flex flex-col gap-6">
-        <Field label="Work email or Keycloak username">
+        <Field label="Work email or username">
           <input
             type="text"
             required
@@ -82,7 +76,7 @@ export function SignInForm() {
               setIdentifier(e.target.value);
               setError(null);
             }}
-            placeholder="buyer.user@example.test or dana.admin"
+            placeholder="name@company.com"
             className={inputCls}
           />
         </Field>
@@ -91,7 +85,7 @@ export function SignInForm() {
           aside={
             <button
               type="button"
-              onClick={() => setNotice("Local UAT accounts share password dgix_local_only. Or click any persona below.")}
+              onClick={() => setNotice("Contact your organisation administrator or support@dgix.daffodil.global to reset your password.")}
               className="underline underline-offset-2"
             >
               Forgot?
@@ -108,7 +102,7 @@ export function SignInForm() {
                 setPassword(e.target.value);
                 setError(null);
               }}
-              placeholder="dgix_local_only"
+              placeholder="••••••••"
               className={inputCls + " pr-12"}
             />
             <button
@@ -133,12 +127,11 @@ export function SignInForm() {
             </motion.p>
           )}
         </AnimatePresence>
-        <PrimaryButton disabled={busy}>{busy ? "Authenticating via Keycloak..." : "Sign in"}</PrimaryButton>
+        <PrimaryButton disabled={busy}>{busy ? "Signing in..." : "Sign in"}</PrimaryButton>
       </form>
       <p className="text-center text-sm leading-[18px] text-muted">
         New to DGIX? <Link href="/create-account" className="font-semibold text-ink underline underline-offset-2">Create an account</Link>
       </p>
-      <TestAccounts onSignedIn={go} />
     </div>
   );
 }

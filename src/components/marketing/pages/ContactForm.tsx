@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon } from "@/components/ui/Icon";
+import { submitPublicInquiry } from "@/lib/api";
 import { useLookup, useStore } from "@/lib/store";
 import { Toast } from "@/components/portal/ui";
 
@@ -19,12 +20,14 @@ export function ContactForm() {
   const { user, ready, signOut, createRequest } = useStore();
   const look = useLookup();
   const company = look.company(user?.companyId);
-  const advisor = look.user(company?.advisorId ?? "u-asha");
-  const advisorFirst = advisor?.name.split(" ")[0] ?? "Asha";
+  const advisor = look.user(company?.advisorId);
+  const advisorLabel = advisor?.name ?? "your advisor";
 
   const [mode, setMode] = useState<Mode>(params.get("role") === "seller" ? "sell" : "buy");
   const [f, setF] = useState({ name: "", email: "", company: "", country: "United Arab Emirates", need: "" });
   const [sent, setSent] = useState<null | { ref?: string }>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
@@ -42,18 +45,40 @@ export function ContactForm() {
     if (params.get("topic") === "readiness") setF((p) => (p.need ? p : { ...p, need: "I'd like a readiness report for our product." }));
   }, [params]);
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setError(null);
+    setF((p) => ({ ...p, [k]: e.target.value }));
+  };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setError(null);
     if (user?.role === "buyer" && mode === "buy") {
       const firstLine = f.need.split(/[.\n]/)[0].trim().slice(0, 80) || "New request from contact form";
-      const req = createRequest({ title: firstLine, need: f.need, country: f.country, budget: "To be confirmed", users: "To be confirmed", goLive: "To be confirmed" });
+      const req = createRequest({ title: firstLine, need: f.need, country: f.country, budget: "45000", users: "250", goLive: "6 weeks" });
       setSent({ ref: req.ref });
       setToast(true);
       setTimeout(() => setToast(false), 3200);
-    } else {
-      setSent({});
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await submitPublicInquiry({
+        mode,
+        full_name: f.name.trim(),
+        email: f.email.trim(),
+        company: f.company.trim(),
+        country: f.country,
+        need: f.need.trim(),
+      });
+      setSent({ ref: res.reference });
+      setToast(true);
+      setTimeout(() => setToast(false), 3200);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send your message right now. Please try again.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -67,12 +92,21 @@ export function ContactForm() {
             <motion.div initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 18 }} className="flex size-16 items-center justify-center rounded-full bg-[#E6F4EC] text-success">
               <Icon name="check" size={30} strokeWidth={2} />
             </motion.div>
-            <div className="text-[28px] leading-[34px] font-light tracking-[-0.03em] text-ink">{signedIn ? `Sent to ${advisorFirst}.` : "Thanks, we've got it."}</div>
+            <div className="text-[28px] leading-[34px] font-light tracking-[-0.03em] text-ink">{signedIn ? `Sent to ${advisorLabel}.` : "Thanks, we've got it."}</div>
             <p className="max-w-[380px] text-[15px] leading-6 text-muted">
-              {sent.ref ? <>Your request <span className="font-mono text-ink">{sent.ref}</span> is being matched. Expect a verified shortlist within one business day.</> : "A named advisor will reply within one business day."}
+              {sent.ref ? (
+                mode === "buy" ? (
+                  <>Your request <span className="font-mono text-ink">{sent.ref}</span> is being matched. Expect a verified shortlist within one business day.</>
+                ) : (
+                  <>Your inquiry <span className="font-mono text-ink">{sent.ref}</span> has been logged with our partner team. Expect a reply within one business day.</>
+                )
+              ) : (
+                "A named advisor will reply within one business day."
+              )}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              {sent.ref && <Link href="/buyer" className="inline-flex h-11 items-center rounded-lg bg-ink px-5 text-sm font-semibold text-white">Open my portal</Link>}
+              {signedIn && user?.role === "buyer" && <Link href="/buyer" className="inline-flex h-11 items-center rounded-lg bg-ink px-5 text-sm font-semibold text-white">Open my portal</Link>}
+              {signedIn && user?.role === "seller" && <Link href="/seller" className="inline-flex h-11 items-center rounded-lg bg-ink px-5 text-sm font-semibold text-white">Open partner portal</Link>}
               <button onClick={() => { setSent(null); setF((p) => ({ ...p, need: "" })); }} className="inline-flex h-11 items-center rounded-lg border border-line px-5 text-sm font-medium text-ink">Send another</button>
             </div>
           </motion.div>
@@ -114,12 +148,14 @@ export function ContactForm() {
                 />
               </AnimatePresence>
             </Field>
+            {error && <p className="rounded-lg bg-[#FBE7E7] px-3.5 py-2.5 text-xs font-medium text-danger">{error}</p>}
             <button
               type="submit"
-              className="group flex h-14 items-center justify-center gap-[10px] rounded-lg text-base font-semibold leading-5 text-white shadow-[inset_0_1px_0_#FFFFFF66,0_12px_28px_-10px_#1E4FA3B3] transition-transform hover:-translate-y-0.5"
+              disabled={busy}
+              className="group flex h-14 items-center justify-center gap-[10px] rounded-lg text-base font-semibold leading-5 text-white shadow-[inset_0_1px_0_#FFFFFF66,0_12px_28px_-10px_#1E4FA3B3] transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               style={{ backgroundImage: "linear-gradient(180deg, #4C85EE 0%, #1E4FA3 100%)" }}
             >
-              {signedIn ? `Send to ${advisorFirst}, your advisor` : mode === "buy" ? "Get my verified shortlist" : "Apply to sell"}
+              {busy ? "Sending..." : signedIn ? "Send to advisory team" : mode === "buy" ? "Get my verified shortlist" : "Send partner inquiry"}
               <Icon name="arrowRight" size={18} strokeWidth={1.75} className="transition-transform group-hover:translate-x-0.5" />
             </button>
             <div className="text-center text-xs leading-[18px] text-muted">
@@ -137,7 +173,7 @@ export function ContactForm() {
           </motion.form>
         )}
       </AnimatePresence>
-      <Toast show={toast}>Request sent to {advisorFirst}</Toast>
+      <Toast show={toast}>Request received</Toast>
     </div>
   );
 }

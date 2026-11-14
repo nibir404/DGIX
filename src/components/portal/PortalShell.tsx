@@ -3,17 +3,28 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
 import { AccountMenu } from "./AccountMenu";
-import { useLookup, useStore } from "@/lib/store";
-import type { Db, Role } from "@/lib/types";
+import { staffHomeForRole, useLookup, useStore } from "@/lib/store";
+import type { Db, Role, User } from "@/lib/types";
 
 type Item = { href: string; label: string; icon: IconName; badge?: (db: Db, companyId: string) => number; tone?: "amber" | "red" };
-type Config = { groups: { label?: string; items: Item[] }[]; primary: { label: string; href: string }; search: string };
+type Config = { groups: { label?: string; items: Item[] }[]; primary?: { label: string; href: string }; search: string };
+
+const STAFF_ITEMS: Record<string, Item> = {
+  today: { href: "/admin", label: "Today", icon: "sun" },
+  matching: { href: "/admin/matching", label: "Matching desk", icon: "sparkle", badge: (db) => db.requests.filter((r) => r.status === "matching").length },
+  review: { href: "/admin/review", label: "Product review", icon: "shield", badge: (db) => db.products.filter((p) => p.status === "in_review").length },
+  offers: { href: "/admin/offers", label: "Offers & contracts", icon: "file" },
+  governance: { href: "/admin/governance", label: "Council & audit", icon: "lock" },
+  delivery: { href: "/admin/delivery", label: "Delivery", icon: "pulse", badge: (db) => db.projects.filter((p) => p.health !== "on_track").length, tone: "red" },
+  finance: { href: "/admin/finance", label: "Finance & ledger", icon: "card" },
+  partners: { href: "/admin/partners", label: "Partners & agreements", icon: "users" },
+};
 
 export const portalConfig: Record<Role, Config> = {
   buyer: {
@@ -68,45 +79,145 @@ export const portalConfig: Record<Role, Config> = {
     groups: [
       {
         items: [
-          { href: "/admin", label: "Today", icon: "sun" },
-          { href: "/admin/matching", label: "Matching desk", icon: "sparkle", badge: (db) => db.requests.filter((r) => r.status === "matching").length },
-          { href: "/admin/review", label: "Product review", icon: "shield", badge: (db) => db.products.filter((p) => p.status === "in_review").length },
-          { href: "/admin/offers", label: "Offers & contracts", icon: "file" },
+          STAFF_ITEMS.today,
+          STAFF_ITEMS.matching,
+          STAFF_ITEMS.review,
+          STAFF_ITEMS.offers,
         ],
       },
       {
-        label: "Governance & Operations",
+        label: "Operations",
         items: [
-          { href: "/admin/governance", label: "Council & audit", icon: "lock" },
-          { href: "/admin/delivery", label: "Delivery", icon: "pulse", badge: (db) => db.projects.filter((p) => p.health !== "on_track").length, tone: "red" },
-          { href: "/admin/finance", label: "Finance & ledger", icon: "card" },
-          { href: "/admin/partners", label: "Legal & KYB", icon: "users" },
+          STAFF_ITEMS.governance,
+          STAFF_ITEMS.delivery,
+          STAFF_ITEMS.finance,
+          STAFF_ITEMS.partners,
         ],
       },
     ],
   },
 };
 
+function getStaffConfigForUser(user?: User | null): Config {
+  const roles = new Set<string>(user?.dgixRoles ?? []);
+  const primary = user?.primaryDgixRole ?? "";
+  if (primary === "dgix_admin" || roles.has("dgix_admin")) {
+    return portalConfig.staff;
+  }
+  if (primary === "advisor" || roles.has("advisor")) {
+    return {
+      primary: { label: "+ New shortlist", href: "/admin/matching" },
+      search: "Search requests, shortlists, offers",
+      groups: [
+        {
+          items: [STAFF_ITEMS.today, STAFF_ITEMS.matching, STAFF_ITEMS.offers, STAFF_ITEMS.delivery],
+        },
+      ],
+    };
+  }
+  if (primary === "reviewer" || roles.has("reviewer")) {
+    return {
+      search: "Search products, gates, findings",
+      groups: [
+        {
+          items: [STAFF_ITEMS.review, STAFF_ITEMS.governance, STAFF_ITEMS.delivery],
+        },
+      ],
+    };
+  }
+  if (primary === "legal" || roles.has("legal")) {
+    return {
+      search: "Search partners, screenings, agreements",
+      groups: [
+        {
+          items: [STAFF_ITEMS.partners, STAFF_ITEMS.offers],
+        },
+      ],
+    };
+  }
+  if (primary === "finance" || roles.has("finance")) {
+    return {
+      search: "Search pricing, invoices, payouts",
+      groups: [
+        {
+          items: [STAFF_ITEMS.finance, STAFF_ITEMS.offers],
+        },
+      ],
+    };
+  }
+  if (primary === "council_member" || roles.has("council_member")) {
+    return {
+      search: "Search approvals, readiness, audit",
+      groups: [
+        {
+          items: [
+            { ...STAFF_ITEMS.governance, label: "Council & approvals" },
+            STAFF_ITEMS.review,
+          ],
+        },
+      ],
+    };
+  }
+  if (primary === "auditor" || roles.has("auditor")) {
+    return {
+      search: "Search audit entries, approvals, ledger",
+      groups: [
+        {
+          items: [
+            { ...STAFF_ITEMS.governance, label: "Audit & compliance" },
+            STAFF_ITEMS.review,
+            STAFF_ITEMS.finance,
+          ],
+        },
+      ],
+    };
+  }
+  return portalConfig.staff;
+}
+
 export function PortalShell({ role, children }: { role: Role; children: React.ReactNode }) {
-  const { db, user, authSession, syncing, lastError, clearError, refreshLive, ready } = useStore();
+  const { db, user, lastError, clearError, ready } = useStore();
   const { company } = useLookup();
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => setMenuOpen(false), [pathname]);
-  const cfg = portalConfig[role];
+
+  const cfg = useMemo<Config>(() => {
+    if (role === "staff") return getStaffConfigForUser(user);
+    return portalConfig[role];
+  }, [role, user]);
+
+  const allowedStaffHrefs = useMemo(() => {
+    if (role !== "staff") return null;
+    const hrefs = cfg.groups.flatMap((g) => g.items.map((it) => it.href));
+    return new Set([...hrefs, "/admin/account"]);
+  }, [role, cfg]);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!user || user.role !== role) {
+      router.replace("/sign-in");
+      return;
+    }
+    if (role === "staff" && allowedStaffHrefs) {
+      const permitted = Array.from(allowedStaffHrefs).some((href) =>
+        href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`),
+      );
+      if (!permitted) {
+        router.replace(staffHomeForRole(user));
+      }
+    }
+  }, [ready, user, role, pathname, allowedStaffHrefs, router]);
+
   const co = company(user?.companyId);
   const unread = user ? db.notifications.filter((n) => n.userId === user.id && !n.read).length : 0;
-  const activeRole = authSession?.user.primary_dgix_role ?? user?.primaryDgixRole ?? role;
 
   if (!ready) return <div className="min-h-screen bg-[#F5F8FC]" />;
-  if (!user || user.role !== role) {
-    if (typeof window !== "undefined") router.replace("/sign-in");
-    return null;
-  }
+  if (!user || user.role !== role) return null;
 
-  const homeHref = cfg.groups[0].items[0].href;
+  const homeHref = cfg.groups[0].items[0]?.href ?? (role === "staff" ? staffHomeForRole(user) : `/${role}`);
 
   return (
     <div className="flex min-h-screen bg-[#F5F8FC] text-ink">
@@ -138,8 +249,8 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 {role === "buyer"
                   ? `Verified buyer · ${co?.country === "United Arab Emirates" ? "UAE" : co?.country}`
                   : role === "seller"
-                    ? `Partner · ${activeRole}`
-                    : `OPA Role · ${activeRole}`}
+                    ? (co?.verified ? "Verified partner" : "Partner onboarding")
+                    : (user.title || "DGIX Operations")}
               </div>
             </div>
           )}
@@ -150,7 +261,9 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
               {g.label && !collapsed && <div className="px-3 pb-2 pt-5 text-[11px] leading-[14px] text-subtle">{g.label}</div>}
               {g.label && collapsed && <div className="my-3 h-px bg-line" />}
               {g.items.map((it) => {
-                const active = it.href === homeHref ? pathname === it.href : pathname.startsWith(it.href);
+                const active = it.href === "/admin" || it.href === "/buyer" || it.href === "/seller"
+                  ? pathname === it.href
+                  : pathname.startsWith(it.href);
                 const n = it.badge?.(db, user.companyId) ?? 0;
                 return (
                   <Link
@@ -198,22 +311,14 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             <kbd className="hidden sm:block rounded-lg bg-mist px-1.5 py-0.5 font-mono text-[11px] text-muted">⌘K</kbd>
           </label>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => void refreshLive()}
-              title="Sync live 9-service state via BFF (:18118)"
-              className="hidden h-11 items-center gap-2 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-ink shadow-[0_1px_2px_rgba(12,31,69,0.04)] hover:bg-mist md:flex"
-            >
-              <span className={clsx("size-2 rounded-full", authSession ? "bg-success" : "bg-amber")} />
-              <span className="font-mono">{activeRole}</span>
-              <span className="text-muted">· {syncing ? "Syncing..." : "Sync"}</span>
-            </button>
-            <Link
-              href={cfg.primary.href}
-              className="hidden h-11 items-center gap-2 rounded-lg border border-primary/25 bg-white px-4 text-[15px] font-semibold text-primary shadow-[0_1px_2px_rgba(12,31,69,0.04)] transition-colors hover:border-primary/50 hover:bg-mist sm:flex"
-            >
-              <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
-            </Link>
+            {cfg.primary && (
+              <Link
+                href={cfg.primary.href}
+                className="hidden h-11 items-center gap-2 rounded-lg border border-primary/25 bg-white px-4 text-[15px] font-semibold text-primary shadow-[0_1px_2px_rgba(12,31,69,0.04)] transition-colors hover:border-primary/50 hover:bg-mist sm:flex"
+              >
+                <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
+              </Link>
+            )}
             <NotificationBell count={unread} />
             <AccountMenu />
           </div>
@@ -223,7 +328,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             <div className="flex items-start gap-2.5">
               <Icon name="info" size={16} className="mt-0.5 shrink-0" />
               <div>
-                <div className="font-semibold">Policy / Backend Enforcement Notice</div>
+                <div className="font-semibold">Unable to complete action</div>
                 <div className="text-xs leading-5">{lastError}</div>
               </div>
             </div>
@@ -247,16 +352,18 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
-            <Link href={`${homeHref}/account#profile`} onClick={() => setMenuOpen(false)} className="mb-4 flex items-center gap-3 rounded-lg p-1 hover:bg-mist/70">
+            <Link href={`/${role === "staff" ? "admin" : role}/account#profile`} onClick={() => setMenuOpen(false)} className="mb-4 flex items-center gap-3 rounded-lg p-1 hover:bg-mist/70">
               <Avatar user={user} size={36} />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{user.name}</div>
-                <div className="truncate text-xs text-muted">{co?.name} · {activeRole}</div>
+                <div className="truncate text-xs text-muted">{co?.name}</div>
               </div>
             </Link>
-            <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-white text-[15px] font-semibold text-primary sm:hidden">
-              <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
-            </Link>
+            {cfg.primary && (
+              <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-white text-[15px] font-semibold text-primary sm:hidden">
+                <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
+              </Link>
+            )}
             <nav className="flex flex-col gap-1">
               {cfg.groups.map((g, gi) => (
                 <div key={gi} className="flex flex-col gap-1">

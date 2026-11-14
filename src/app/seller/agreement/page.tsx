@@ -2,14 +2,15 @@
 
 import clsx from "clsx";
 import { useStore } from "@/lib/store";
+import { Empty } from "@/components/portal/ui";
 import { Head, Panel, Pill, useFlash, useSeller } from "@/components/seller/kit";
 
 const TERMS = [
   ["You keep", "All IP and source code. DGIX receives non-exclusive regional distribution rights only."],
   ["You deliver", "Implementation, training and tier-2/3 engineering support under each buyer's signed SLA."],
-  ["DGIX handles", "Buyer contract, tax e-invoicing (UAE FTA / KSA ZATCA), hosted collection and tier-1 advisory."],
-  ["Payout & reserve", "Released via 4-eyes Finance sign-off after settlement, subject to contractual dispute-hold reserve."],
-  ["Continuous assurance", "Annual re-verification, or immediate trigger on critical CVE / severe SLA breach."],
+  ["DGIX handles", "Buyer contract, tax e-invoicing (UAE FTA / KSA ZATCA), online collection and tier-1 advisory."],
+  ["Payout & reserve", "Released after buyer invoice settlement clears, subject to any agreed contractual reserve."],
+  ["Continuous assurance", "Annual re-verification, or immediate review on critical security advisories or severe SLA breaches."],
 ];
 
 export default function AgreementPage() {
@@ -22,21 +23,35 @@ export default function AgreementPage() {
   );
   const activeAg = partnerAgreements[0];
 
-  const markets = Array.isArray(activeAg?.territories)
+  if (!activeAg) {
+    return (
+      <div className="flex flex-col gap-5">
+        <Head kicker="Distribution terms" title="Partnership agreement" />
+        <Empty
+          title="Agreement pending"
+          body="Your commercial distribution agreement will appear here once product verification and commercial terms are finalised with our legal team."
+        />
+      </div>
+    );
+  }
+
+  const markets = Array.isArray(activeAg.territories)
     ? (activeAg.territories as string[])
     : Array.from(new Set(products.flatMap((p) => p.markets)));
-  const mkts = markets.length ? markets.join(" · ") : "UAE · KSA · BGD";
-  const agRef = activeAg ? `AGR-${String(activeAg.agreement_id).slice(0, 8).toUpperCase()}` : "MOU-0031";
-  const status = String(activeAg?.status ?? "signed");
-  const modelLabel = String(activeAg?.commercial_model ?? "Co-branded reseller").replace(/_/g, " ");
-  const commPct = activeAg?.commission_pct ? `${Number(activeAg.commission_pct)}%` : "18%";
-  const holdPct = activeAg?.dispute_hold_pct ? `${Number(activeAg.dispute_hold_pct)}% dispute reserve` : "Taken only from settled milestones";
+  const mkts = markets.length ? markets.join(" · ") : company?.country ?? "—";
+  const agRef = `AGR-${String(activeAg.agreement_id).slice(0, 8).toUpperCase()}`;
+  const status = String(activeAg.status ?? "draft");
+  const modelLabel = String(activeAg.commercial_model ?? "reseller").replace(/_/g, " ");
+  const commPct = `${Number(activeAg.commission_pct ?? 0)}%`;
+  const holdPct = activeAg.dispute_hold_pct
+    ? `${Number(activeAg.dispute_hold_pct)}% contractual reserve`
+    : "Settled milestone basis";
 
   const download = () => {
     const text = [
       `DGIX COMMERCIAL DISTRIBUTION AGREEMENT — ${agRef}`,
       `Partner: ${company?.name ?? ""}, ${company?.city ?? ""}, ${company?.country ?? ""}`,
-      `Status: ${status.toUpperCase()} (4-Eyes Legal Maker + Signer Verified)`,
+      `Status: ${status.toUpperCase()}`,
       "",
       `Commercial model: ${modelLabel}`,
       `DGIX commission: ${commPct} (${holdPct})`,
@@ -54,9 +69,9 @@ export default function AgreementPage() {
   };
 
   const cells = [
-    { k: "Commercial model", v: modelLabel, s: "4-eyes Legal signed · Daffodil Verified" },
+    { k: "Commercial model", v: modelLabel, s: status === "signed" ? "Countersigned · Daffodil Verified" : "Draft under legal review" },
     { k: "DGIX margin / fee", v: `${commPct} per sale`, s: holdPct },
-    { k: "Territories", v: mkts, s: "Per-country readiness enforced (BR-05)" },
+    { k: "Territories", v: mkts, s: "Authorised distribution markets" },
   ];
 
   return (

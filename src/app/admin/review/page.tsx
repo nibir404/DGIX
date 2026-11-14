@@ -9,7 +9,6 @@ import { Button, Chip } from "@/components/portal/ui";
 import { Bar, H1, Kicker, useFlash } from "@/components/admin/kit";
 
 const gateName = (g: string) => `${g} · ${GATES.find((x) => x.id === g)?.name ?? ""}`;
-const FUNNEL = [21, 16, 13, 9, 8, 6];
 
 export default function ProductReview() {
   const { db, live, approveCheck, refreshLive } = useStore();
@@ -24,6 +23,14 @@ export default function ProductReview() {
   const p = rows.find((r) => r.id === sel) ?? rows[0];
   const open = p?.checks.filter((c) => c.score < c.max) ?? [];
   const listed = db.products.filter((x) => x.status === "listed").length;
+  const funnel = GATES.map((_, gateIdx) =>
+    db.products.filter((prod) => {
+      if (prod.status === "listed") return true;
+      const idx = GATES.findIndex((g) => g.id === prod.gate);
+      return idx >= gateIdx;
+    }).length,
+  );
+  const funnelMax = Math.max(1, ...funnel);
   const livePid = p?.id ?? "";
   const reviewVerIds = new Set(
     [
@@ -41,7 +48,7 @@ export default function ProductReview() {
     const c = p.checks.find((x) => x.key === key)!;
     const total = L.score(p.id) + (c.max - c.score);
     approveCheck(p.id, key);
-    flash(total >= 100 ? `${p.name} reached 100/100 · ready for Council Quorum` : `${c.label} verified · ${total}/100`);
+    flash(total >= 100 ? `${p.name} reached 100/100 · ready for Council review` : `${c.label} verified · ${total}/100`);
   };
 
   const runAiPipeline = async () => {
@@ -49,7 +56,7 @@ export default function ProductReview() {
     const verId = p.versionId ?? String(live.versionsByProduct[livePid]?.[0]?.version_id ?? "");
     const assId = String(productAssessment?.assessment_id ?? "");
     if (!assId || !verId) {
-      flash("No live PG0–PG5 assessment bound to this product yet.");
+      flash("No active product assessment bound to this product yet.");
       return;
     }
     setAiBusy(true);
@@ -60,7 +67,7 @@ export default function ProductReview() {
         sha256: String(ev.sha256),
         evidence_type: String(ev.evidence_type),
         scan_status: String(ev.scan_status ?? "clean"),
-        content_excerpt: `Verified artifact ${String(ev.filename ?? ev.evidence_type)}`,
+        content_excerpt: `Verified document ${String(ev.filename ?? ev.evidence_type)}`,
       }));
       const res = await apiFetch<Record<string, unknown>>("/bff/v1/agents/assessments/run", {
         method: "POST",
@@ -79,11 +86,11 @@ export default function ProductReview() {
       });
       const runs = Array.isArray(res.agent_runs) ? res.agent_runs.length : 7;
       const findings = Array.isArray(res.findings) ? res.findings.length : 0;
-      setAiSummary(`AI 7-Agent Pipeline executed (${runs} specialist agents + Red-Team Critic): ${findings} cited findings generated with zero uncited hallucinations.`);
+      setAiSummary(`Automated assurance check completed (${runs} specialist checks): ${findings} cited finding${findings === 1 ? "" : "s"} recorded.`);
       await refreshLive();
-      flash(`AI 7-Agent Assessment completed for ${p.name}`);
+      flash(`Automated review completed for ${p.name}`);
     } catch (err) {
-      flash(err instanceof Error ? err.message : "AI Pipeline requires reviewer or dgix_admin role");
+      flash(err instanceof Error ? err.message : "Assurance review requires reviewer or administrator access");
     } finally {
       setAiBusy(false);
     }
@@ -97,13 +104,13 @@ export default function ProductReview() {
         body: JSON.stringify({
           scan_status: "clean",
           scanner: "clamav-1.4.1",
-          details: "Manual reviewer scan verified 0 threats",
+          details: "Manual reviewer check verified document",
         }),
       });
       await refreshLive();
-      flash("ClamAV scan recorded as CLEAN");
+      flash("Document marked verified");
     } catch (err) {
-      flash(err instanceof Error ? err.message : "Scan failed");
+      flash(err instanceof Error ? err.message : "Verification failed");
     } finally {
       setScanBusyId(null);
     }
@@ -121,12 +128,12 @@ export default function ProductReview() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
-          <Kicker>PG0–PG5 Human Gate Decisions, ClamAV Evidence &amp; 7-Agent AI Assurance</Kicker>
+          <Kicker>Product assurance, verification documents &amp; readiness scoring</Kicker>
           <H1>Product review</H1>
         </div>
         {p && (
           <Button onClick={() => void runAiPipeline()} disabled={aiBusy}>
-            {aiBusy ? "Running 7 AI Agents + Red-Team..." : `Run AI 7-Agent Assessment · ${p.name}`}
+            {aiBusy ? "Running assurance check..." : `Run automated check · ${p.name}`}
           </Button>
         )}
       </div>
@@ -179,7 +186,7 @@ export default function ProductReview() {
           <h2 className="mb-4 text-lg">{p?.name} · Gate criteria &amp; checks</h2>
           {open.length === 0 && (
             <div className="rounded-lg bg-[#E7F5EE] px-4 py-3 text-sm text-success">
-              All PG0–PG5 human gate decisions verified ({L.score(p?.id ?? "")}/100). Ready for 2-Member Council Quorum in Council &amp; Audit.
+              All assurance criteria verified ({L.score(p?.id ?? "")}/100). Ready for Product Council approval.
             </div>
           )}
           <motion.div layout className="flex flex-col gap-3">
@@ -197,11 +204,11 @@ export default function ProductReview() {
 
         <section className="rounded-lg bg-white p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg">Primary Evidence Artifacts ({productEvidence.length})</h2>
-            <span className="text-xs text-muted">SHA-256 &amp; ClamAV</span>
+            <h2 className="text-lg">Submitted documents ({productEvidence.length})</h2>
+            <span className="text-xs text-muted">Document review</span>
           </div>
           {productEvidence.length === 0 ? (
-            <p className="text-xs text-muted">No binary evidence uploaded for {p?.name} yet.</p>
+            <p className="text-xs text-muted">No supporting documents uploaded for {p?.name} yet.</p>
           ) : (
             <div className="flex flex-col divide-y divide-line">
               {productEvidence.map((ev) => {
@@ -212,18 +219,18 @@ export default function ProductReview() {
                   <div key={eid} className="flex items-center justify-between gap-2 py-2.5 text-xs">
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium text-ink">{fname}</div>
-                      <div className="truncate font-mono text-[10.5px] text-muted">
-                        SHA-256: {String(ev.sha256 ?? "").slice(0, 20)}… · {scan}
+                      <div className="truncate text-xs text-muted">
+                        Status: <span className={scan === "clean" ? "font-semibold text-success" : "font-semibold text-warning"}>{scan === "clean" ? "Verified" : "Pending check"}</span>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {scan !== "clean" && (
                         <Button size="sm" variant="soft" disabled={scanBusyId === eid} onClick={() => void scanEvidence(eid)}>
-                          Scan
+                          Verify
                         </Button>
                       )}
                       <Button size="sm" variant="outline" onClick={() => void downloadFile(eid, fname)}>
-                        PDF
+                        Download
                       </Button>
                     </div>
                   </div>
@@ -237,15 +244,15 @@ export default function ProductReview() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <section className="rounded-lg bg-white p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg">Gate funnel · PG0 to PG5</h2>
-            <span className="text-xs text-muted">Hard gates: KYB, Zero Critical CVEs, IP Clean, Data Residency, Portfolio Fit</span>
+            <h2 className="text-lg">Stage progression</h2>
+            <span className="text-xs text-muted">Mandatory checks: KYB, security review, IP ownership, data residency &amp; fit</span>
           </div>
           <div className="mt-4 grid grid-cols-3 items-end gap-2 sm:grid-cols-6">
             {GATES.map((g, i) => (
               <div key={g.id} className="flex flex-col items-center gap-2">
-                <span className={"text-sm font-semibold " + (i === 3 ? "text-warning" : "")}>{FUNNEL[i]}</span>
+                <span className={"text-sm font-semibold " + (i === 3 ? "text-warning" : "")}>{funnel[i]}</span>
                 <motion.div
-                  initial={{ height: 0 }} animate={{ height: (FUNNEL[i] / 21) * 96 }} transition={{ duration: 0.7, delay: i * 0.06 }}
+                  initial={{ height: 0 }} animate={{ height: Math.max(8, (funnel[i] / funnelMax) * 96) }} transition={{ duration: 0.7, delay: i * 0.06 }}
                   className={"w-full rounded-lg " + (i < 2 ? "hatch-light" : i === 2 ? "hatch" : i === 3 ? "bg-[linear-gradient(180deg,#7FB6FF,#2F6BD8)]" : i === 4 ? "bg-cobalt" : "bg-primary")}
                 />
                 <span className={"text-[11px] " + (i === 3 ? "font-semibold text-warning" : "text-muted")}>{g.id} · {g.name}</span>
@@ -258,7 +265,7 @@ export default function ProductReview() {
           <div className="text-sm text-haze">Globally Ready Pass Rate</div>
           <div className="mt-3 text-[56px] leading-[60px] font-extralight">{Math.round((listed / Math.max(1, db.products.length)) * 100)}%</div>
           <p className="mt-3 text-sm text-haze">
-            ≥90/100 + all 5 hard gates unlocks Globally Ready. 80–89/100 unlocks Pilot-Eligible (BR-05).
+            90/100 or above with all mandatory checks complete qualifies as Globally Ready. 80–89/100 qualifies as Pilot-Eligible.
           </p>
         </section>
       </div>

@@ -24,30 +24,30 @@ export default function PayoutsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Head kicker="Double-entry ledger verified · SWIFT / Local Bank Settlement · BR-17" title="Payouts" />
+      <Head kicker="Bank settlements & statements" title="Payouts" />
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <Panel className="flex flex-col gap-[18px] rounded-lg bg-night p-6 md:p-7 lg:grow-[1.4] lg:basis-0" style={{ backgroundImage: NIGHT_BANNER }}>
           {next ? (
             <>
               <div className="text-[13px] leading-4 text-glow-amber">
-                Next payout · {dayMonth(next.date)} · {next.status === "scheduled" ? "Awaiting 4-Eyes Finance Release" : "Awaiting Buyer Settlement"}
+                Next payout · {dayMonth(next.date)} · {next.status === "scheduled" ? "Pending finance release" : "Awaiting buyer settlement"}
               </div>
               <div className="text-[44px] leading-[52px] md:text-[56px] md:leading-[64px] font-light tracking-[-0.05em] text-paper">{fmtMoney(next.net)}</div>
               <div className="flex flex-col gap-[10px] border-t border-[#FFFFFF1F] pt-4">
                 <Row l={`Buyer settled · ${label(next)}`} r={fmtMoney(next.gross)} />
-                <Row l={`DGIX margin & gateway fee`} r={`− ${fmtMoney(next.fee)}`} />
+                <Row l={`DGIX margin & processing fee`} r={`− ${fmtMoney(next.fee)}`} />
                 {typeof next.disputeHold === "number" && next.disputeHold > 0 && (
-                  <Row l="Dispute-hold reserve (escrow)" r={`− ${fmtMoney(next.disputeHold)}`} />
+                  <Row l="Contractual reserve" r={`− ${fmtMoney(next.disputeHold)}`} />
                 )}
-                <Row l="Partner payable release" r={fmtMoney(next.net)} strong />
+                <Row l="Net partner payout" r={fmtMoney(next.net)} strong />
               </div>
             </>
           ) : (
             <div className="text-[15px] text-paper">No payouts pending approval.</div>
           )}
           <div className="text-xs leading-[18px] text-[#FFFFFF8C]">
-            Partner payouts are strictly gated on settled buyer payments (BR-17) and require two independent DGIX Finance actors (Maker + Approver) before disbursement.
+            Partner payouts are scheduled once buyer invoice settlement clears and DGIX Finance completes disbursement sign-off.
           </div>
         </Panel>
 
@@ -79,7 +79,7 @@ export default function PayoutsPage() {
               {p.status === "paid" ? (
                 <Pill tone="success">Released</Pill>
               ) : p.status === "scheduled" ? (
-                <Pill tone="info">Pending 4-Eyes Approval</Pill>
+                <Pill tone="info">Pending finance release</Pill>
               ) : (
                 <Pill tone="warning">Awaiting settlement</Pill>
               )}

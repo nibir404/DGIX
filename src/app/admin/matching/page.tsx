@@ -46,6 +46,8 @@ export default function MatchingDesk() {
   }, [req?.id]);
 
   const buyer = req ? L.company(req.buyerId) : undefined;
+  const liveSl = req ? live.shortlists.find((s) => String(s.requirement_id) === req.id) : undefined;
+  const sameMaker = Boolean(authSession?.user.sub && liveSl && String(liveSl.created_by) === authSession.user.sub);
   const n = Object.values(picked).filter(Boolean).length;
   const visible = showAll ? ranked : ranked.slice(0, 3);
   const hidden = ranked.length - visible.length;
@@ -53,18 +55,18 @@ export default function MatchingDesk() {
   const send = () => {
     if (!req) return;
     confirmShortlist(req.id, Object.keys(picked).filter((id) => picked[id]));
-    flash(`4-Eyes Advisor approval recorded (BR-15) · Shortlist unlocked for ${buyer?.name ?? "buyer"}`);
+    flash(`Shortlist approved and shared with ${buyer?.name ?? "buyer"}`);
   };
 
   const publishListing = async (e: React.FormEvent) => {
     e.preventDefault();
     const app = live.approvals.find((a) => String(a.approval_id) === selectedApprovalId) ?? live.approvals[0];
     if (!app) {
-      flash("No Ed25519 Council ApprovalRecord available yet. Vote in Council & Audit first.");
+      flash("No Product Council approval record available yet. Complete council approval first.");
       return;
     }
     if (hasProhibitedUltimateWording(pubTitle, pubDesc)) {
-      flash("FR-CAT-03 Violation: Listing copy cannot contain 'ultimate'.");
+      flash("Listing copy cannot contain the word 'ultimate'. Please use verifiable statements.");
       return;
     }
     const pid = String(app.product_id);
@@ -76,7 +78,7 @@ export default function MatchingDesk() {
       (x) => String(x.product_id) === pid && String(x.country_code) === country && x.status === "approved",
     );
     if (!ag || !pl) {
-      flash("5-Point Check: Requires signed CommercialAgreement and 4-eyes approved PriceList for this country.");
+      flash("Requires a signed distribution agreement and an approved price list for this market.");
       return;
     }
     const partner = live.partners.find((pt) => String(pt.partner_id) === String(ag.partner_id));
@@ -105,7 +107,7 @@ export default function MatchingDesk() {
           title: pubTitle.trim() || String(prod?.name ?? "Verified Solution"),
           description:
             pubDesc.trim() ||
-            "Council-approved enterprise software verified across PG0–PG5 quality, security, and country readiness gates.",
+            "Council-approved enterprise software verified across quality, security, and regional readiness checks.",
           partner_name: String(partner?.legal_name ?? "Verified Partner"),
           category: String(prod?.category ?? "erp"),
           capabilities: ["Regional Regulatory Compliance", "Signed Enterprise SLA"],
@@ -119,7 +121,7 @@ export default function MatchingDesk() {
       await refreshLive();
       setPubTitle("");
       setPubDesc("");
-      flash(`Published ${String(prod?.name)} for ${country} via 5-point governance check!`);
+      flash(`Published ${String(prod?.name)} for ${country}`);
     } catch (err) {
       flash(err instanceof Error ? err.message : "Catalogue publication failed");
     } finally {
@@ -130,14 +132,14 @@ export default function MatchingDesk() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Kicker>BR-15 Human-in-the-Loop Shortlist Gate &amp; 5-Point Catalogue Publication ({authSession?.user.username ?? "advisor"})</Kicker>
+        <Kicker>Buyer shortlist review &amp; regional catalogue publication</Kicker>
         <H1>Matching &amp; Catalogue Desk</H1>
       </div>
 
       {!req ? (
         <Empty
           title="All pending buyer shortlists approved"
-          body="Every AI-ranked shortlist has received 4-eyes Advisor sign-off (BR-15)."
+          body="Every matched shortlist has been reviewed and shared with the buyer."
           action={<Button href="/admin/offers">View Offers &amp; Contracts</Button>}
         />
       ) : (
@@ -154,7 +156,7 @@ export default function MatchingDesk() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-xs">
-                <Chip tone="warning">Pending 4-Eyes Advisor Approval · BR-15</Chip>
+                <Chip tone="warning">Pending Advisor Review</Chip>
                 <span className="text-muted">{req.ref}</span>
               </div>
               <h2 className="text-2xl font-light text-ink">
@@ -171,12 +173,12 @@ export default function MatchingDesk() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
             <section className="rounded-lg bg-white p-6">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <h2 className="text-lg">AI Candidate Ranking · {ranked.length} verified matches</h2>
-                <span className="text-xs text-muted">Checker: advisor.approver</span>
+                <h2 className="text-lg">Matched candidates · {ranked.length} verified product{ranked.length === 1 ? "" : "s"}</h2>
+                <span className="text-xs text-muted">Two-advisor verification</span>
               </div>
               {ranked.length === 0 ? (
                 <p className="py-6 text-sm text-muted">
-                  Candidate shortlist generated in backend for {req.country}. Click approve on the right as <code>advisor.approver</code> to release to buyer.
+                  Candidate shortlist prepared for {req.country}. Review and approve on the right to share with the buyer.
                 </p>
               ) : (
                 <motion.ul initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.06 } } }}>
@@ -208,27 +210,27 @@ export default function MatchingDesk() {
             </section>
 
             <section className="rounded-lg bg-white p-6">
-              <h2 className="mb-3 text-lg">4-Eyes Advisor Approval Note</h2>
+              <h2 className="mb-3 text-lg">Advisor review note</h2>
               <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} className="w-full resize-none rounded-lg bg-mist/60 p-4 text-sm leading-[21px] outline-none focus:ring-2 focus:ring-primary/30" />
               <label className="mt-4 flex items-center gap-2.5 text-[13px]">
                 <Checkbox checked={checked} onChange={() => setChecked((c) => !c)} label="Checked" />
-                Verified country readiness, cost floor &amp; SLA capacity (BR-15)
+                Confirmed country readiness, approved pricing &amp; delivery capacity
               </label>
-              <Button size="lg" className="mt-4 w-full" disabled={!checked} onClick={send}>
-                Approve &amp; Release Shortlist to Buyer
+              <Button size="lg" className="mt-4 w-full" disabled={!checked || sameMaker} onClick={send}>
+                {sameMaker ? "Awaiting second advisor approval" : "Approve & share shortlist with buyer"}
               </Button>
             </section>
           </div>
         </>
       )}
 
-      {/* 5-Point Catalogue Publication Desk */}
+      {/* Regional Catalogue Publication Desk */}
       <section className="rounded-lg bg-white p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg font-medium">5-Point Catalogue Publication Desk</h2>
+            <h2 className="text-lg font-medium">Regional Catalogue Publication</h2>
             <p className="text-xs text-muted">
-              Publishes a regional listing only when Ed25519 Council Approval + Signed Agreement + Approved PriceList + Country Match + FR-CAT-03 all pass.
+              Publishes a regional catalogue listing once council approval, a signed distribution agreement, and an approved market price list are in place.
             </p>
           </div>
           <Chip tone="info">{live.listings.length} Live Regional Listings</Chip>
@@ -239,7 +241,7 @@ export default function MatchingDesk() {
             onChange={(e) => setSelectedApprovalId(e.target.value)}
             className="h-10 rounded-lg border border-line bg-white px-3 text-xs outline-none"
           >
-            <option value="">Select Ed25519 Council Approval…</option>
+            <option value="">Select council-approved product…</option>
             {live.approvals.map((ap) => {
               const pr = live.products.find((p) => String(p.product_id) === String(ap.product_id));
               return (
@@ -258,11 +260,11 @@ export default function MatchingDesk() {
           <input
             value={pubDesc}
             onChange={(e) => setPubDesc(e.target.value)}
-            placeholder="Verified scope summary (no 'ultimate')"
+            placeholder="Verified scope summary"
             className="h-10 rounded-lg border border-line px-3 text-xs outline-none"
           />
           <Button type="submit" disabled={pubBusy || live.approvals.length === 0}>
-            {pubBusy ? "Verifying 5 preconditions..." : "Publish Regional Listing"}
+            {pubBusy ? "Publishing..." : "Publish Regional Listing"}
           </Button>
         </form>
       </section>

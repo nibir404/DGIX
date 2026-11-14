@@ -23,7 +23,7 @@ export default function GovernanceAndAuditPage() {
       (x) => String(x.product_id) === pid && String(x.country_code) === countryCode && x.status === "approved",
     );
     if (!ag || !pl) {
-      flash(`Signed CommercialAgreement and approved ${countryCode} PriceList required before Council vote.`);
+      flash(`Signed distribution agreement and approved ${countryCode} price list required before Council vote.`);
       return;
     }
     setBusy(assId);
@@ -36,7 +36,7 @@ export default function GovernanceAndAuditPage() {
           product_version_id: verId,
           country_code: countryCode,
           vote: "approve",
-          reason: `Independent Council member verified PG0–PG5 gates, legal IP rights, and ${countryCode} readiness.`,
+          reason: `Council member verified assurance checks, IP rights, and ${countryCode} readiness.`,
           agreement_id: String(ag.agreement_id),
           agreement_type: "commercial_agreement",
           agreement_signed: true,
@@ -56,13 +56,13 @@ export default function GovernanceAndAuditPage() {
             algorithm: String(approval.algorithm),
           }),
         }).catch(() => undefined);
-        flash(`2-Member Quorum Reached! Ed25519 ApprovalRecord minted (kid=${String(approval.kid)})`);
+        flash("Council quorum reached · approval certificate issued");
       } else {
-        flash("1st Council Quorum Vote recorded! Switch to council2 to complete 2-member quorum.");
+        flash("Council approval vote recorded · awaiting second council member vote");
       }
       await refreshLive();
     } catch (err) {
-      flash(err instanceof Error ? err.message : "Council vote requires council_member role (council1 / council2)");
+      flash(err instanceof Error ? err.message : "Council voting requires Product Council membership");
     } finally {
       setBusy(null);
     }
@@ -73,9 +73,9 @@ export default function GovernanceAndAuditPage() {
     try {
       await apiFetch(`/bff/v1/iam/pao-bindings/${productId}/approve`, { method: "POST" });
       await refreshLive();
-      flash("PAO 4-Eyes Binding Approved in IAM-KYB!");
+      flash("Product assurance owner assignment approved");
     } catch (err) {
-      flash(err instanceof Error ? err.message : "Requires dgix_admin different from requestor");
+      flash(err instanceof Error ? err.message : "Requires approval by a separate platform administrator");
     } finally {
       setBusy(null);
     }
@@ -99,9 +99,9 @@ export default function GovernanceAndAuditPage() {
         }),
       });
       await refreshLive();
-      flash("Continuous Assurance Trigger fired · Catalogue suspension & re-assessment event emitted!");
+      flash("Assurance alert recorded · re-verification initiated");
     } catch (err) {
-      flash(err instanceof Error ? err.message : "Requires dgix_admin / reviewer role");
+      flash(err instanceof Error ? err.message : "Requires administrator or assurance reviewer access");
     } finally {
       setBusy(null);
     }
@@ -112,63 +112,66 @@ export default function GovernanceAndAuditPage() {
     try {
       await apiFetch("/bff/v1/audit/anchors", { method: "POST" });
       await refreshLive();
-      flash("SHA-256 Audit Ledger checkpoint anchored & hash chain verified!");
+      flash("Audit log checkpoint recorded and verified");
     } catch (err) {
-      flash(err instanceof Error ? err.message : "Audit anchor requires dgix_admin role (dana.admin)");
+      flash(err instanceof Error ? err.message : "Recording audit checkpoints requires platform administrator access");
     } finally {
       setBusy(null);
     }
   };
 
   const v = live.auditVerification;
+  const isAdmin = authSession?.user.roles.includes("dgix_admin");
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
-          <Kicker>2-Member Ed25519 Council Quorum, PAO 4-Eyes, Continuous Assurance &amp; Tamper-Evident Audit Chain ({authSession?.user.username ?? "staff"})</Kicker>
-          <H1>Council Quorum &amp; Audit Ledger</H1>
+          <Kicker>Product council approvals, assurance ownership &amp; compliance audit log</Kicker>
+          <H1>Council &amp; Compliance Audit</H1>
         </div>
-        <Button onClick={() => void createAnchorAndVerify()} disabled={busy === "audit"}>
-          {busy === "audit" ? "Verifying SHA-256 Chain..." : "Anchor & Verify Hash Chain"}
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => void createAnchorAndVerify()} disabled={busy === "audit"}>
+            {busy === "audit" ? "Recording checkpoint..." : "Record audit checkpoint"}
+          </Button>
+        )}
       </div>
 
-      {/* Audit Hash Chain Status Banner */}
+      {/* Audit & Council Status Banner */}
       <section className="rounded-lg bg-night-hero p-6 text-white">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-sky">
-              <span>Immutable SHA-256 Append-Only Audit Ledger</span>
+              <span>Compliance &amp; Audit Status</span>
               {v && (
                 <span className={"rounded px-2 py-0.5 font-semibold " + (v.ok ? "bg-success/30 text-[#7FE0AE]" : "bg-danger text-white")}>
-                  {v.ok ? "CHAIN INTEGRITY OK" : "BROKEN CHAIN"}
+                  {v.ok ? "INTEGRITY VERIFIED" : "REVIEW REQUIRED"}
                 </span>
               )}
             </div>
             <div className="text-2xl font-light">
-              {v ? `${v.count} Chained Domain Events Verified (ok=${String(v.ok)})` : "Switch to dana.admin or auditor.user to inspect ledger entries"}
+              {v ? `${v.count} verified platform events recorded` : `${live.assessments.length} active product assessments under governance`}
             </div>
             {v?.last_entry_hash && (
-              <div className="font-mono text-xs text-white/70">Head SHA-256: {v.last_entry_hash}</div>
+              <div className="font-mono text-xs text-white/70">Checkpoint reference: {v.last_entry_hash.slice(0, 24)}…</div>
             )}
           </div>
           <div className="text-right text-xs text-white/70">
-            <div>Ed25519 Council Approvals: <strong className="text-white">{live.approvals.length}</strong></div>
-            <div>Authorised Country Readiness: <strong className="text-white">{live.countryReadiness.length}</strong></div>
+            <div>Council approvals issued: <strong className="text-white">{live.approvals.length}</strong></div>
+            <div>Verified market clearances: <strong className="text-white">{live.countryReadiness.length}</strong></div>
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* 2-Member Product Council Quorum Voting */}
+        {/* Product Council Quorum Voting */}
         <section className="rounded-lg bg-white p-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-medium">2-Member Product Council Quorum</h2>
-            <span className="text-xs text-muted">Actors: council1 + council2</span>
+            <h2 className="text-lg font-medium">Product Council Approvals</h2>
+            <span className="text-xs text-muted">Two-member quorum</span>
           </div>
           <p className="mb-3 text-xs text-muted">
-            Requires ≥2 distinct non-conflicted <code>council_member</code> votes to mint an Ed25519 signed <code>ApprovalRecord</code>. CureSphere Hospital HMS has 1/2 votes seeded so <code>council2</code> can complete quorum live!
+            Regional catalogue eligibility requires approval votes from at least two independent, non-conflicted Product Council members.
           </p>
           <div className="flex flex-col divide-y divide-line">
             {live.assessments.map((ass) => {
@@ -182,15 +185,15 @@ export default function GovernanceAndAuditPage() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-ink">{String(prod?.name ?? pid.slice(0, 8))}</div>
                     <div className="text-muted">
-                      Assessment {aid.slice(0, 8)} · Signed countries:{" "}
-                      {existingApprovals.map((a) => String(a.country_code)).join(", ") || "Awaiting 2nd Quorum Vote"}
+                      Ref {aid.slice(0, 8)} · Approved markets:{" "}
+                      {existingApprovals.map((a) => String(a.country_code)).join(", ") || "Awaiting council quorum"}
                     </div>
                   </div>
                   {uaeApproved ? (
-                    <Chip tone="success">Ed25519 Signed ({existingApprovals.length})</Chip>
+                    <Chip tone="success">Council Approved ({existingApprovals.length})</Chip>
                   ) : (
                     <Button size="sm" disabled={busy === aid} onClick={() => void castCouncilVote(ass, "UAE")}>
-                      {busy === aid ? "Signing..." : "Cast UAE Quorum Vote"}
+                      {busy === aid ? "Recording..." : "Approve for UAE"}
                     </Button>
                   )}
                 </div>
@@ -200,7 +203,7 @@ export default function GovernanceAndAuditPage() {
 
           {live.approvals.length > 0 && (
             <div className="mt-4 border-t border-line pt-3">
-              <div className="mb-2 text-xs font-semibold uppercase text-muted">Minted Ed25519 Approval Records</div>
+              <div className="mb-2 text-xs font-semibold uppercase text-muted">Issued Council Approvals</div>
               <div className="flex max-h-[150px] flex-col gap-1.5 overflow-y-auto">
                 {live.approvals.map((ap) => {
                   const prod = live.products.find((p) => String(p.product_id) === String(ap.product_id));
@@ -208,9 +211,9 @@ export default function GovernanceAndAuditPage() {
                     <div key={String(ap.approval_id)} className="rounded bg-[#F8FAFE] px-3 py-2 text-[11px]">
                       <div className="flex justify-between font-medium text-ink">
                         <span>{String(prod?.name ?? "Product")} · {String(ap.country_code)}</span>
-                        <span className="font-mono text-primary">{String(ap.algorithm)} ({String(ap.kid)})</span>
+                        <span className="text-primary">{String(ap.readiness_tier ?? "Approved").replace(/_/g, " ")}</span>
                       </div>
-                      <div className="truncate font-mono text-[10px] text-muted">Sig: {String(ap.signature)}</div>
+                      <div className="truncate font-mono text-[10px] text-muted">Certificate ID: {String(ap.approval_id).slice(0, 18)}</div>
                     </div>
                   );
                 })}
@@ -219,12 +222,12 @@ export default function GovernanceAndAuditPage() {
           )}
         </section>
 
-        {/* PAO 4-Eyes + Continuous Assurance Suspension Trigger */}
+        {/* PAO + Continuous Assurance Suspension Trigger */}
         <div className="flex flex-col gap-4">
           <section className="rounded-lg bg-white p-6">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">IAM 4-Eyes PAO Bindings</h2>
-              <span className="text-xs text-muted">Approver: dana.admin</span>
+              <h2 className="text-lg font-medium">Product Assurance Owners</h2>
+              <span className="text-xs text-muted">Conflict-of-interest check</span>
             </div>
             <div className="flex flex-col divide-y divide-line">
               {live.paoBindings.map((b) => {
@@ -235,13 +238,13 @@ export default function GovernanceAndAuditPage() {
                   <div key={pid} className="flex items-center justify-between py-2.5 text-xs">
                     <div>
                       <div className="font-medium text-ink">{String(prod?.name ?? pid.slice(0, 8))}</div>
-                      <div className="text-muted">Conflict-free declaration: {String(b.no_conflict_declared ?? true)}</div>
+                      <div className="text-muted">Conflict-free declaration confirmed</div>
                     </div>
                     {st === "approved" || st === "active" ? (
                       <Chip tone="success">Approved</Chip>
                     ) : (
                       <Button size="sm" disabled={busy === pid} onClick={() => void approvePao(pid)}>
-                        Approve PAO
+                        Approve owner
                       </Button>
                     )}
                   </div>
@@ -252,8 +255,8 @@ export default function GovernanceAndAuditPage() {
 
           <section className="rounded-lg bg-white p-6">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">Continuous Assurance Trigger</h2>
-              <Chip tone="danger">Auto-Suspend on Critical</Chip>
+              <h2 className="text-lg font-medium">Continuous Assurance Alert</h2>
+              <Chip tone="danger">Suspends listing on critical</Chip>
             </div>
             <form onSubmit={fireAssuranceTrigger} className="flex flex-col gap-2.5 text-xs">
               <div className="grid grid-cols-2 gap-2">
@@ -273,8 +276,8 @@ export default function GovernanceAndAuditPage() {
                   onChange={(e) => setTriggerSeverity(e.target.value as "high" | "critical")}
                   className="h-9 rounded border border-line bg-white px-2"
                 >
-                  <option value="critical">Critical CVE (Suspends Listing)</option>
-                  <option value="high">High SLA Warning</option>
+                  <option value="critical">Critical security advisory (Suspends listing)</option>
+                  <option value="high">High SLA warning</option>
                 </select>
               </div>
               <input
@@ -283,22 +286,22 @@ export default function GovernanceAndAuditPage() {
                 className="h-9 rounded border border-line px-2.5"
               />
               <Button type="submit" size="sm" variant="outline" disabled={busy === "trigger"}>
-                {busy === "trigger" ? "Dispatching..." : "Emit Assurance Trigger"}
+                {busy === "trigger" ? "Recording..." : "Record assurance alert"}
               </Button>
             </form>
           </section>
         </div>
       </div>
 
-      {/* Append-Only Audit Entries Table */}
+      {/* Audit Entries Table */}
       <section className="overflow-x-auto rounded-lg bg-white p-6">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Append-Only Audit Event Stream ({live.auditEntries.length} latest shown)</h2>
-          <span className="text-xs text-muted">Role: dgix_admin / auditor</span>
+          <h2 className="text-lg font-medium">Compliance Audit Log ({live.auditEntries.length} recent events)</h2>
+          <span className="text-xs text-muted">Read-only compliance record</span>
         </div>
         {live.auditEntries.length === 0 ? (
           <p className="text-xs text-muted">
-            Switch to <code>dana.admin</code> or <code>auditor.user</code> in the top-right Account menu to inspect raw SHA-256 audit entries.
+            Detailed audit log entries are visible to authorised compliance auditors and platform administrators.
           </p>
         ) : (
           <table className="w-full min-w-[760px] text-left text-xs">
@@ -307,8 +310,8 @@ export default function GovernanceAndAuditPage() {
                 <th className="pb-2">Seq</th>
                 <th className="pb-2">Action</th>
                 <th className="pb-2">Entity</th>
-                <th className="pb-2">Prev Hash</th>
-                <th className="pb-2">Entry Hash (SHA-256)</th>
+                <th className="pb-2">Prev Reference</th>
+                <th className="pb-2">Event Digest</th>
               </tr>
             </thead>
             <tbody>

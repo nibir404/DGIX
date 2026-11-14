@@ -65,7 +65,7 @@ function ShortlistInner() {
   };
 
   const note = lockedByAdvisorGate
-    ? "AI pre-ranking is complete and queued for DGIX Senior Advisor 4-eyes approval (BR-15). Buyer visibility unlocks immediately after human verification."
+    ? "Your advisor is reviewing regional readiness, pricing, and delivery capacity before sharing your matched shortlist."
     : best
       ? `${best.p.name} fits best: ${best.s.strengths.slice(0, 2).join(" and ")}. Book ${Math.min(2, items.length) === 1 ? "a demo" : "two demos"}, then I'll prepare one binding offer.`
       : "Your advisor is preparing verified product matches for this requirement.";
@@ -106,17 +106,13 @@ function ShortlistInner() {
         <Panel className="flex flex-col gap-4 border border-[#F3D9B0] bg-[#FFFBF4] p-7">
           <div className="flex items-center gap-2.5">
             <span className="rounded-full bg-[#FFE4B5] px-2.5 py-1 text-xs font-semibold text-[#8A5300]">
-              Human-in-the-Loop Gate · BR-15
+              Advisor review in progress
             </span>
-            <span className="text-xs text-[#6B4A12]">Status: Pending Senior Advisor 4-Eyes Approval</span>
           </div>
-          <h2 className="text-2xl font-light text-ink">AI candidate ranking complete — awaiting Advisor sign-off.</h2>
+          <h2 className="text-2xl font-light text-ink">Your advisor is reviewing your matched shortlist.</h2>
           <p className="max-w-2xl text-sm leading-6 text-[#6B4A12]">
-            Under DGIX Governance Rule <strong>BR-15</strong>, AI-generated product shortlists are never exposed directly to enterprise buyers without independent 4-eyes verification by a Senior DGIX Advisor (<code>advisor.approver</code>) confirming regional country readiness, cost-floor compliance and delivery capacity.
+            We have matched candidate products against your requirement and our advisory team is confirming regional readiness, pricing, and delivery capacity before sharing your shortlist.
           </p>
-          <div className="text-xs text-muted">
-            Tip for UAT: Switch to <code>advisor.approver</code> in the top-right Account menu → open <strong>Matching desk</strong> → approve this shortlist to unlock it for <code>buyer.user</code>.
-          </div>
         </Panel>
       ) : (
         <>
@@ -174,7 +170,7 @@ function ShortlistInner() {
           <Panel className="flex items-center gap-4 p-5" delay={0.1}>
             <Image src="/media/buyer-advisor.webp" alt={owner?.name ?? "Advisor"} width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
             <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-[13px] font-semibold leading-4 text-ink">{firstName(owner?.name) || "Advisor"}&apos;s note (BR-15 Verified)</div>
+              <div className="text-[13px] font-semibold leading-4 text-ink">{firstName(owner?.name) || "Advisor"}&apos;s note</div>
               <div className="text-sm leading-5 text-muted">{note}</div>
             </div>
           </Panel>

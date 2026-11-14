@@ -75,7 +75,7 @@ export default function VerificationPage() {
       {pending.length === 0 ? (
         <Empty title="All eight checks passed" body={`${p.name} scored 100/100 and is listed for buyers.`} action={<Link href="/seller/products" className="text-sm font-semibold text-primary">View passport →</Link>} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {pending.map((c) => (c.key === "readiness" ? <ResidencyCard key={c.key} p={p} c={c} onSave={(a) => send(c, `Answer “${a}”`)} /> : <UploadCard key={c.key} c={c} onFile={(n) => send(c, n)} />))}
         </div>
       )}

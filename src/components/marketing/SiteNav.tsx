@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon } from "@/components/ui/Icon";
@@ -66,8 +67,104 @@ function NavBar({ compact }: { compact?: boolean }) {
           </Link>
         ))}
       </div>
-      <div className="flex items-center gap-2.5">{ready && user ? <SignedIn /> : <SignedOut />}</div>
+      <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+        {ready && user ? <SignedIn /> : <SignedOut />}
+        <MobileMenu />
+      </div>
     </nav>
+  );
+}
+
+function MobileMenu() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, ready, signOut } = useStore();
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.documentElement.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const signedIn = ready && user;
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+        aria-expanded={open}
+        className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-white/18 bg-white/8 text-white sm:size-11 lg:hidden"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
+      {mounted && createPortal(<AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            data-lenis-prevent
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-night px-4 pb-[max(24px,env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:hidden"
+          >
+            <div className="flex items-center justify-between">
+              <Link href="/" aria-label="DGIX home" onClick={() => setOpen(false)}>
+                <Image src="/brand/dgix-logo-white.png" alt="DGIX" width={182} height={48} className="h-8 w-auto sm:h-10" />
+              </Link>
+              <button onClick={() => setOpen(false)} aria-label="Close menu" className="flex size-10 items-center justify-center rounded-lg border border-white/18 bg-white/8 text-white sm:size-11">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            </div>
+            <nav className="mt-8 flex flex-col">
+              {[...links, { href: "/pricing", label: "Pricing" }, { href: "/app", label: "Get the app" }, { href: "/about", label: "About" }, { href: "/contact", label: "Contact" }].map((l, i) => (
+                <motion.div key={l.href} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 * i }}>
+                  <Link
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className={clsx("flex items-center justify-between border-b border-white/10 py-4 text-xl font-medium", pathname.startsWith(l.href) ? "text-white" : "text-white/80")}
+                  >
+                    {l.label}
+                    <Icon name="arrowUpRight" size={14} className="text-white/40" />
+                  </Link>
+                </motion.div>
+              ))}
+            </nav>
+            <div className="mt-auto flex flex-col gap-3 pt-8">
+              {signedIn ? (
+                <>
+                  <Link href={portalHome[user.role]} onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
+                    {user.role === "staff" ? "Open console" : "Open my portal"}
+                  </Link>
+                  <button onClick={() => { setOpen(false); signOut(); router.push("/"); }} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/contact" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
+                    Get my shortlist
+                  </Link>
+                  <Link href="/sign-in" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
+                    Sign in
+                  </Link>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>, document.body)}
+    </>
   );
 }
 
@@ -77,7 +174,7 @@ function SignedOut() {
       <Link href="/sign-in" className="hidden md:block text-[15px] text-white/72 hover:text-white px-3">
         Sign in
       </Link>
-      <Link href="/contact" className="group flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
+      <Link href="/contact" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
         Get my shortlist
         <span className="flex size-[30px] items-center justify-center rounded-full bg-primary text-white transition-transform group-hover:rotate-45">
           <Icon name="arrowUpRight" size={12} strokeWidth={2.2} />

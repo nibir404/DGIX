@@ -4,7 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "./Reveal";
 
 const cols = [
-  { title: "Buy", links: [["Solutions", "/solutions"], ["How it works", "/how-it-works"], ["Pricing", "/pricing"]] },
+  { title: "Buy", links: [["Solutions", "/solutions"], ["How it works", "/how-it-works"], ["Pricing", "/pricing"], ["Android app", "/app"]] },
   { title: "Trust", links: [["Daffodil Verified", "/verified"], ["FAQ", "/faq"], ["About", "/about"]] },
   { title: "Partners", links: [["Sell through DGIX", "/sell"], ["Insights", "/insights"], ["Contact", "/contact"]] },
 ];

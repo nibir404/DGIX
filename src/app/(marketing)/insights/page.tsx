@@ -72,7 +72,7 @@ export default function InsightsPage() {
             ) : (
               <div className="rounded-lg bg-mist p-12 text-center text-muted">No articles in this topic yet.</div>
             )}
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {rest.map((a, i) => {
                 const v = VISUALS[i % VISUALS.length];
                 return (

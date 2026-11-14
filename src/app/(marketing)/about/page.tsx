@@ -80,7 +80,7 @@ export default function AboutPage() {
         <Reveal>
           <h2 className="text-[36px] leading-[40px] md:text-[52px] md:leading-[56px] font-light tracking-tight text-ink">Rules we don&apos;t bend.</h2>
         </Reveal>
-        <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {rules.map((r, i) => {
             const dark = i === 3;
             return (

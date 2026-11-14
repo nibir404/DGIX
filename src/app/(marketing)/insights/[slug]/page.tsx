@@ -56,7 +56,7 @@ export default function ArticlePage({ params }: { params: Promise<{ slug: string
 
       <Section className="flex flex-col gap-6 pb-20 md:pb-[112px]">
         <h3 className="text-[32px] leading-[40px] font-light tracking-tight text-ink">Keep reading</h3>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {more.map((m, i) => {
             const v = VISUALS[i % VISUALS.length];
             return (

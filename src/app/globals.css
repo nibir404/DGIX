@@ -67,7 +67,7 @@ html {
 }
 
 body {
-  min-width: 353px;
+  min-width: 280px;
   background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);

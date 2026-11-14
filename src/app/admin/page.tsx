@@ -71,7 +71,7 @@ export default function AdminToday() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.55fr_1fr] lg:items-start">
         <section className="rounded-lg bg-white p-6">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-xl leading-6">My queue</h2>
@@ -105,7 +105,7 @@ export default function AdminToday() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr_1.2fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.45fr_1fr_1.2fr]">
         <DealFlow />
         <SlaGauge onTarget={db.projects.filter((p) => p.health === "on_track").length + 2} risk={db.projects.filter((p) => p.health !== "on_track").length} />
         <RouteMap live={db.projects.length + 3} />

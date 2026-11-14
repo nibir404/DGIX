@@ -35,7 +35,7 @@ export default function Offers() {
         <H1>Offers &amp; contracts</H1>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {COLS.map((col) => {
           const list = db.offers.filter((o) => o.status === col.key);
           return (
@@ -63,12 +63,12 @@ export default function Offers() {
         })}
       </div>
 
-      <div className="grid overflow-hidden rounded-lg bg-white sm:grid-cols-2">
+      <div className="grid grid-cols-1 overflow-hidden rounded-lg bg-white sm:grid-cols-2">
         <div className="p-6"><div className="text-sm text-muted">Open offers</div><div className="text-[34px] font-light">{fmtMoney(open)}</div></div>
         <div className="border-t border-line p-6 sm:border-l sm:border-t-0"><div className="text-sm text-muted">Signed this quarter</div><div className="text-[34px] font-light">{fmtMoney(signed)}</div></div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-lg bg-white p-6">
           <div className="flex justify-between"><h2 className="text-lg">Pipeline value · 12 weeks</h2><span className="text-xs text-success">▲ 22%</span></div>
           <svg viewBox={`0 0 ${W} ${H + 10}`} className="mt-4 h-[150px] w-full overflow-visible" preserveAspectRatio="none">

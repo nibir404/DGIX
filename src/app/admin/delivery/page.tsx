@@ -45,7 +45,7 @@ export default function Delivery() {
                   </tr>
                   {openId === p.id && (
                     <tr key={p.id + "-m"}><td colSpan={5} className="pb-4">
-                      <motion.ul initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="grid gap-2 rounded-lg bg-mist/50 p-4 sm:grid-cols-2">
+                      <motion.ul initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="grid grid-cols-1 gap-2 rounded-lg bg-mist/50 p-4 sm:grid-cols-2">
                         {p.milestones.map((m) => (
                           <li key={m.id} className="flex items-center justify-between gap-3 text-[13px]"><span>{m.title}</span><span className="flex items-center gap-2 text-muted">{dateShort(m.due)} <Chip tone={m.status === "done" ? "success" : m.status === "in_review" ? "warning" : m.status === "in_progress" ? "info" : "draft"}>{m.status.replace("_", " ")}</Chip></span></li>
                         ))}
@@ -59,7 +59,7 @@ export default function Delivery() {
         </table>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr] lg:items-start">
         {risk ? (
           <section className="relative overflow-hidden rounded-lg bg-night-hero p-6 text-white">
             <div className="text-sm text-[#FF8A8A]">Escalation · {L.product(risk.productId)?.name}, {short(L.company(risk.buyerId)?.country)}</div>

@@ -56,7 +56,7 @@ export default function AgreementPage() {
         }
       />
 
-      <Panel className="grid overflow-clip bg-paper md:grid-cols-3">
+      <Panel className="grid grid-cols-1 overflow-clip bg-paper md:grid-cols-3">
         {cells.map((c, i) => (
           <div key={c.k} className={clsx("flex flex-col gap-2 p-6", i > 0 && "max-md:border-t md:border-l border-[#EEF1F6]")}>
             <div className="text-[13px] leading-4 text-muted">{c.k}</div>

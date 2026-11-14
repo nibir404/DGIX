@@ -48,7 +48,7 @@ export default function ContactPage() {
         </div>
       </PageHero>
 
-      <Section className="grid gap-4 pb-20 pt-16 md:pb-[112px] md:pt-[96px] lg:grid-cols-[1.2fr_1fr_1fr]">
+      <Section className="grid grid-cols-1 gap-4 pb-20 pt-16 md:pb-[112px] md:pt-[96px] lg:grid-cols-[1.2fr_1fr_1fr]">
         {offices.map((o, i) => (
           <Reveal key={o.label} delay={i * 0.08} className={"flex flex-col justify-between gap-6 rounded-lg p-8 " + (o.mist ? "bg-mist" : "border border-line")}>
             <div className="text-sm leading-[18px] text-muted">{o.label}</div>

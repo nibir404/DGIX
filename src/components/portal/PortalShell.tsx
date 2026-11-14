@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -91,6 +91,8 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => setMenuOpen(false), [pathname]);
   const cfg = portalConfig[role];
   const co = company(user?.companyId);
   const advisor = role === "staff" ? user : findUser(co?.advisorId);
@@ -106,7 +108,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
 
   return (
     <div className="flex min-h-screen bg-[#F5F8FC] text-ink">
-      <aside className={clsx("sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-white px-4 py-5 md:flex transition-[width]", collapsed ? "w-[84px]" : "w-64")}>
+      <aside className={clsx("sticky top-0 hidden h-screen shrink-0 flex-col overflow-y-auto border-r border-line bg-white px-4 py-5 lg:flex transition-[width]", collapsed ? "w-[84px]" : "w-64")}>
         <div className="flex items-center justify-between px-1 pb-6">
           <Link href="/" aria-label="DGIX website">
             <Image src="/brand/dgix-logo-full.png" alt="DGIX" width={140} height={37} className={clsx("h-9 w-auto", collapsed && "hidden")} />
@@ -201,22 +203,82 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-4 px-5 pt-6 md:px-8">
-          <label className="flex h-11 w-full max-w-[420px] items-center gap-3 rounded-lg bg-white px-4 text-sm text-subtle shadow-[0_1px_2px_rgba(12,31,69,0.04)]">
-            <Icon name="search" size={16} />
-            <input placeholder={cfg.search} className="flex-1 bg-transparent text-ink outline-none placeholder:text-subtle" />
+        <header className="flex items-center justify-between gap-3 px-4 pt-4 sm:gap-4 sm:px-5 sm:pt-6 lg:px-8">
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-white text-ink shadow-[0_1px_2px_rgba(12,31,69,0.04)] lg:hidden"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+          <label className="flex h-11 min-w-0 w-full max-w-[420px] items-center gap-3 rounded-lg bg-white px-4 text-sm text-subtle shadow-[0_1px_2px_rgba(12,31,69,0.04)]">
+            <Icon name="search" size={16} className="shrink-0" />
+            <input placeholder={cfg.search} className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-subtle sm:text-sm" />
             <kbd className="hidden sm:block rounded-lg bg-mist px-1.5 py-0.5 font-mono text-[11px] text-muted">⌘K</kbd>
           </label>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Link href={cfg.primary.href} className="hidden sm:flex h-11 items-center gap-2 rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_8px_20px_-8px_#1E4FA3B3]">
               {cfg.primary.label.startsWith("+") ? cfg.primary.label : <><Icon name="plus" size={16} /> {cfg.primary.label}</>}
             </Link>
             <NotificationBell count={unread} />
-            <Avatar user={user} size={44} />
+            <span className="hidden sm:block"><Avatar user={user} size={44} /></span>
           </div>
         </header>
-        <main className="flex-1 px-5 pb-12 pt-6 md:px-8">{children}</main>
+        <main className="min-w-0 flex-1 px-4 pb-12 pt-5 sm:px-5 sm:pt-6 lg:px-8">{children}</main>
       </div>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <button aria-label="Close menu" onClick={() => setMenuOpen(false)} className="absolute inset-0 bg-night/40" />
+          <div className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col overflow-y-auto bg-white px-4 pb-[max(20px,env(safe-area-inset-bottom))] pt-5">
+            <div className="flex items-center justify-between px-1 pb-5">
+              <Link href="/" aria-label="DGIX website" onClick={() => setMenuOpen(false)}>
+                <Image src="/brand/dgix-logo-full.png" alt="DGIX" width={140} height={37} className="h-9 w-auto" />
+              </Link>
+              <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="flex size-10 items-center justify-center rounded-lg text-subtle hover:bg-mist hover:text-ink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            </div>
+            <div className="mb-4 flex items-center gap-3 px-1">
+              <Avatar user={user} size={36} />
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">{user.name}</div>
+                <div className="truncate text-xs text-muted">{co?.name}</div>
+              </div>
+            </div>
+            <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center rounded-lg bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)] text-[15px] font-semibold text-white sm:hidden">
+              {cfg.primary.label}
+            </Link>
+            <nav className="flex flex-col gap-1">
+              {cfg.groups.map((g, gi) => (
+                <div key={gi} className="flex flex-col gap-1">
+                  {g.label && <div className="px-3 pb-2 pt-4 text-[11px] leading-[14px] text-subtle">{g.label}</div>}
+                  {g.items.map((it) => {
+                    const active = it.href === homeHref ? pathname === it.href : pathname.startsWith(it.href);
+                    const n = it.badge?.(db, user.companyId) ?? 0;
+                    return (
+                      <Link key={it.href} href={it.href} onClick={() => setMenuOpen(false)} className={clsx("flex h-11 items-center gap-3 rounded-lg px-3 text-[15px]", active ? "bg-mist font-medium text-primary" : "text-ink/80 hover:bg-mist/60")}>
+                        <Icon name={it.icon} size={18} />
+                        <span className="flex-1">{it.label}</span>
+                        {n > 0 && <span className={clsx("flex size-5 items-center justify-center rounded-full text-[11px] font-semibold text-white", it.tone === "red" ? "bg-danger" : "bg-amber")}>{n}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+            <div className="mt-auto flex flex-col gap-3 border-t border-line pt-4">
+              {role !== "staff" && (
+                <Link href={`/${role}/support`} onClick={() => setMenuOpen(false)} className="flex h-10 items-center justify-center rounded-lg bg-mist text-sm font-medium text-primary">Message advisor</Link>
+              )}
+              <button onClick={() => { setMenuOpen(false); signOut(); router.push("/"); }} className="flex h-10 items-center gap-2 px-1 text-sm text-subtle hover:text-ink">
+                <Icon name="logout" size={14} /> Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -232,7 +294,7 @@ function NotificationBell({ count }: { count: number }) {
         {count > 0 && <span className="absolute right-3 top-2.5 size-2 rounded-full bg-red ring-2 ring-white" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-14 z-50 w-[340px] rounded-lg bg-white p-2 shadow-[0_24px_60px_rgba(12,31,69,0.18)]">
+        <div className="absolute right-0 top-14 z-50 w-[min(340px,calc(100vw-32px))] rounded-lg bg-white p-2 shadow-[0_24px_60px_rgba(12,31,69,0.18)]">
           <div className="px-3 py-2 text-sm font-semibold">Notifications</div>
           {items.length === 0 && <div className="px-3 py-6 text-sm text-muted">You&apos;re all caught up.</div>}
           {items.map((n) => (

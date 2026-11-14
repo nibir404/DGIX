@@ -38,7 +38,7 @@ export default function PricingPage() {
         <HeroBg image={BG.blue} />
       </PageHero>
 
-      <Section className="grid gap-5 pt-16 md:pt-[96px] lg:grid-cols-2">
+      <Section className="grid grid-cols-1 gap-5 pt-16 md:pt-[96px] lg:grid-cols-2">
         <Reveal className="flex flex-col gap-7 rounded-lg border border-line p-6 md:p-10 shadow-[0_30px_60px_-40px_#0C1F4559]">
           <div className="flex items-center justify-between">
             <div className="text-[15px] leading-[18px] text-muted">For buyers</div>

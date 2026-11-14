@@ -86,7 +86,7 @@ export function ContactForm() {
                 </button>
               ))}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Full name"><input required value={f.name} onChange={set("name")} className={inputCls} autoComplete="name" /></Field>
               <Field label="Work email"><input required type="email" value={f.email} onChange={set("email")} className={inputCls} autoComplete="email" /></Field>
               <Field label="Company"><input required value={f.company} onChange={set("company")} className={inputCls} autoComplete="organization" /></Field>

@@ -62,7 +62,7 @@ export default function ProductReview() {
         </table>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.05fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.05fr] lg:items-start">
         <section className="rounded-lg bg-white p-6">
           <h2 className="mb-4 text-lg">{p?.name} · open items</h2>
           {open.length === 0 && <div className="rounded-lg bg-[#E7F5EE] px-4 py-3 text-sm text-success">All checks at 100/100 · listed.</div>}

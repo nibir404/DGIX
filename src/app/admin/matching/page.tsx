@@ -68,7 +68,7 @@ export default function MatchingDesk() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
         <section className="rounded-lg bg-white p-6">
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="text-lg">AI ranking · {ranked.length} verified products</h2>

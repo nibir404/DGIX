@@ -6,6 +6,7 @@ import { Solutions } from "./Solutions";
 import { Proof } from "./Proof";
 import { WhyChoose } from "./WhyChoose";
 import { Faq } from "./Faq";
+import { DownloadApp } from "./DownloadApp";
 
 /** Home sections below the hero — Paper artboard "Home · Desktop". */
 export function HomeSections() {
@@ -18,6 +19,7 @@ export function HomeSections() {
       <Solutions />
       <Proof />
       <WhyChoose />
+      <DownloadApp />
       <Faq />
     </>
   );

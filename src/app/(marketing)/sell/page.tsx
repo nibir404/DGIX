@@ -58,7 +58,7 @@ export default function SellPage() {
             Everything a global sales<br className="hidden md:block" /> team would do, done for you.
           </h2>
         </Reveal>
-        <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (
             <motion.div
               key={f.title}
@@ -79,7 +79,7 @@ export default function SellPage() {
         </Stagger>
       </Section>
 
-      <Section className="grid gap-5 py-20 md:py-[112px] lg:grid-cols-2">
+      <Section className="grid grid-cols-1 gap-5 py-20 md:py-[112px] lg:grid-cols-2">
         <Reveal className="flex flex-col gap-6 rounded-lg border border-line p-6 md:p-10">
           <h3 className="text-[32px] leading-[40px] md:text-[40px] md:leading-12 font-light tracking-tight text-ink">Choose how you&apos;re sold.</h3>
           <div className="flex flex-col border-t border-ink">

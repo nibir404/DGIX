@@ -63,7 +63,7 @@ export default function LeadsPage() {
       {leads.length === 0 ? (
         <Empty title="No leads yet" body="When DGIX matches a buyer to one of your products, it shows up here." />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {leads.map((l, i) => {
             const dark = l.kind === "requested";
             return (

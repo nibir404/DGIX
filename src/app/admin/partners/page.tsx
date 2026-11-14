@@ -71,7 +71,7 @@ export default function Partners() {
         </table>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-lg bg-white p-6">
           <div className="text-sm text-muted">Applications this month</div>
           <div className="mt-2 text-[34px] font-light">{db.products.filter((p) => p.gate <= "PG2").length + 3}</div>
@@ -91,7 +91,7 @@ export default function Partners() {
         </section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-lg bg-white p-6">
           <div className="mb-3 flex justify-between"><h2 className="text-lg">Paid out by partner · this year</h2><span className="text-xs text-muted">{fmtMoney(totalPaid)} total</span></div>
           {[...partners].sort((a, b) => b.paid - a.paid).map((p, i) => (

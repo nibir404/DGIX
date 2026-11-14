@@ -56,7 +56,7 @@ export default function Finance() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-lg bg-white p-6">
           <div className="mb-2 flex justify-between"><h2 className="text-lg">Payouts</h2><span className="text-xs text-muted">Buyer has paid</span></div>
           <motion.ul layout>
@@ -101,9 +101,9 @@ export default function Finance() {
         </section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-lg bg-white p-6">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div><div className="text-sm text-muted">Collected this year</div><div className="text-[34px] font-light">$312,400</div></div>
             <div className="flex rounded-lg bg-mist p-1 text-[13px]">
               {(["monthly", "yearly"] as const).map((m) => <button key={m} onClick={() => setMode(m)} className={"rounded-lg px-3 py-1 capitalize " + (mode === m ? "bg-primary text-white" : "text-muted")}>{m}</button>)}

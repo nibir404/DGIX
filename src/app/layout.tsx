@@ -6,9 +6,37 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800"] });
 const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500"] });
 
+// Absolute base for share links and images. Vercel sets VERCEL_PROJECT_PRODUCTION_URL at build time;
+// NEXT_PUBLIC_SITE_URL overrides it (e.g. a custom domain).
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://dgix-rho.vercel.app");
+
+const TITLE = "DGIX · Proven products. Sold to the world.";
+const DESCRIPTION = "DGIX is Daffodil's global innovation exchange. We verify software from Bangladesh, match it to your need, and deliver it under one contract.";
+const SHARE_IMAGE = { url: "/og/dgix-og.jpg", width: 1200, height: 630, alt: "DGIX: Proven products. Sold to the world.", type: "image/jpeg" };
+
 export const metadata: Metadata = {
-  title: { default: "DGIX · Proven products. Sold to the world.", template: "%s · DGIX" },
-  description: "DGIX is Daffodil's global innovation exchange. We verify software from Bangladesh, match it to your need, and deliver it under one contract.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: TITLE, template: "%s · DGIX" },
+  description: DESCRIPTION,
+  applicationName: "DGIX",
+  // Link previews on WhatsApp, Facebook, Messenger, Discord, LinkedIn, Slack and X
+  openGraph: {
+    type: "website",
+    siteName: "DGIX · Daffodil Global Innovation Exchange",
+    url: "/",
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: "en_US",
+    images: [SHARE_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [SHARE_IMAGE],
+  },
   icons: {
     icon: [
       { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },

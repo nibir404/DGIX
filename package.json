@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "globe:dots": "node scripts/gen-globe-dots.mjs"
+    "globe:dots": "node scripts/gen-globe-dots.mjs",
+    "og:image": "node scripts/gen-og-image.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.6",

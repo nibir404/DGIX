@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-11-14
+
+The home page now tells the story from the DGIX exhibition posters.
+
+### Changed
+- **Hero:** "Built in Bangladesh. For the world.", introduced as a Daffodil Group initiative. The site title and share-image text match.
+- **How it works:** the six-step pathway (Discover, Validate, Accelerate, Connect, Commercialize, Globalize), who is responsible for each part (DGIX, SMBOS, product teams, Finance), and the six delivery areas under "More than software".
+- **Daffodil Verified:** explains the product passport (Rights & proof, Delivery & trust, Commercial fit).
+- **Portfolio:** "What Bangladesh builds", with six Daffodil examples and a note that they are not a list of approved offers.
+- **Evidence:** six Daffodil AI projects selected for the Top 50 at the Bangladesh Innovation Fair 2026, and the 1990 and 2002 milestones.
+- **Work with DGIX:** "Take the next step", with cards for six audiences (buyers, innovators, delivery partners, experts and diaspora, universities, investors) and a contact link.
+
+### Removed
+- Figures the posters don't include: "38% pass", "1-day shortlist" and "$0 extra cost".
+
 ## [1.5.1] — 2026-11-14
 
 A cleaner home hero.
@@ -128,7 +143,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nibir404/DGIX/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nibir404/DGIX/compare/v1.3.0...v1.4.0

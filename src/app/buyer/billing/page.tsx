@@ -1,0 +1,208 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import clsx from "clsx";
+import { motion } from "framer-motion";
+import { useLookup } from "@/lib/store";
+import type { Invoice } from "@/lib/types";
+import { Btn, Dialog, Panel, daysUntil, dayMonth, money, useBuyer, useFlash } from "@/components/buyer/kit";
+
+const statusChip = (i: Invoice) =>
+  i.status === "due" ? { t: `Due ${dayMonth(i.due)}`, c: "bg-[#FFF3DC] text-warning" }
+  : i.status === "overdue" ? { t: "Overdue", c: "bg-[#FBE7E7] text-danger" }
+  : i.status === "paid" ? { t: "Paid · verifying", c: "bg-mist text-primary" }
+  : { t: "Paid", c: "bg-[#E6F4EC] text-[#0E6439]" };
+
+export default function Billing() {
+  const b = useBuyer();
+  const lk = useLookup();
+  const { flash, toast } = useFlash();
+  const [paying, setPaying] = useState<Invoice | null>(null);
+  const [method, setMethod] = useState<"card" | "bank">("card");
+
+  const list = [...b.invoices].sort((a, c) => (a.status === "due" ? -1 : 0) - (c.status === "due" ? -1 : 0) || c.due.localeCompare(a.due));
+  const due = list.filter((i) => i.status === "due" || i.status === "overdue").sort((a, c) => a.due.localeCompare(c.due));
+  const next = due[0];
+  const projName = (id: string) => lk.product(b.db.projects.find((p) => p.id === id)?.productId)?.name ?? "Project";
+  const year = String(new Date().getFullYear());
+  const paidThisYear = b.invoices.filter((i) => (i.status === "paid" || i.status === "verified") && (i.paidOn ?? "").startsWith(year));
+  const spent = paidThisYear.reduce((s, i) => s + i.amount, 0);
+
+  const months = Array.from({ length: 5 }, (_, k) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - (4 - k));
+    const key = d.toISOString().slice(0, 7);
+    return { key, label: d.toLocaleDateString("en-GB", { month: "short" }), v: b.invoices.filter((i) => (i.paidOn ?? "").startsWith(key)).reduce((s, i) => s + i.amount, 0) };
+  });
+  const max = Math.max(1, ...months.map((m) => m.v));
+
+  const exportCsv = () => {
+    const rows = [["Invoice", "For", "Status", "Amount (USD)", "Due", "Paid on"], ...list.map((i) => [i.ref, `${projName(i.projectId)} · ${i.milestone}`, i.status, String(i.amount), i.due, i.paidOn ?? ""])];
+    const url = URL.createObjectURL(new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dgix-statement-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    flash("Statement exported");
+  };
+
+  const pay = () => {
+    if (!paying) return;
+    b.payInvoice(paying.id);
+    flash(`${paying.ref} paid · ${money(paying.amount)}. DGIX will verify it.`);
+    setPaying(null);
+  };
+
+  const dd = next ? daysUntil(next.due) : 0;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[13px] leading-4 text-muted">All amounts in USD · one invoice per accepted milestone</div>
+          <h1 className="text-[32px] font-light leading-10 tracking-tight text-ink md:text-[36px] md:leading-[44px]">Billing</h1>
+        </div>
+        <Btn variant="outline" onClick={exportCsv} className="self-start border-[#C9D4E8] md:self-auto">Export statement</Btn>
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-start justify-between gap-6 rounded-lg bg-night p-6 sm:flex-row sm:items-center md:p-7 lg:grow-[1.4] lg:basis-0"
+          style={{ backgroundImage: "radial-gradient(ellipse 60% 120% at 100% 0%, #2F6BD8 0%, #2F6BD800 60%), radial-gradient(ellipse 40% 90% at 70% 100%, #F6A11A4D 0%, #F6A11A00 70%)" }}
+        >
+          {next ? (
+            <>
+              <div className="flex min-w-0 flex-col gap-2">
+                <div className="text-[13px] leading-4 text-glow-amber">{dd < 0 ? `Overdue by ${-dd} days` : dd === 0 ? "Due today" : `Due in ${dd} days`} · {next.ref}</div>
+                <div className="text-[48px] font-light leading-[56px] tracking-[-0.05em] text-paper md:text-[56px] md:leading-[64px]">{money(next.amount)}</div>
+                <div className="text-sm leading-[18px] text-[#FFFFFFA6]">{projName(next.projectId)} · {next.milestone}</div>
+              </div>
+              <div className="flex w-full flex-col gap-2.5 sm:w-auto">
+                <button onClick={() => setPaying(next)} className="inline-flex h-[52px] items-center justify-center rounded-lg bg-paper px-7 text-[15px] font-semibold leading-[18px] text-night hover:bg-mist">Pay now</button>
+                <div className="text-center text-xs leading-4 text-[#FFFFFF8C]">Card or bank transfer</div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="text-[13px] leading-4 text-[#7FE0AE]">Nothing due</div>
+              <div className="text-[32px] font-light leading-10 tracking-tight text-paper">You&apos;re all paid up.</div>
+              <div className="text-sm text-[#FFFFFFA6]">New invoices appear only after you accept a milestone.</div>
+            </div>
+          )}
+        </motion.div>
+
+        <Panel className="flex flex-col gap-3.5 p-6 lg:grow lg:basis-0" delay={0.05}>
+          <div className="text-[13px] leading-4 text-muted">Spent this year</div>
+          <div className="text-[40px] font-light leading-12 tracking-tight text-ink">{money(spent)}</div>
+          <div className="flex h-2.5 gap-1">
+            {b.projects.map((p, i) => {
+              const v = paidThisYear.filter((x) => x.projectId === p.id).reduce((s, x) => s + x.amount, 0);
+              return v ? <div key={p.id} style={{ flexGrow: v }} className={clsx("basis-0 rounded-lg", i % 2 ? "bg-sky" : "bg-primary")} /> : null;
+            })}
+            {spent === 0 && <div className="flex-1 rounded-lg bg-mist" />}
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            {b.projects.map((p, i) => {
+              const v = paidThisYear.filter((x) => x.projectId === p.id).reduce((s, x) => s + x.amount, 0);
+              return v ? <div key={p.id} className={clsx("text-xs leading-4", i % 2 ? "text-muted" : "text-primary")}>● {lk.product(p.productId)?.name} {money(v)}</div> : null;
+            })}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <Panel className="min-w-0 overflow-x-auto px-6 py-2 lg:grow-[1.6] lg:basis-0" delay={0.1}>
+          <div className="min-w-[520px]">
+            <div className="flex items-center border-b border-[#F1F4FA] py-3.5 text-xs font-semibold leading-4 tracking-[0.06em] text-[#9AA2B4]">
+              <div className="flex-[1.2] basis-0">INVOICE</div>
+              <div className="flex-[2] basis-0">FOR</div>
+              <div className="flex-1 basis-0">STATUS</div>
+              <div className="flex-1 basis-0 text-right">AMOUNT</div>
+            </div>
+            {list.length === 0 && <div className="py-8 text-center text-sm text-muted">No invoices yet.</div>}
+            {list.map((i, k) => {
+              const s = statusChip(i);
+              const isDue = i.status === "due" || i.status === "overdue";
+              return (
+                <div key={i.id} className={clsx("flex items-center py-4", k < list.length - 1 && "border-b border-[#F1F4FA]")}>
+                  <div className="flex-[1.2] basis-0 text-sm font-medium leading-[18px] text-ink">{i.ref}</div>
+                  <div className="flex flex-[2] basis-0 flex-col pr-3">
+                    <Link href={`/buyer/projects/${i.projectId}`} className="text-sm leading-[18px] text-ink hover:text-primary">{projName(i.projectId)} · {i.milestone}</Link>
+                    <div className="text-xs leading-4 text-[#9AA2B4]">{i.paidOn ? `Paid ${dayMonth(i.paidOn)}` : `Due ${dayMonth(i.due)}`}</div>
+                  </div>
+                  <div className="flex flex-1 basis-0 items-center gap-2">
+                    <span className={clsx("whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", s.c)}>{s.t}</span>
+                  </div>
+                  <div className="flex flex-1 basis-0 items-center justify-end gap-2.5">
+                    {isDue && <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>}
+                    <span className={clsx("text-right text-[15px] leading-[18px] text-ink", isDue && "font-semibold")}>{money(i.amount)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+
+        <div className="flex flex-col gap-4 lg:grow lg:basis-0">
+          <Panel className="flex min-h-[220px] flex-1 flex-col gap-3.5 p-6" delay={0.15}>
+            <div className="text-base font-medium leading-5 text-ink">Monthly spend</div>
+            <div className="flex flex-1 items-end gap-2.5">
+              {months.map((m, k) => {
+                const last = k === months.length - 1;
+                return (
+                  <div key={m.key} className="flex h-full flex-1 basis-0 flex-col items-center justify-end gap-1.5" title={money(m.v)}>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max(4, (m.v / max) * 84)}%` }}
+                      transition={{ duration: 0.7, delay: k * 0.05 }}
+                      className={clsx("w-full rounded-lg", last ? "bg-[linear-gradient(180deg,#4C85EE_0%,#1E4FA3_100%)]" : "[background:repeating-linear-gradient(135deg,#7FB6FF_0px,#7FB6FF_2px,#E3EDFD_2px,#E3EDFD_6px)]")}
+                    />
+                    <div className={clsx("text-[11px] leading-[14px]", last ? "font-semibold text-ink" : "text-[#9AA2B4]")}>{m.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Panel>
+          <Panel className="flex flex-col gap-3 p-5" delay={0.2}>
+            <div className="text-base font-medium leading-5 text-ink">Payment method</div>
+            <div className="flex items-center gap-3 rounded-lg bg-[linear-gradient(135deg,#0C1F45_0%,#1E4FA3_100%)] p-3.5">
+              <svg width="28" height="20" viewBox="0 0 28 20" className="shrink-0"><rect x="0.5" y="0.5" width="27" height="19" rx="4" fill="none" stroke="rgb(255 255 255 / 50%)" /><rect x="4" y="6" width="6" height="5" rx="1" fill="#FFD58A" /></svg>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="text-[13px] font-semibold leading-4 text-paper">Company Visa ·· 4410</div>
+                <div className="text-[11px] leading-[14px] text-[#FFFFFF99]">Expires 08/28</div>
+              </div>
+              <Link href={`/buyer/support?subject=${encodeURIComponent("Change payment method")}`} className="text-xs leading-4 text-glow-amber">Change</Link>
+            </div>
+            <div className="text-xs leading-4 text-muted">VAT invoices go to finance@{b.user?.email.split("@")[1] ?? "company.com"}</div>
+          </Panel>
+        </div>
+      </div>
+
+      <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Pay ${paying?.ref ?? ""}`}>
+        {paying && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between">
+              <div className="text-sm text-muted">{projName(paying.projectId)} · {paying.milestone}</div>
+              <div className="text-2xl font-light text-ink">{money(paying.amount)}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(["card", "bank"] as const).map((m) => (
+                <button key={m} onClick={() => setMethod(m)} className={clsx("rounded-lg border px-3 py-3 text-left text-[13px]", method === m ? "border-primary bg-mist font-semibold text-primary" : "border-[#E3E9F4] text-ink")}>
+                  {m === "card" ? "Company Visa ·· 4410" : "Bank transfer"}
+                </button>
+              ))}
+            </div>
+            <div className="text-xs text-muted">Funds are held by DGIX and released to the partner after verification.</div>
+            <Btn onClick={pay} size="lg">Pay {money(paying.amount)}</Btn>
+          </div>
+        )}
+      </Dialog>
+      {toast}
+    </div>
+  );
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- DGIX symbol, redrawn as vector from the official lock-up -->
+  <defs>
+    <clipPath id="outer">
+      <path d="M21 4 Q25 3 28 6 L59 33 Q62 36 59 39 L11 61 Q6 63 6 57 L17 8 Q18 4 21 4 Z"/>
+    </clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#FFFFFF"/>
+  <g clip-path="url(#outer)">
+    <rect width="64" height="64" fill="#6B7787"/>
+    <!-- pinwheel cuts: red triangle edges extended to the outer edge -->
+    <g stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round">
+      <line x1="2" y1="40" x2="64" y2="26"/>
+      <line x1="50" y1="18" x2="27" y2="64"/>
+      <line x1="40" y1="62" x2="12" y2="20"/>
+    </g>
+  </g>
+  <!-- red core -->
+  <path d="M15.5 39.5 Q13.5 33.5 19.5 32 L42.5 26.6 Q49 25.4 46.2 31.4 L37 51.5 Q34 57 30.6 52 Z" fill="#E52A2A" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

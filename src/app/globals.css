@@ -1,26 +1,137 @@
 @import "tailwindcss";
 
+/* DGIX design tokens — mirrored from the Paper file "Design System v2" */
+@theme {
+  --color-paper: #ffffff;
+  --color-mist: #eef3fb;
+  --color-line: #d9e1ee;
+  --color-muted: #5b6478;
+  --color-subtle: #8790a3;
+  --color-ink: #0c1f45;
+  --color-primary: #1e4fa3;
+  --color-primary-strong: #163c7e;
+  --color-cobalt: #2f6bd8;
+  --color-red: #e52a2a;
+  --color-amber: #f6a11a;
+  --color-success: #14804a;
+  --color-warning: #b86e00;
+  --color-danger: #c42020;
+  --color-night: #08152f;
+  --color-sky: #7fb6ff;
+  --color-glow-amber: #ffd58a;
+  --color-haze: #aebbd6;
+
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+
+  --text-display: 104px;
+  --text-display--line-height: 104px;
+  --text-h1: 52px;
+  --text-h1--line-height: 56px;
+  --text-h2: 32px;
+  --text-h2--line-height: 38px;
+
+  --tracking-tight: -0.04em;
+  --tracking-snug: -0.03em;
+  --tracking-caps: 0.08em;
+
+  /* One radius everywhere: 8px */
+  --radius-xs: 8px;
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
+
+  --container-content: 1200px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html {
+  background: #ffffff;
+  overflow-x: clip;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Large displays: scale the 1440–1920 layout up proportionally (QHD → 4K). */
+@media (min-width: 2400px) {
+  html { zoom: 1.333; }
+}
+@media (min-width: 3200px) {
+  html { zoom: 2; }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-width: 353px;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+}
+
+/* Typography: never split words; balance headings, avoid orphans in body copy */
+h1, h2, h3, h4 {
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  hyphens: manual;
+}
+p, li, dd {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Brand surfaces */
+.bg-night-hero {
+  background-color: #08152f;
+  background-image:
+    radial-gradient(ellipse 60% 70% at 100% 0%, rgba(47, 107, 216, 0.85) 0%, rgba(47, 107, 216, 0) 70%),
+    radial-gradient(ellipse 50% 55% at 85% 100%, rgba(246, 161, 26, 0.28) 0%, rgba(246, 161, 26, 0) 70%),
+    radial-gradient(ellipse 45% 60% at 0% 100%, rgba(47, 107, 216, 0.35) 0%, rgba(47, 107, 216, 0) 70%);
+}
+.bg-night-panel {
+  background-color: #08152f;
+  background-image: radial-gradient(ellipse 80% 90% at 100% 0%, #2f6bd8 0%, rgba(47, 107, 216, 0) 70%);
+}
+.bg-verified {
+  background-color: #eef3fb;
+  background-image:
+    radial-gradient(ellipse 50% 60% at 100% 0%, rgba(127, 182, 255, 0.45) 0%, rgba(127, 182, 255, 0) 70%),
+    radial-gradient(ellipse 40% 50% at 0% 100%, rgba(255, 213, 138, 0.4) 0%, rgba(255, 213, 138, 0) 70%);
+}
+.hatch {
+  background-image: repeating-linear-gradient(135deg, rgba(30, 79, 163, 0.55) 0 2px, transparent 2px 7px);
+}
+.hatch-light {
+  background-image: repeating-linear-gradient(135deg, rgba(127, 182, 255, 0.55) 0 2px, transparent 2px 7px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

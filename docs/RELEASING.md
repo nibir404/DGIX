@@ -114,6 +114,7 @@ Vercel deploys every push to `main`, so the release is live once the deploy fini
 
 | Version | Date | Summary |
 | --- | --- | --- |
+| [v1.2.1](https://github.com/nibir404/DGIX/compare/v1.2.0...v1.2.1) | 2026-11-14 | Advisor moved into the account menu, simpler hero top, notification toggle fix |
 | [v1.2.0](https://github.com/nibir404/DGIX/compare/v1.1.0...v1.2.0) | 2026-11-14 | End-to-end buyer, seller and staff workflow; new home hero, line-art globe, sticky search and app section |
 | [v1.1.0](https://github.com/nibir404/DGIX/compare/v1.0.0...v1.1.0) | 2026-11-14 | Mobile and tablet support, Android app section, account menu and settings, Next.js security upgrade |
 | [v1.0.0](https://github.com/nibir404/DGIX/releases/tag/v1.0.0) | 2026-11-14 | First complete release of the frontend |

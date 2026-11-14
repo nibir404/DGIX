@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.2.1] — 2026-11-14
+
+Small polish to the portals and home page.
+
 ### Changed
 - "Message your advisor" moved into the account menu (advisor photo, online status and a Message action); the sidebar foot now shows only your own account.
 - Removed the line above the home hero heading.
@@ -91,7 +97,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/nibir404/DGIX/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/nibir404/DGIX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nibir404/DGIX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nibir404/DGIX/releases/tag/v1.0.0

@@ -6,7 +6,7 @@ Frontend for **DGIX**, Daffodil's global innovation exchange: verified software 
 
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff), built as a 1-1 implementation of the DGIX Paper design file. All data comes from local seed data, so every flow can be tested end to end without a backend.
 
-> **Status:** v1.2.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+> **Status:** v1.2.1. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ---
 
@@ -137,6 +137,7 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 
 | Version | Date | Highlights |
 | --- | --- | --- |
+| v1.2.1 | 2026-11-14 | Advisor in the account menu, simpler hero top, toggle fix |
 | v1.2.0 | 2026-11-14 | End-to-end workflow for all three roles, new home hero, line-art globe, sticky search, app section |
 | v1.1.0 | 2026-11-14 | Mobile and tablet support, Android app section, account menu and settings, Next.js security upgrade |
 | v1.0.0 | 2026-11-14 | First complete release |

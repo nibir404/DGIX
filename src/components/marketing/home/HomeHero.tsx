@@ -60,7 +60,6 @@ export function HomeHero() {
 
       {/* Foreground: everything centred */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[calc(100%-104px)] max-w-[980px] flex-col items-center justify-center gap-7 px-4 pb-10 pt-6 text-center sm:px-6 md:gap-8 md:pb-[150px]">
-        <div className="hero-fade text-[15px] leading-[18px] text-white/70">Daffodil Verified software for the USA &amp; GCC</div>
         <h1 ref={headline} className="text-[44px] leading-[46px] sm:text-[64px] sm:leading-[66px] md:text-[84px] md:leading-[86px] lg:text-[100px] lg:leading-[100px] font-light tracking-[-0.05em]">
           <span className="hl-line block overflow-hidden pb-2"><span className="block">Proven products.</span></span>
           <span className="hl-line block overflow-hidden pb-2"><span className="block">Sold to the world.</span></span>

@@ -17,7 +17,6 @@ const GearIcon = () => (
     <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
   </svg>
 );
-const HelpIcon = () => <svg {...svg}><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01" /></svg>;
 
 /**
  * Account menu: profile, account settings, help and sign out.
@@ -26,7 +25,7 @@ const HelpIcon = () => <svg {...svg}><circle cx="12" cy="12" r="9" /><path d="M9
  */
 export function AccountMenu({ variant = "header", collapsed = false }: { variant?: "header" | "sidebar"; collapsed?: boolean }) {
   const { user, signOut } = useStore();
-  const { company } = useLookup();
+  const { company, user: findUser } = useLookup();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -48,10 +47,10 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
   if (!user) return null;
   const base = portalHome[user.role];
   const co = company(user.companyId);
+  const advisor = user.role !== "staff" ? findUser(co?.advisorId) : undefined;
   const items = [
     { href: `${base}/account#profile`, label: "Profile", icon: <UserIcon /> },
     { href: `${base}/account#settings`, label: "Account settings", icon: <GearIcon /> },
-    ...(user.role !== "staff" ? [{ href: `${base}/support`, label: "Help & support", icon: <HelpIcon /> }] : []),
   ];
   const up = variant === "sidebar";
 
@@ -111,6 +110,29 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
               </div>
             </div>
             <div className="h-px bg-line" />
+            {advisor && (
+              <>
+                <Link
+                  href={`${base}/support`}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className="group my-1 flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors hover:bg-mist"
+                >
+                  <span className="relative shrink-0">
+                    <Avatar user={advisor} size={32} />
+                    <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-success ring-2 ring-white" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-ink">{advisor.name}</span>
+                    <span className="block truncate text-xs text-success">{user.role === "buyer" ? "Advisor" : "Manager"} · online</span>
+                  </span>
+                  <span className="flex items-center gap-1 rounded-md bg-mist px-2.5 py-1 text-xs font-semibold text-primary transition-colors group-hover:bg-white">
+                    <Icon name="chat" size={13} /> Message
+                  </span>
+                </Link>
+                <div className="h-px bg-line" />
+              </>
+            )}
             <div className="flex flex-col py-1">
               {items.map((it) => (
                 <Link

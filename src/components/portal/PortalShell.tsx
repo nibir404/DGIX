@@ -88,7 +88,7 @@ export const portalConfig: Record<Role, Config> = {
 
 export function PortalShell({ role, children }: { role: Role; children: React.ReactNode }) {
   const { db, user, ready } = useStore();
-  const { company, user: findUser } = useLookup();
+  const { company } = useLookup();
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -96,7 +96,6 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
   useEffect(() => setMenuOpen(false), [pathname]);
   const cfg = portalConfig[role];
   const co = company(user?.companyId);
-  const advisor = role === "staff" ? user : findUser(co?.advisorId);
   const unread = user ? db.notifications.filter((n) => n.userId === user.id && !n.read).length : 0;
 
   if (!ready) return <div className="min-h-screen bg-[#F5F8FC]" />;
@@ -172,28 +171,9 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             </div>
           ))}
         </nav>
-        <div className="flex flex-col gap-3 border-t border-line pt-4">
-          {advisor && role !== "staff" && (
-            <div className={clsx("flex items-center gap-3 px-1", collapsed && "justify-center")}>
-              <Avatar user={advisor} size={36} />
-              {!collapsed && (
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold leading-[18px]">{advisor.name}</div>
-                  <div className="text-xs leading-4 text-muted">
-                    <span className="text-success">● {role === "buyer" ? "Your advisor" : "Partner manager"} · online</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {role !== "staff" && !collapsed && (
-            <Link href={`/${role}/support`} className="flex h-9 items-center justify-center rounded-lg bg-mist text-sm font-medium text-primary hover:bg-[#E2EAF7]">
-              Message
-            </Link>
-          )}
-          <div className={clsx(role !== "staff" && "border-t border-line pt-3")}>
-            <AccountMenu variant="sidebar" collapsed={collapsed} />
-          </div>
+        {/* Only your own account lives here; messaging the advisor is inside the account menu */}
+        <div className="border-t border-line pt-4">
+          <AccountMenu variant="sidebar" collapsed={collapsed} />
         </div>
       </aside>
 

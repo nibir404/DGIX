@@ -13,8 +13,8 @@ import { Btn, Panel, StatusTag, dayMonth, firstName, money, useBuyer, useFlash }
 const thumb = (v: Product["visual"]) => (v === "people" ? "/media/buyer-req-hr.webp" : v === "bag" ? "/media/buyer-req-pos.webp" : "/media/buyer-req-ai.webp");
 
 function trust(p: Product, score: number) {
-  if (p.status === "pilot") return `Pilot · ${score}/100`;
-  if (score === 100) return "Verified 100/100";
+  if (p.status === "pilot" || p.classification === "pilot_eligible") return `Pilot-Eligible · ${score}/100`;
+  if (score >= 90) return `Globally Ready · ${score}/100`;
   return `In review · ${score}/100`;
 }
 
@@ -26,26 +26,36 @@ function ShortlistInner() {
   const { flash, toast } = useFlash();
   const [tab, setTab] = useState<"need" | "shortlist">("shortlist");
 
-  const withList = b.requests.filter((r) => r.shortlist.length > 0);
-  const byLatest = [...withList].sort((a, c) => c.createdAt.localeCompare(a.createdAt));
-  const req = withList.find((r) => r.id === params.get("request")) ?? byLatest.find((r) => r.status === "shortlist_sent") ?? byLatest[0];
+  const byLatest = [...b.requests].sort((a, c) => c.createdAt.localeCompare(a.createdAt));
+  const req =
+    byLatest.find((r) => r.id === params.get("request")) ??
+    byLatest.find((r) => r.status === "shortlist_sent") ??
+    byLatest[0];
 
   if (!req)
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg bg-paper px-6 py-16 text-center">
         <div className="text-lg text-ink">No shortlist yet</div>
-        <div className="max-w-sm text-sm text-muted">Describe what you need and your advisor will send three verified matches within 24 hours.</div>
+        <div className="max-w-sm text-sm text-muted">Describe what you need and your advisor will send verified matches within 24 hours.</div>
         <Btn href="/buyer/requests/new">New request</Btn>
       </div>
     );
 
   const owner = lk.user(req.ownerId ?? b.company?.advisorId);
-  const preliminary = req.status === "matching" || req.shortlist.some((s) => !s.confirmed);
-  const items = [...req.shortlist].sort((a, c) => c.fit - a.fit).map((s) => {
-    const p = lk.product(s.productId)!;
-    const demo = b.demos.find((d) => d.productId === s.productId && (d.requestId === req.id || !d.requestId) && d.status !== "cancelled");
-    return { s, p, score: lk.score(p.id), partner: lk.company(p.partnerId), demo };
-  });
+  const lockedByAdvisorGate =
+    req.shortlistStatus === "pending_advisor" ||
+    (req.status === "matching" && req.shortlist.every((s) => !s.confirmed));
+
+  const items = [...req.shortlist]
+    .sort((a, c) => c.fit - a.fit)
+    .map((s) => {
+      const p = lk.product(s.productId);
+      if (!p) return null;
+      const demo = b.demos.find((d) => d.productId === s.productId && (d.requestId === req.id || !d.requestId) && d.status !== "cancelled");
+      return { s, p, score: lk.score(p.id), partner: lk.company(p.partnerId), demo };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
   const best = items[0];
   const tags = [req.country === "United Arab Emirates" ? "UAE" : req.country, `Budget ${req.budget}`, `Go-live ${req.goLive}`, `${req.users} users`].filter(Boolean);
 
@@ -54,9 +64,11 @@ function ShortlistInner() {
     flash(`Demo requested · ${name}. We'll confirm a time within a day.`);
   };
 
-  const note = preliminary
-    ? `I'm checking these ${items.length} matches now. You'll get the confirmed shortlist ${req.dueAt ? "by " + dayMonth(req.dueAt) : "within 24 hours"}.`
-    : `${best.p.name} fits best: ${best.s.strengths.slice(0, 2).join(" and ")}. Book ${Math.min(2, items.length) === 1 ? "a demo" : "two demos"}, then I'll prepare one offer.`;
+  const note = lockedByAdvisorGate
+    ? "AI pre-ranking is complete and queued for DGIX Senior Advisor 4-eyes approval (BR-15). Buyer visibility unlocks immediately after human verification."
+    : best
+      ? `${best.p.name} fits best: ${best.s.strengths.slice(0, 2).join(" and ")}. Book ${Math.min(2, items.length) === 1 ? "a demo" : "two demos"}, then I'll prepare one binding offer.`
+      : "Your advisor is preparing verified product matches for this requirement.";
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,9 +76,9 @@ function ShortlistInner() {
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2 text-[13px] leading-4 text-muted">
             <Link href="/buyer/requests" className="hover:text-ink">Requests</Link> / {req.ref}
-            {withList.length > 1 && (
+            {byLatest.length > 1 && (
               <select value={req.id} onChange={(e) => router.push(`/buyer/shortlist?request=${e.target.value}`)} aria-label="Choose request" className="ml-1 rounded-full border border-[#E3E9F4] bg-paper px-2 py-0.5 text-xs text-ink outline-none">
-                {byLatest.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+                {byLatest.map((r) => <option key={r.id} value={r.id}>{r.title} ({r.shortlistStatus === "approved" || r.status === "shortlist_sent" ? "Approved" : "Pending Advisor"})</option>)}
               </select>
             )}
           </div>
@@ -90,6 +102,22 @@ function ShortlistInner() {
           <p className="text-lg font-light leading-8 text-ink">{req.need}</p>
           <div className="text-[13px] text-muted">Sent {dayMonth(req.createdAt)} · {req.ref}</div>
         </Panel>
+      ) : lockedByAdvisorGate ? (
+        <Panel className="flex flex-col gap-4 border border-[#F3D9B0] bg-[#FFFBF4] p-7">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full bg-[#FFE4B5] px-2.5 py-1 text-xs font-semibold text-[#8A5300]">
+              Human-in-the-Loop Gate · BR-15
+            </span>
+            <span className="text-xs text-[#6B4A12]">Status: Pending Senior Advisor 4-Eyes Approval</span>
+          </div>
+          <h2 className="text-2xl font-light text-ink">AI candidate ranking complete — awaiting Advisor sign-off.</h2>
+          <p className="max-w-2xl text-sm leading-6 text-[#6B4A12]">
+            Under DGIX Governance Rule <strong>BR-15</strong>, AI-generated product shortlists are never exposed directly to enterprise buyers without independent 4-eyes verification by a Senior DGIX Advisor (<code>advisor.approver</code>) confirming regional country readiness, cost-floor compliance and delivery capacity.
+          </p>
+          <div className="text-xs text-muted">
+            Tip for UAT: Switch to <code>advisor.approver</code> in the top-right Account menu → open <strong>Matching desk</strong> → approve this shortlist to unlock it for <code>buyer.user</code>.
+          </div>
+        </Panel>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -107,7 +135,7 @@ function ShortlistInner() {
                   <div className={clsx("relative flex h-[170px] shrink-0 items-start p-[18px]", top ? "justify-between" : "justify-end")}>
                     <Image src={thumb(p.visual)} alt="" fill sizes="(min-width:1280px) 33vw, 100vw" className="object-cover" />
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,#08152F1A_0%,#08152F8C_100%)]" />
-                    {top && <span className="relative rounded-lg bg-glow-amber px-2.5 py-[5px] text-xs font-semibold leading-4 text-night">Best match</span>}
+                    {top && <span className="relative rounded-lg bg-glow-amber px-2.5 py-[5px] text-xs font-semibold leading-4 text-night">Advisor Approved · #1</span>}
                     <div className="relative flex flex-col items-end">
                       <div className="text-[40px] font-light leading-[42px] tracking-tight text-paper">{s.fit}</div>
                       <div className="text-[11px] leading-[14px] text-[#FFFFFFB3]">fit score</div>
@@ -146,27 +174,29 @@ function ShortlistInner() {
           <Panel className="flex items-center gap-4 p-5" delay={0.1}>
             <Image src="/media/buyer-advisor.webp" alt={owner?.name ?? "Advisor"} width={48} height={48} className="size-12 shrink-0 rounded-full object-cover" />
             <div className="flex min-w-0 flex-col gap-1">
-              <div className="text-[13px] font-semibold leading-4 text-ink">{firstName(owner?.name) || "Advisor"}&apos;s note</div>
+              <div className="text-[13px] font-semibold leading-4 text-ink">{firstName(owner?.name) || "Advisor"}&apos;s note (BR-15 Verified)</div>
               <div className="text-sm leading-5 text-muted">{note}</div>
             </div>
           </Panel>
 
-          <Panel className="overflow-x-auto px-6 py-2" delay={0.15}>
-            <div className="min-w-[620px]">
-              {[
-                { k: "COMPARE", head: true, vals: items.map((x) => x.p.name) },
-                { k: "Go-live", vals: items.map((x) => x.p.goLive) },
-                { k: "Price from (per year)", vals: items.map((x) => money(x.p.priceFrom)) },
-                { k: "Verification", vals: items.map((x) => trust(x.p, x.score)) },
-                { k: "Markets live", vals: items.map((x) => x.p.markets.join(", ")) },
-              ].map((row, i, arr) => (
-                <div key={row.k} className={clsx("flex py-3.5", i < arr.length - 1 && "border-b border-[#F1F4FA]")}>
-                  <div className={clsx("w-[180px] shrink-0 md:w-[240px]", row.head ? "text-xs font-semibold leading-4 tracking-[0.06em] text-[#9AA2B4]" : "text-[13px] leading-4 text-muted")}>{row.k}</div>
-                  {row.vals.map((v, j) => <div key={j} className={clsx("flex-1 basis-0 pr-3 text-[13px] leading-4 text-ink", row.head && "font-semibold")}>{v}</div>)}
-                </div>
-              ))}
-            </div>
-          </Panel>
+          {items.length > 0 && (
+            <Panel className="overflow-x-auto px-6 py-2" delay={0.15}>
+              <div className="min-w-[620px]">
+                {[
+                  { k: "COMPARE", head: true, vals: items.map((x) => x.p.name) },
+                  { k: "Go-live", vals: items.map((x) => x.p.goLive) },
+                  { k: "Price from (per year)", vals: items.map((x) => money(x.p.priceFrom)) },
+                  { k: "Verification", vals: items.map((x) => trust(x.p, x.score)) },
+                  { k: "Markets live", vals: items.map((x) => x.p.markets.join(", ")) },
+                ].map((row, i, arr) => (
+                  <div key={row.k} className={clsx("flex py-3.5", i < arr.length - 1 && "border-b border-[#F1F4FA]")}>
+                    <div className={clsx("w-[180px] shrink-0 md:w-[240px]", row.head ? "text-xs font-semibold leading-4 tracking-[0.06em] text-[#9AA2B4]" : "text-[13px] leading-4 text-muted")}>{row.k}</div>
+                    {row.vals.map((v, j) => <div key={j} className={clsx("flex-1 basis-0 pr-3 text-[13px] leading-4 text-ink", row.head && "font-semibold")}>{v}</div>)}
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
         </>
       )}
       {toast}

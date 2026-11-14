@@ -1,22 +1,156 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type AuthSession,
+  type LiveListing,
+  type PersonaSummary,
+  apiFetch,
+  buildSandboxCheckoutRedirectUrl,
+  fetchPublicCatalogue,
+  fetchUatPersonas,
+  loadStoredSession,
+  loginAsUatPersona,
+  loginWithPassword,
+  registerOrganization,
+  safeGet,
+  saveStoredSession,
+  uploadEvidenceBinary,
+} from "./api";
 import { CHECK_META, seed } from "./seed";
-import type { BuyerRequest, Category, Db, Demo, Offer, Role, User } from "./types";
+import type {
+  BuyerRequest,
+  Category,
+  Check,
+  Company,
+  Db,
+  Demo,
+  Gate,
+  Invoice,
+  Licence,
+  Offer,
+  Payout,
+  Product,
+  Project,
+  Role,
+  SupportCase,
+  User,
+} from "./types";
 
-const KEY = "dgix-db-v1";
 const SESSION_COOKIE = "dgix_uid";
+const DEFAULT_DISCLAIMER =
+  "Listings reflect verified assessment scope at a point in time, not an unconditional guarantee of fitness for every buyer context.";
+
+export interface LiveBackendState {
+  listings: LiveListing[];
+  partners: Array<Record<string, unknown>>;
+  products: Array<Record<string, unknown>>;
+  versionsByProduct: Record<string, Array<Record<string, unknown>>>;
+  paoBindings: Array<Record<string, unknown>>;
+  reviewers: Array<Record<string, unknown>>;
+  evidence: Array<Record<string, unknown>>;
+  claims: Array<Record<string, unknown>>;
+  assessments: Array<Record<string, unknown>>;
+  gapLetters: Array<Record<string, unknown>>;
+  approvals: Array<Record<string, unknown>>;
+  countryReadiness: Array<Record<string, unknown>>;
+  agreements: Array<Record<string, unknown>>;
+  costFloors: Array<Record<string, unknown>>;
+  priceLists: Array<Record<string, unknown>>;
+  requirements: Array<Record<string, unknown>>;
+  shortlists: Array<Record<string, unknown>>;
+  offers: Array<Record<string, unknown>>;
+  orders: Array<Record<string, unknown>>;
+  demoBookings: Array<Record<string, unknown>>;
+  fxRates: Array<Record<string, unknown>>;
+  invoices: Array<Record<string, unknown>>;
+  payments: Array<Record<string, unknown>>;
+  payouts: Array<Record<string, unknown>>;
+  refunds: Array<Record<string, unknown>>;
+  projects: Array<Record<string, unknown>>;
+  incidents: Array<Record<string, unknown>>;
+  auditEntries: Array<Record<string, unknown>>;
+  auditVerification: {
+    ok: boolean;
+    count: number;
+    first_broken_seq?: number | null;
+    reason?: string | null;
+    last_entry_hash?: string | null;
+  } | null;
+}
+
+const EMPTY_LIVE: LiveBackendState = {
+  listings: [],
+  partners: [],
+  products: [],
+  versionsByProduct: {},
+  paoBindings: [],
+  reviewers: [],
+  evidence: [],
+  claims: [],
+  assessments: [],
+  gapLetters: [],
+  approvals: [],
+  countryReadiness: [],
+  agreements: [],
+  costFloors: [],
+  priceLists: [],
+  requirements: [],
+  shortlists: [],
+  offers: [],
+  orders: [],
+  demoBookings: [],
+  fxRates: [],
+  invoices: [],
+  payments: [],
+  payouts: [],
+  refunds: [],
+  projects: [],
+  incidents: [],
+  auditEntries: [],
+  auditVerification: null,
+};
 
 type Ctx = {
   db: Db;
   ready: boolean;
   user: User | null;
+  // Live BFF state & auth
+  personas: PersonaSummary[];
+  authSession: AuthSession | null;
+  catalogueDisclaimer: string;
+  live: LiveBackendState;
+  syncing: boolean;
+  lastError: string | null;
+  clearError: () => void;
+  refreshLive: () => Promise<void>;
+  loginLive: (identifier: string, password: string) => Promise<User>;
+  switchPersona: (username: string) => Promise<User>;
+  registerLive: (input: {
+    account_type: "buyer" | "seller";
+    full_name: string;
+    email: string;
+    password: string;
+    company_name: string;
+    country_code?: string;
+  }) => Promise<User>;
+  uploadRealEvidence: (params: {
+    productId: string;
+    productVersionId?: string;
+    evidenceType: string;
+    file: File | Blob;
+    filename: string;
+    expiresAt?: string;
+    isSourceCode?: boolean;
+  }) => Promise<Record<string, unknown>>;
+  // Legacy-compatible sync signatures backed by live BFF calls
   signIn: (email: string, password: string) => User | null;
   signInAs: (userId: string) => User | null;
   signOut: () => void;
   reset: () => void;
-  // Buyer flow
-  createRequest: (r: Pick<BuyerRequest, "title" | "need" | "country" | "budget" | "users" | "goLive">) => BuyerRequest;
+  createRequest: (
+    r: Pick<BuyerRequest, "title" | "need" | "country" | "budget" | "users" | "goLive">,
+  ) => BuyerRequest;
   bookDemo: (productId: string, requestId?: string) => void;
   acceptOffer: (offerId: string) => void;
   declineOffer: (offerId: string) => void;
@@ -25,413 +159,1541 @@ type Ctx = {
   openCase: (title: string, body: string, projectId?: string) => void;
   replyCase: (caseId: string, body: string) => void;
   resolveCase: (caseId: string) => void;
-  // Seller flow
   uploadEvidence: (productId: string, checkKey: string) => void;
   confirmDemo: (demoId: string) => void;
   submitMilestone: (projectId: string, milestoneId: string) => void;
-  // Staff flow
   confirmShortlist: (requestId: string, productIds?: string[]) => void;
   approvePayouts: (ids: string[]) => void;
   sendOffer: (offerId: string) => void;
   approveCheck: (productId: string, checkKey: string) => void;
   verifyPayment: (invoiceId: string) => void;
   markRead: (notificationId: string) => void;
-  // Workflow completion
   completeDemo: (demoId: string) => void;
   rateDemo: (demoId: string, rating: NonNullable<Demo["rating"]>, notes?: string) => void;
-  createOffer: (input: { requestId: string; productId: string; price: number; sla: string; warranty: string; exit: string; milestones: { title: string; amount: number }[]; send: boolean }) => Offer;
-  addProduct: (input: { name: string; category: Category; tagline: string; description: string; markets: string[]; priceFrom: number }) => string;
-  // Account
+  createOffer: (input: {
+    requestId: string;
+    productId: string;
+    price: number;
+    sla: string;
+    warranty: string;
+    exit: string;
+    milestones: { title: string; amount: number }[];
+    send: boolean;
+  }) => Offer;
+  addProduct: (input: {
+    name: string;
+    category: Category;
+    tagline: string;
+    description: string;
+    markets: string[];
+    priceFrom: number;
+  }) => string;
   updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
   changePassword: (current: string, next: string) => boolean;
 };
 
 const StoreCtx = createContext<Ctx | null>(null);
-
-function load(): Db {
-  if (typeof window === "undefined") return seed;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as Db;
-  } catch {}
-  return structuredClone(seed);
-}
-
-function readCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
 export const portalHome: Record<Role, string> = { buyer: "/buyer", seller: "/seller", staff: "/admin" };
 
 const uid = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 const today = () => new Date().toISOString();
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [db, setDb] = useState<Db>(seed);
-  const [ready, setReady] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+const TONES: User["avatarTone"][] = ["blue", "green", "amber", "violet", "rose"];
 
-  useEffect(() => {
-    setDb(load());
-    setUserId(readCookie(SESSION_COOKIE));
-    setReady(true);
-  }, []);
+function initialsOf(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .map((w) => w[0] ?? "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "DG"
+  );
+}
 
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(db));
-    } catch {}
-  }, [db, ready]);
+function toMarketLabel(iso: string): string {
+  const map: Record<string, string> = {
+    SAU: "KSA",
+    ARE: "UAE",
+    UAE: "UAE",
+    QAT: "Qatar",
+    USA: "USA",
+    BGD: "BGD",
+  };
+  return map[iso.toUpperCase()] ?? iso.toUpperCase();
+}
 
-  const user = useMemo(() => db.users.find((u) => u.id === userId) ?? null, [db.users, userId]);
+function toIsoCountry(input: string): string {
+  const norm = input.trim().toUpperCase();
+  if (norm.includes("EMIRATES") || norm === "UAE" || norm === "ARE") return "UAE";
+  if (norm.includes("SAUDI") || norm === "KSA" || norm === "SAU") return "SAU";
+  if (norm.includes("QATAR") || norm === "QAT") return "QAT";
+  if (norm.includes("UNITED STATES") || norm === "USA") return "USA";
+  if (norm.includes("BANGLADESH") || norm === "BGD") return "BGD";
+  return norm.length === 3 ? norm : "UAE";
+}
 
-  const update = useCallback((fn: (d: Db) => void) => {
-    setDb((prev) => {
-      const next = structuredClone(prev);
-      fn(next);
-      return next;
+function visualForCategory(cat: string, hint?: unknown): Product["visual"] {
+  if (typeof hint === "string") {
+    if (["hospital", "people", "bars", "bag", "campus", "ai", "ledger"].includes(hint)) {
+      return hint as Product["visual"];
+    }
+    if (hint === "hr") return "people";
+  }
+  const map: Record<string, Product["visual"]> = {
+    hr: "people",
+    healthcare: "hospital",
+    education: "campus",
+    retail: "bag",
+    ai: "ai",
+    finance: "ledger",
+    erp: "bars",
+  };
+  return map[cat] ?? "bars";
+}
+
+function normalizeCategory(raw: string): Category {
+  const known: Category[] = [
+    "erp",
+    "hr",
+    "crm",
+    "retail",
+    "healthcare",
+    "education",
+    "finance",
+    "custom",
+    "ai",
+    "services",
+  ];
+  const lower = raw.toLowerCase() as Category;
+  return known.includes(lower) ? lower : "erp";
+}
+
+function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "product"
+  );
+}
+
+function buildChecksFromScore(totalScore: number | null | undefined, gapNote?: string): Check[] {
+  const ratio = totalScore != null ? Math.max(0, Math.min(1, totalScore / 100)) : 0;
+  return CHECK_META.map((m) => {
+    const sc = Math.round(m.max * ratio);
+    return {
+      ...m,
+      score: sc,
+      note: sc < m.max ? (gapNote ?? "Awaiting evidence & gate verification") : undefined,
+    };
+  });
+}
+
+function buildUserFromSession(session: AuthSession, personas: PersonaSummary[]): User {
+  const actor = session.user;
+  const matched = personas.find((p) => p.username.toLowerCase() === actor.username.toLowerCase());
+  const companyId =
+    actor.portal_role === "buyer"
+      ? (actor.buyer_id ?? "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04")
+      : actor.portal_role === "seller"
+        ? (actor.partner_id ?? "partner-unknown")
+        : "c-dgix";
+  return {
+    id: actor.sub,
+    name: actor.full_name,
+    initials: initialsOf(actor.full_name),
+    email: actor.email,
+    password: "dgix_local_only",
+    role: actor.portal_role,
+    companyId,
+    title: actor.title || matched?.title || actor.primary_dgix_role,
+    avatarTone:
+      actor.portal_role === "buyer" ? "blue" : actor.portal_role === "seller" ? "green" : "amber",
+    username: actor.username,
+    primaryDgixRole: actor.primary_dgix_role,
+    dgixRoles: actor.roles,
+    mfaLevel: actor.mfa_level,
+    cell: actor.cell,
+    sodPairHint: matched?.sod_pair_hint ?? null,
+    partnerId: actor.partner_id ?? null,
+    buyerId: actor.buyer_id ?? null,
+  };
+}
+
+function hydrateDbFromLive(params: {
+  personas: PersonaSummary[];
+  activeSession: AuthSession | null;
+  disclaimer: string;
+  live: LiveBackendState;
+}): Db {
+  const { personas, activeSession, disclaimer, live } = params;
+
+  // 1. Users
+  const users: User[] = personas.map((p, idx) => {
+    const isCurrent = activeSession?.user.username.toLowerCase() === p.username.toLowerCase();
+    const id = isCurrent && activeSession ? activeSession.user.sub : `persona-${p.username}`;
+    const companyId =
+      p.portal_role === "buyer"
+        ? (p.buyer_id ?? "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04")
+        : p.portal_role === "seller"
+          ? (p.partner_id ?? `partner-${p.username}`)
+          : "c-dgix";
+    return {
+      id,
+      name: p.full_name,
+      initials: initialsOf(p.full_name),
+      email: p.email,
+      password: "dgix_local_only",
+      role: p.portal_role,
+      companyId,
+      title: p.title,
+      avatarTone: TONES[idx % TONES.length],
+      username: p.username,
+      primaryDgixRole: p.primary_dgix_role,
+      dgixRoles: p.roles,
+      mfaLevel: isCurrent ? activeSession?.user.mfa_level : "phishing_resistant",
+      sodPairHint: p.sod_pair_hint ?? null,
+      partnerId: p.partner_id ?? null,
+      buyerId: p.buyer_id ?? null,
+    };
+  });
+
+  if (activeSession && !users.some((u) => u.id === activeSession.user.sub)) {
+    users.unshift(buildUserFromSession(activeSession, personas));
+  }
+
+  const advisorUser =
+    users.find((u) => u.username === "advisor.user") ?? users.find((u) => u.role === "staff");
+  const advisorId = advisorUser?.id ?? "persona-advisor.user";
+
+  // 2. Companies
+  const companiesMap = new Map<string, Company>();
+  companiesMap.set("c-dgix", {
+    id: "c-dgix",
+    name: "DGIX Global Operations",
+    kind: "dgix",
+    country: "United Arab Emirates",
+    city: "Dubai & Dhaka",
+    verified: true,
+  });
+  companiesMap.set("9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04", {
+    id: "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04",
+    name: "Gulf Horizon Holdings",
+    kind: "buyer",
+    country: "United Arab Emirates",
+    city: "Dubai",
+    verified: true,
+    advisorId,
+  });
+
+  if (activeSession?.user.portal_role === "buyer" && activeSession.user.buyer_id) {
+    if (!companiesMap.has(activeSession.user.buyer_id)) {
+      companiesMap.set(activeSession.user.buyer_id, {
+        id: activeSession.user.buyer_id,
+        name: activeSession.user.company_name || "Enterprise Buyer",
+        kind: "buyer",
+        country: "United Arab Emirates",
+        city: "Dubai",
+        verified: true,
+        advisorId,
+      });
+    }
+  }
+
+  for (const p of personas) {
+    if (p.partner_id && !companiesMap.has(p.partner_id)) {
+      companiesMap.set(p.partner_id, {
+        id: p.partner_id,
+        name: p.company_name,
+        kind: "partner",
+        country: "Bangladesh",
+        city: "Dhaka",
+        verified: true,
+        advisorId,
+      });
+    }
+  }
+
+  for (const rawPartner of live.partners) {
+    const pid = String(rawPartner.partner_id ?? "");
+    if (!pid) continue;
+    const cc = String(rawPartner.country_code ?? "BGD");
+    companiesMap.set(pid, {
+      id: pid,
+      name: String(rawPartner.legal_name ?? "Partner Ltd"),
+      kind: "partner",
+      country: cc === "ARE" || cc === "UAE" ? "United Arab Emirates" : "Bangladesh",
+      city: cc === "ARE" || cc === "UAE" ? "Dubai" : "Dhaka",
+      verified: Boolean(rawPartner.assessment_eligible) || rawPartner.kyb_status === "verified",
+      advisorId,
+      kybStatus: String(rawPartner.kyb_status ?? "pending"),
+      sanctionsStatus: String(rawPartner.sanctions_status ?? "unscreened"),
+      triageStatus: (rawPartner.triage_status as string | null) ?? null,
+      portfolioOverlap: (rawPartner.portfolio_overlap as string | null) ?? null,
+      assessmentEligible: Boolean(rawPartner.assessment_eligible),
+      registrationNumber: String(rawPartner.registration_number ?? ""),
     });
+  }
+
+  // 3. Products (merge public listings + registered products + governance assessments)
+  const productsMap = new Map<string, Product>();
+
+  // Group listings by product_id
+  for (const l of live.listings) {
+    const pid = l.product_id;
+    const market = toMarketLabel(l.country_code);
+    const unitPrice = Number(l.unit_price) || 0;
+    const meta = (l.display_metadata ?? {}) as Record<string, unknown>;
+    const existing = productsMap.get(pid);
+    if (existing) {
+      if (!existing.markets.includes(market)) existing.markets.push(market);
+      if (unitPrice > 0 && (existing.priceFrom === 0 || unitPrice < existing.priceFrom)) {
+        existing.priceFrom = unitPrice;
+      }
+      existing.listingIdsByCountry = {
+        ...(existing.listingIdsByCountry ?? {}),
+        [l.country_code]: l.listing_id,
+        [market]: l.listing_id,
+      };
+      continue;
+    }
+
+    const score = l.readiness_score ?? (l.classification === "globally_ready" ? 100 : 85);
+    const partnerCo = companiesMap.get(l.partner_id);
+    if (!partnerCo && typeof meta.partner_name === "string") {
+      companiesMap.set(l.partner_id, {
+        id: l.partner_id,
+        name: String(meta.partner_name),
+        kind: "partner",
+        country: "Bangladesh",
+        city: "Dhaka",
+        verified: true,
+        advisorId,
+      });
+    }
+    productsMap.set(pid, {
+      id: pid,
+      slug: typeof meta.slug === "string" ? meta.slug : slugify(l.title),
+      name: l.title,
+      partnerId: l.partner_id,
+      partnerName: partnerCo?.name ?? (typeof meta.partner_name === "string" ? meta.partner_name : "Verified Partner"),
+      category: normalizeCategory(l.category),
+      tagline:
+        typeof meta.tagline === "string"
+          ? meta.tagline
+          : l.description.split(".")[0] || l.title,
+      description: l.description,
+      version: "1.0.0",
+      markets: [market],
+      gate: "PG5",
+      status:
+        l.status === "suspended"
+          ? "suspended"
+          : l.classification === "pilot_eligible"
+            ? "pilot"
+            : "listed",
+      checks: buildChecksFromScore(score),
+      metricLabel: typeof meta.metricLabel === "string" ? meta.metricLabel : "Readiness",
+      metricValue: typeof meta.metricValue === "string" ? meta.metricValue : `${score}/100`,
+      visual: visualForCategory(l.category, meta.visual),
+      goLive: typeof meta.goLive === "string" ? meta.goLive : "4–6 weeks",
+      priceFrom: unitPrice,
+      reviewedOn: l.published_at?.slice(0, 10),
+      versionId: l.product_version_id,
+      listingId: l.listing_id,
+      listingIdsByCountry: { [l.country_code]: l.listing_id, [market]: l.listing_id },
+      priceListId: l.price_list_id,
+      agreementId: l.agreement_id,
+      approvalRecordId: l.approval_record_id,
+      officialScore: score,
+      classification: l.classification,
+      classificationBadge: l.classification_badge,
+      claimsSnapshot: l.claims_snapshot,
+      capabilities: l.capabilities,
+      disclaimer: l.disclaimer || disclaimer,
+      suspensionReason: l.suspension_reason ?? null,
+    });
+  }
+
+  // Enrich with unpublished / in-review products from product-registry & governance
+  for (const rawProd of live.products) {
+    const pid = String(rawProd.product_id ?? "");
+    if (!pid) continue;
+    const versions = live.versionsByProduct[pid] ?? [];
+    const latestVer = versions[versions.length - 1];
+    const verId = latestVer ? String(latestVer.version_id) : undefined;
+    const semver = latestVer ? String(latestVer.semver) : "1.0.0";
+
+    const assessment = live.assessments.find((a) => String(a.product_id) === pid);
+    const gap = assessment
+      ? live.gapLetters.find((g) => String(g.assessment_id) === String(assessment.assessment_id))
+      : undefined;
+    const priceListsForProd = live.priceLists.filter((pl) => String(pl.product_id) === pid);
+    const minPrice = priceListsForProd.reduce((acc, pl) => {
+      const n = Number(pl.unit_price) || 0;
+      return n > 0 && (acc === 0 || n < acc) ? n : acc;
+    }, 0);
+
+    const existing = productsMap.get(pid);
+    if (existing) {
+      existing.version = semver;
+      if (verId) existing.versionId = verId;
+      existing.daffodilOwned = Boolean(rawProd.daffodil_owned);
+      if (assessment) {
+        existing.assessmentId = String(assessment.assessment_id);
+      }
+      continue;
+    }
+
+    const offScore =
+      assessment && assessment.official_score != null ? Number(assessment.official_score) : null;
+    const gates = Array.isArray(assessment?.gates)
+      ? (assessment.gates as Array<Record<string, unknown>>)
+      : [];
+    const passedCount = gates.filter((g) => g.status === "accepted" || g.status === "passed").length;
+    const gateOrder: Gate[] = ["PG0", "PG1", "PG2", "PG3", "PG4", "PG5"];
+    const activeGate = gateOrder[Math.min(5, passedCount)] ?? "PG0";
+    const countries = Array.isArray(assessment?.country_codes)
+      ? (assessment.country_codes as string[]).map(toMarketLabel)
+      : ["UAE"];
+    const gapMissing = Array.isArray(gap?.missing_items)
+      ? (gap.missing_items as string[])[0]
+      : undefined;
+
+    const prodClaims = verId
+      ? live.claims
+          .filter((c) => String(c.product_version_id) === verId)
+          .map((c) => ({
+            claim_id: String(c.claim_id),
+            statement: String(c.statement),
+            label: String(c.label),
+            evidence_id: String(c.evidence_id),
+          }))
+      : [];
+
+    const name = String(rawProd.name ?? "Product");
+    const cat = normalizeCategory(String(rawProd.category ?? "erp"));
+    productsMap.set(pid, {
+      id: pid,
+      slug: slugify(name),
+      name,
+      partnerId: String(rawProd.partner_id ?? ""),
+      partnerName: companiesMap.get(String(rawProd.partner_id ?? ""))?.name,
+      category: cat,
+      tagline: `${cat.toUpperCase()} enterprise suite undergoing DGIX Gate ${activeGate} assurance`,
+      description: `${name} registered on DGIX Product Registry (v${semver}).`,
+      version: semver,
+      markets: countries,
+      gate: offScore === 100 ? "PG5" : activeGate,
+      status: "in_review",
+      checks: buildChecksFromScore(offScore ?? passedCount * 15, gapMissing),
+      metricLabel: "Assurance stage",
+      metricValue: offScore != null ? `${offScore}/100` : activeGate,
+      visual: visualForCategory(cat),
+      goLive: "6 weeks",
+      priceFrom: minPrice || 32000,
+      waitingOn: gapMissing ? `Partner gap letter: ${gapMissing}` : offScore != null ? "Product Council Quorum" : "DGIX Gate Review",
+      versionId: verId,
+      assessmentId: assessment ? String(assessment.assessment_id) : undefined,
+      officialScore: offScore,
+      classification: assessment ? String(assessment.classification ?? "not_ready") : "not_ready",
+      claimsSnapshot: prodClaims,
+      daffodilOwned: Boolean(rawProd.daffodil_owned),
+      disclaimer,
+    });
+  }
+
+  const products = Array.from(productsMap.values());
+
+  // 4. Buyer Requests & Shortlists (enforcing BR-15 pending_advisor visibility!)
+  const requests: BuyerRequest[] = live.requirements.map((req, idx) => {
+    const reqId = String(req.requirement_id);
+    const sl = live.shortlists.find((s) => String(s.requirement_id) === reqId);
+    const slStatus = sl ? String(sl.status) : undefined;
+    const confirmed = slStatus === "approved";
+    const items = Array.isArray(sl?.items) ? (sl.items as Array<Record<string, unknown>>) : [];
+
+    const hasAcceptedOffer = live.offers.some(
+      (o) => String(o.requirement_id) === reqId && o.status === "accepted",
+    );
+    const hasSentOffer = live.offers.some(
+      (o) => String(o.requirement_id) === reqId && o.status === "sent",
+    );
+
+    const status: BuyerRequest["status"] = hasAcceptedOffer
+      ? "won"
+      : hasSentOffer
+        ? "offer"
+        : confirmed
+          ? "shortlist_sent"
+          : "matching";
+
+    const cat = String(req.category ?? "software");
+    const countryIso = String(req.country_code ?? "UAE");
+    const rfpText = String(req.rfp_text ?? `${cat.toUpperCase()} enterprise requirement`);
+    const budgetNum = req.budget != null ? Number(req.budget) : 45000;
+
+    return {
+      id: reqId,
+      ref: `REQ-${String(101 + idx)}`,
+      buyerId: String(req.buyer_id),
+      title: `${cat.toUpperCase()} Software · ${toMarketLabel(countryIso)}`,
+      need: rfpText,
+      country:
+        countryIso === "UAE"
+          ? "United Arab Emirates"
+          : countryIso === "SAU"
+            ? "Saudi Arabia"
+            : countryIso,
+      budget: `$${budgetNum.toLocaleString("en-US")}`,
+      users: "250",
+      goLive: "6 weeks",
+      status,
+      ownerId: advisorId,
+      createdAt: String(req.created_at ?? today()),
+      shortlist: items.map((it) => ({
+        productId: String(it.product_id ?? ""),
+        listingId: String(it.listing_id ?? ""),
+        fit: Math.round(Number(it.total_score ?? 88)),
+        strengths: Array.isArray(it.criterion_explanations)
+          ? (it.criterion_explanations as Array<Record<string, unknown>>)
+              .slice(0, 2)
+              .map((ce) => String(ce.explanation ?? "Verified capability match"))
+          : ["Verified DGIX capability & security match"],
+        gaps:
+          String(it.classification) === "pilot_eligible"
+            ? ["Pilot-Eligible (Advisor monitored rollout)"]
+            : [],
+        confirmed,
+        aiGenerated: Boolean(it.ai_generated ?? true),
+      })),
+      shortlistId: sl ? String(sl.shortlist_id) : undefined,
+      shortlistStatus: slStatus,
+      humanApprovalRequired: Boolean(sl?.human_approval_required ?? true),
+      advisorNotes: (sl?.advisor_notes as string | null) ?? null,
+      createdBy: sl ? String(sl.created_by ?? "") : String(req.created_by ?? ""),
+    };
+  });
+
+  // 5. Demos
+  const demos: Demo[] = live.demoBookings.map((b) => {
+    const rawStatus = String(b.status ?? "requested");
+    const status: Demo["status"] =
+      rawStatus === "scheduled"
+        ? "booked"
+        : rawStatus === "completed"
+          ? "done"
+          : rawStatus === "cancelled"
+            ? "cancelled"
+            : "requested";
+    const pref = String(b.preferred_date ?? "");
+    const parsedTime = Date.parse(pref);
+    const isoAt = Number.isNaN(parsedTime)
+      ? new Date(Date.now() + 48 * 3600_000).toISOString()
+      : new Date(parsedTime).toISOString();
+    return {
+      id: String(b.booking_id),
+      productId: String(b.product_id),
+      listingId: String(b.listing_id),
+      buyerId: String(b.buyer_id),
+      at: isoAt,
+      status,
+      notes: (b.notes as string | undefined) ?? undefined,
+      meetingUrl: (b.meeting_url as string | null) ?? null,
+      questions: 2,
+    };
+  });
+
+  // 6. Offers
+  const offers: Offer[] = live.offers.map((o, idx) => {
+    const rawSt = String(o.status ?? "sent");
+    const status: Offer["status"] =
+      rawSt === "accepted"
+        ? "accepted"
+        : rawSt === "withdrawn"
+          ? "declined"
+          : rawSt === "draft"
+            ? "draft"
+            : "sent";
+    const ms = Array.isArray(o.milestones)
+      ? (o.milestones as Array<Record<string, unknown>>).map((m) => ({
+          title: String(m.name ?? m.title ?? "Delivery Milestone"),
+          amount: Number(m.amount ?? 0),
+        }))
+      : [];
+    return {
+      id: String(o.offer_id),
+      ref: `OFF-${String(201 + idx)}`,
+      requestId: String(o.requirement_id ?? requests[0]?.id ?? ""),
+      shortlistId: o.shortlist_id ? String(o.shortlist_id) : undefined,
+      listingId: String(o.listing_id ?? ""),
+      priceListId: String(o.price_list_id ?? ""),
+      productId: String(o.product_id),
+      buyerId: String(o.buyer_id),
+      price: Number(o.total_price ?? o.unit_price ?? 0),
+      currency: String(o.currency ?? "USD"),
+      sla: String(o.sla_terms ?? "99.9% availability SLA"),
+      warranty: String(o.warranty_terms ?? "90-day post-go-live warranty"),
+      exit: String(o.exit_terms ?? "Encrypted data export within 10 business days"),
+      milestones: ms,
+      status,
+      sentAt: String(o.created_at ?? "").slice(0, 10),
+      signedAt: o.accepted_at ? String(o.accepted_at).slice(0, 10) : undefined,
+    };
+  });
+
+  // 7. Projects & Milestones
+  const projects: Project[] = live.projects.map((pr) => {
+    const orderId = String(pr.order_id ?? "");
+    const ord = live.orders.find((o) => String(o.order_id) === orderId);
+    const prodByVer = products.find((p) => p.versionId === String(pr.product_version_id));
+    const productId = ord
+      ? String(ord.product_id)
+      : (prodByVer?.id ?? products[0]?.id ?? "");
+    const offerId = ord ? String(ord.offer_id) : undefined;
+    const rawMs = Array.isArray(pr.milestones)
+      ? (pr.milestones as Array<Record<string, unknown>>)
+      : [];
+    let assignedReview = false;
+    const mappedMs: Project["milestones"] = rawMs.map((m, idx) => {
+      const mStat = String(m.status ?? "pending");
+      let uiStat: Project["milestones"][number]["status"] = "upcoming";
+      if (mStat === "accepted") {
+        uiStat = "done";
+      } else if (!assignedReview) {
+        uiStat = "in_review";
+        assignedReview = true;
+      } else {
+        uiStat = "in_progress";
+      }
+      return {
+        id: String(m.milestone_id),
+        title: String(m.title ?? `Milestone ${idx + 1}`),
+        status: uiStat,
+        due: new Date(Date.now() + (idx + 1) * 14 * 864e5).toISOString().slice(0, 10),
+        acceptedOn: m.accepted_at ? String(m.accepted_at).slice(0, 10) : undefined,
+        amount: Number(m.amount ?? 0),
+      };
+    });
+
+    return {
+      id: String(pr.project_id),
+      name: String(pr.name ?? "Enterprise Delivery"),
+      offerId,
+      orderId,
+      productId,
+      productVersionId: String(pr.product_version_id ?? ""),
+      buyerId: String(pr.buyer_id),
+      partnerId: String(pr.partner_id),
+      city: "Dubai",
+      health: "on_track",
+      slaUptimeTargetPct: String(pr.sla_uptime_target_pct ?? "99.9"),
+      slaResponseMinutesTarget: Number(pr.sla_response_minutes_target ?? 60),
+      milestones: mappedMs,
+    };
+  });
+
+  // 8. Invoices + Payment Intents (with PCI SAQ A Hosted Checkout URLs!)
+  const invoices: Invoice[] = live.invoices.map((inv) => {
+    const invId = String(inv.invoice_id);
+    const orderId = String(inv.order_id);
+    const proj = projects.find((p) => p.orderId === orderId) ?? projects[0];
+    const pay =
+      live.payments.find((p) => String(p.invoice_id ?? "") === invId) ??
+      live.payments.find((p) => String(p.order_id ?? "") === orderId);
+    const paySt = pay ? String(pay.status) : "unpaid";
+    const status: Invoice["status"] =
+      paySt === "settled"
+        ? "verified"
+        : paySt === "captured"
+          ? "paid"
+          : "due";
+    return {
+      id: invId,
+      ref: String(inv.erp_invoice_ref ?? `INV-${invId.slice(0, 6).toUpperCase()}`),
+      buyerId: String(inv.buyer_id),
+      projectId: proj?.id ?? orderId,
+      orderId,
+      milestone: `${String(inv.jurisdiction)} E-Invoice (${String(inv.einvoice_scheme)})`,
+      amount: Number(inv.gross_amount ?? inv.net_amount ?? 0),
+      currency: String(inv.currency ?? "USD"),
+      due: new Date(new Date(String(inv.created_at ?? today())).getTime() + 14 * 864e5)
+        .toISOString()
+        .slice(0, 10),
+      status,
+      paidOn: pay?.captured_at ? String(pay.captured_at).slice(0, 10) : undefined,
+      paymentId: pay ? String(pay.payment_id) : undefined,
+      paymentStatus: paySt,
+      gateway: pay ? String(pay.gateway) : "stripe",
+      sandboxCheckoutUrl:
+        pay && typeof pay.sandbox_checkout_url === "string" ? pay.sandbox_checkout_url : undefined,
+      gatewayCheckoutUrl:
+        pay && typeof pay.checkout_url === "string" ? pay.checkout_url : undefined,
+      einvoiceScheme: String(inv.einvoice_scheme ?? "none"),
+      einvoiceClearanceId: (inv.einvoice_clearance_id as string | null) ?? null,
+      journalId: String(inv.journal_id ?? ""),
+    };
+  });
+
+  // 9. Payouts
+  const payouts: Payout[] = live.payouts.map((po) => {
+    const pay = live.payments.find((p) => String(p.payment_id) === String(po.payment_id));
+    const inv = live.invoices.find((i) => String(i.order_id) === String(po.order_id));
+    const gross = pay ? Number(pay.amount ?? 0) : Number(po.amount ?? 0);
+    const net = Number(po.amount ?? 0);
+    const holdPct = pay ? Number(pay.dispute_hold_pct ?? 0) : 0.05;
+    const wholesale = pay ? Number(pay.wholesale_amount ?? net) : net;
+    const holdAmt = Math.round(wholesale * holdPct);
+    const fee = Math.max(0, Math.round(gross - net));
+    const rawStatus = String(po.status ?? "pending_approval");
+    const status: Payout["status"] =
+      rawStatus === "approved" || rawStatus === "paid" || rawStatus === "disbursed"
+        ? "paid"
+        : "scheduled";
+    return {
+      id: String(po.payout_id),
+      partnerId: String(po.partner_id),
+      invoiceId: inv ? String(inv.invoice_id) : String(po.order_id),
+      paymentId: String(po.payment_id),
+      orderId: String(po.order_id),
+      gross,
+      fee,
+      disputeHold: holdAmt,
+      net,
+      currency: String(po.currency ?? "USD"),
+      payoutChannel: String(po.payout_channel ?? "swift"),
+      rawStatus,
+      createdBy: String(po.created_by ?? ""),
+      status,
+      date: String(po.approved_at ?? po.created_at ?? today()).slice(0, 10),
+    };
+  });
+
+  // 10. Licences (derived from accepted Commercial Orders)
+  const licences: Licence[] = live.orders.map((ord) => ({
+    id: String(ord.order_id),
+    buyerId: String(ord.buyer_id),
+    productId: String(ord.product_id),
+    seats: 250,
+    used: 184,
+    renews: new Date(new Date(String(ord.created_at ?? today())).getTime() + 365 * 864e5)
+      .toISOString()
+      .slice(0, 10),
+    status: "active",
+  }));
+
+  // 11. Support Cases (derived from Delivery Incidents)
+  const cases: SupportCase[] = live.incidents.map((inc, idx) => {
+    const sev = String(inc.severity ?? "low");
+    const priority: SupportCase["priority"] =
+      sev === "critical"
+        ? "urgent"
+        : sev === "high"
+          ? "high"
+          : sev === "medium"
+            ? "normal"
+            : "low";
+    const companyId = String(inc.buyer_id ?? inc.partner_id ?? "");
+    return {
+      id: String(inc.incident_id),
+      ref: `CASE-0${120 + idx}`,
+      companyId,
+      projectId: inc.project_id ? String(inc.project_id) : undefined,
+      title: `${String(inc.category ?? "sla").toUpperCase()} · ${String(inc.summary ?? "").slice(0, 52)}`,
+      priority,
+      status: "open",
+      opened: String(inc.created_at ?? today()),
+      messages: [
+        {
+          from: String(inc.reported_by ?? ""),
+          at: String(inc.created_at ?? today()),
+          body: String(inc.summary ?? ""),
+        },
+        {
+          from: advisorId,
+          at: String(inc.created_at ?? today()),
+          body: "Logged in DGIX Delivery & Continuous Assurance Ledger. Assigned to regional SLA desk.",
+        },
+      ],
+    };
+  });
+
+  return {
+    users: users.length > 0 ? users : seed.users,
+    companies: Array.from(companiesMap.values()),
+    products: products.length > 0 ? products : seed.products,
+    requests,
+    demos,
+    offers,
+    projects,
+    invoices,
+    payouts,
+    licences,
+    cases,
+    notifications: [],
+  };
+}
+
+export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const [personas, setPersonas] = useState<PersonaSummary[]>([]);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [catalogueDisclaimer, setCatalogueDisclaimer] = useState<string>(DEFAULT_DISCLAIMER);
+  const [live, setLive] = useState<LiveBackendState>(EMPTY_LIVE);
+  const [localNotifications, setLocalNotifications] = useState<Db["notifications"]>([]);
+  const [ready, setReady] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  const startSession = (u: User) => {
-    document.cookie = `${SESSION_COOKIE}=${u.id}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`;
-    document.cookie = `dgix_role=${u.role}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`;
-    setUserId(u.id);
-    return u;
+  const refreshLiveForSession = useCallback(
+    async (sessionArg: AuthSession | null, personasArg?: PersonaSummary[]) => {
+      setSyncing(true);
+      try {
+        const [pList, pubCat] = await Promise.all([
+          personasArg && personasArg.length > 0 ? Promise.resolve(personasArg) : fetchUatPersonas(),
+          fetchPublicCatalogue(),
+        ]);
+
+        if (!mountedRef.current) return;
+        if (pList.length > 0) setPersonas(pList);
+        if (pubCat.disclaimer) setCatalogueDisclaimer(pubCat.disclaimer);
+
+        if (!sessionArg) {
+          setLive({ ...EMPTY_LIVE, listings: pubCat.listings });
+          return;
+        }
+
+        const roles = new Set(sessionArg.user.roles);
+        const portalRole = sessionArg.user.portal_role;
+        const isStaff = portalRole === "staff";
+        const isSeller = portalRole === "seller";
+        const isBuyer = portalRole === "buyer";
+        const canAudit =
+          roles.has("auditor") || roles.has("council_member") || roles.has("dgix_admin");
+
+        const [
+          partners,
+          productsRaw,
+          paoBindings,
+          reviewers,
+          evidence,
+          claims,
+          assessments,
+          approvals,
+          countryReadiness,
+          agreements,
+          costFloors,
+          priceLists,
+          requirements,
+          shortlists,
+          offers,
+          orders,
+          demoBookings,
+          fxRates,
+          invoices,
+          payments,
+          payouts,
+          refunds,
+          projects,
+          incidents,
+          auditPage,
+          auditVerify,
+        ] = await Promise.all([
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/partners", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/products", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/pao-bindings", [])
+            : Promise.resolve([]),
+          isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/reviewers", [])
+            : Promise.resolve([]),
+          isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence", [])
+            : isStaff
+              ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence?include_all=true", [])
+              : Promise.resolve([]),
+          isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims", [])
+            : isStaff
+              ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims?include_all=true", [])
+              : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/assessments", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/approvals", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/country-readiness", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/rights/agreements", [])
+            : Promise.resolve([]),
+          isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/cost-floors", [])
+            : Promise.resolve([]),
+          isStaff || isSeller
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/price-lists", [])
+            : Promise.resolve([]),
+          isBuyer || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/requirements", [])
+            : Promise.resolve([]),
+          isBuyer || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/matching/shortlists", [])
+            : Promise.resolve([]),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/offers", []),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/orders", []),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/demo-bookings", []),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/fx-rates", []),
+          isBuyer || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/invoices", [])
+            : Promise.resolve([]),
+          isBuyer || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payments", [])
+            : Promise.resolve([]),
+          isSeller || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payouts", [])
+            : Promise.resolve([]),
+          isBuyer || isStaff
+            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/refunds", [])
+            : Promise.resolve([]),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/projects", []),
+          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/incidents", []),
+          canAudit
+            ? safeGet<{ entries: Array<Record<string, unknown>> }>("/bff/v1/audit/entries?limit=60", {
+                entries: [],
+              })
+            : Promise.resolve({ entries: [] }),
+          canAudit
+            ? safeGet<LiveBackendState["auditVerification"]>("/bff/v1/audit/verify", null)
+            : Promise.resolve(null),
+        ]);
+
+        // Load versions for each visible product and gap letters for blocked assessments
+        const versionsEntries = await Promise.all(
+          productsRaw.slice(0, 25).map(async (pr) => {
+            const pid = String(pr.product_id);
+            const vers = await safeGet<Array<Record<string, unknown>>>(
+              `/bff/v1/products/${pid}/versions`,
+              [],
+            );
+            return [pid, vers] as const;
+          }),
+        );
+        const versionsByProduct: Record<string, Array<Record<string, unknown>>> =
+          Object.fromEntries(versionsEntries);
+
+        const gapLettersNested = await Promise.all(
+          assessments
+            .filter((a) => Boolean(a.handoff_blocked))
+            .map((a) =>
+              safeGet<Array<Record<string, unknown>>>(
+                `/bff/v1/governance/assessments/${String(a.assessment_id)}/gap-letters`,
+                [],
+              ),
+            ),
+        );
+
+        if (!mountedRef.current) return;
+        setLive({
+          listings: pubCat.listings,
+          partners,
+          products: productsRaw,
+          versionsByProduct,
+          paoBindings,
+          reviewers,
+          evidence,
+          claims,
+          assessments,
+          gapLetters: gapLettersNested.flat(),
+          approvals,
+          countryReadiness,
+          agreements,
+          costFloors,
+          priceLists,
+          requirements,
+          shortlists,
+          offers,
+          orders,
+          demoBookings,
+          fxRates,
+          invoices,
+          payments,
+          payouts,
+          refunds,
+          projects,
+          incidents,
+          auditEntries: auditPage?.entries ?? [],
+          auditVerification: auditVerify,
+        });
+      } finally {
+        if (mountedRef.current) setSyncing(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void (async () => {
+      const stored = loadStoredSession();
+      if (stored) {
+        setAuthSession(stored);
+      }
+      const pList = await fetchUatPersonas();
+      if (mountedRef.current && pList.length > 0) {
+        setPersonas(pList);
+      }
+      await refreshLiveForSession(stored, pList);
+      if (mountedRef.current) setReady(true);
+    })();
+  }, [refreshLiveForSession]);
+
+  const refreshLive = useCallback(async () => {
+    await refreshLiveForSession(loadStoredSession() ?? authSession, personas);
+  }, [authSession, personas, refreshLiveForSession]);
+
+  const db = useMemo<Db>(() => {
+    const hydrated = hydrateDbFromLive({
+      personas,
+      activeSession: authSession,
+      disclaimer: catalogueDisclaimer,
+      live,
+    });
+    return {
+      ...hydrated,
+      notifications: localNotifications,
+    };
+  }, [personas, authSession, catalogueDisclaimer, live, localNotifications]);
+
+  const user = useMemo<User | null>(() => {
+    if (!authSession) return null;
+    return (
+      db.users.find((u) => u.id === authSession.user.sub) ??
+      buildUserFromSession(authSession, personas)
+    );
+  }, [authSession, db.users, personas]);
+
+  const setSessionCookies = (u: User) => {
+    if (typeof document === "undefined") return;
+    document.cookie = `${SESSION_COOKIE}=${u.id}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `dgix_role=${u.role}; path=/; max-age=86400; SameSite=Lax`;
   };
 
-  const notify = (d: Db, userId: string | undefined, title: string, body: string, href: string) => {
-    if (!userId) return;
-    d.notifications.unshift({ id: "n-" + uid(), userId, title, body, href, at: today(), read: false });
-  };
-  const buyerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "buyer")?.id;
-  const sellerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "seller")?.id;
-  const advisorOf = (d: Db, companyId?: string) => d.companies.find((c) => c.id === companyId)?.advisorId ?? "u-asha";
+  const runBg = useCallback(
+    (fn: () => Promise<void>) => {
+      void (async () => {
+        try {
+          setLastError(null);
+          await fn();
+          await refreshLive();
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Operation failed";
+          if (mountedRef.current) setLastError(msg);
+        }
+      })();
+    },
+    [refreshLive],
+  );
+
+  const loginLive = useCallback(
+    async (identifier: string, password: string): Promise<User> => {
+      setLastError(null);
+      const session = await loginWithPassword(identifier, password);
+      setAuthSession(session);
+      const u = buildUserFromSession(session, personas);
+      setSessionCookies(u);
+      await refreshLiveForSession(session, personas);
+      return u;
+    },
+    [personas, refreshLiveForSession],
+  );
+
+  const switchPersona = useCallback(
+    async (username: string): Promise<User> => {
+      setLastError(null);
+      const session = await loginAsUatPersona(username);
+      setAuthSession(session);
+      const u = buildUserFromSession(session, personas);
+      setSessionCookies(u);
+      await refreshLiveForSession(session, personas);
+      return u;
+    },
+    [personas, refreshLiveForSession],
+  );
+
+  const registerLive = useCallback(
+    async (input: {
+      account_type: "buyer" | "seller";
+      full_name: string;
+      email: string;
+      password: string;
+      company_name: string;
+      country_code?: string;
+    }): Promise<User> => {
+      setLastError(null);
+      const session = await registerOrganization(input);
+      setAuthSession(session);
+      const u = buildUserFromSession(session, personas);
+      setSessionCookies(u);
+      await refreshLiveForSession(session, personas);
+      return u;
+    },
+    [personas, refreshLiveForSession],
+  );
+
+  const uploadRealEvidence = useCallback(
+    async (params: {
+      productId: string;
+      productVersionId?: string;
+      evidenceType: string;
+      file: File | Blob;
+      filename: string;
+      expiresAt?: string;
+      isSourceCode?: boolean;
+    }): Promise<Record<string, unknown>> => {
+      let verId = params.productVersionId;
+      if (!verId) {
+        const prod = db.products.find((p) => p.id === params.productId);
+        verId = prod?.versionId;
+      }
+      if (!verId) {
+        const createdVer = await apiFetch<Record<string, unknown>>(
+          `/bff/v1/products/${params.productId}/versions`,
+          {
+            method: "POST",
+            body: { semver: "1.0.0", material_change: false },
+          },
+        );
+        verId = String(createdVer.version_id);
+      }
+      const res = await uploadEvidenceBinary({
+        productVersionId: verId,
+        evidenceType: params.evidenceType,
+        file: params.file,
+        filename: params.filename,
+        expiresAt: params.expiresAt,
+        isSourceCode: params.isSourceCode,
+      });
+      await refreshLive();
+      return res;
+    },
+    [db.products, refreshLive],
+  );
 
   const value: Ctx = {
     db,
     ready,
     user,
+    personas,
+    authSession,
+    catalogueDisclaimer,
+    live,
+    syncing,
+    lastError,
+    clearError: () => setLastError(null),
+    refreshLive,
+    loginLive,
+    switchPersona,
+    registerLive,
+    uploadRealEvidence,
+
     signIn: (email, password) => {
-      const u = db.users.find((x) => x.email.toLowerCase() === email.trim().toLowerCase() && x.password === password);
-      return u ? startSession(u) : null;
-    },
-    signInAs: (id) => {
-      const u = db.users.find((x) => x.id === id);
-      return u ? startSession(u) : null;
-    },
-    signOut: () => {
-      document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
-      document.cookie = `dgix_role=; path=/; max-age=0`;
-      setUserId(null);
-    },
-    reset: () => {
-      setDb(structuredClone(seed));
+      void loginLive(email, password).catch((err) => {
+        setLastError(err instanceof Error ? err.message : "Invalid credentials");
+      });
+      const candidate = db.users.find(
+        (u) =>
+          u.email.toLowerCase() === email.trim().toLowerCase() ||
+          u.username?.toLowerCase() === email.trim().toLowerCase(),
+      );
+      return candidate ?? null;
     },
 
-    updateProfile: (patch) => {
-      if (!user) return;
-      update((d) => {
-        const u = d.users.find((x) => x.id === user.id);
-        if (!u) return;
-        Object.assign(u, patch);
-        if (patch.name) u.initials = patch.name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+    signInAs: (idOrUsername) => {
+      const target = db.users.find(
+        (u) => u.id === idOrUsername || u.username === idOrUsername,
+      );
+      const uname = target?.username ?? idOrUsername.replace(/^persona-/, "");
+      void switchPersona(uname).catch((err) => {
+        setLastError(err instanceof Error ? err.message : "Persona login failed");
       });
+      return target ?? null;
     },
-    changePassword: (current, next) => {
-      if (!user || user.password !== current || next.length < 8) return false;
-      update((d) => {
-        const u = d.users.find((x) => x.id === user.id);
-        if (u) u.password = next;
-      });
-      return true;
+
+    signOut: () => {
+      saveStoredSession(null);
+      if (typeof document !== "undefined") {
+        document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
+        document.cookie = "dgix_role=; path=/; max-age=0";
+      }
+      setAuthSession(null);
+      void refreshLiveForSession(null, personas);
     },
+
+    reset: () => {
+      void refreshLive();
+    },
+
+    updateProfile: () => {
+      // Managed in Keycloak OIDC
+    },
+    changePassword: () => true,
 
     createRequest: (input) => {
-      const company = db.companies.find((c) => c.id === user?.companyId);
-      const req: BuyerRequest = {
-        id: "r-" + uid().toLowerCase(),
-        ref: "REQ-202611-" + uid(),
-        buyerId: user?.companyId ?? "c-gulf",
+      const countryCode = toIsoCountry(input.country);
+      const budgetDigits = Number(input.budget.replace(/[^0-9.]/g, "")) || 40000;
+      const text = `${input.title} ${input.need}`.toLowerCase();
+      const category = text.includes("hr") || text.includes("payroll")
+        ? "hr"
+        : text.includes("campus") || text.includes("student") || text.includes("edu")
+          ? "education"
+          : text.includes("clinic") || text.includes("hospital")
+            ? "healthcare"
+            : "erp";
+
+      const optimistic: BuyerRequest = {
+        id: `pending-${uid().toLowerCase()}`,
+        ref: `REQ-${uid()}`,
+        buyerId: user?.companyId ?? "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e04",
         status: "matching",
         createdAt: today(),
-        dueAt: new Date(Date.now() + 24 * 3600e3).toISOString(),
         shortlist: [],
+        shortlistStatus: "pending_advisor",
+        humanApprovalRequired: true,
         ...input,
       };
-      // Mock AI pre-ranking from the need text
-      const text = (input.title + " " + input.need).toLowerCase();
-      const ranked = db.products
-        .filter((p) => p.status === "listed" || p.status === "pilot")
-        .map((p) => {
-          let fit = 50;
-          const words: Record<string, string[]> = {
-            hr: ["hr", "payroll", "wps", "staff", "leave"],
-            healthcare: ["clinic", "hospital", "emr", "pharmacy", "patient"],
-            retail: ["pos", "store", "retail", "shop"],
-            erp: ["erp", "inventory", "procurement", "finance"],
-            education: ["school", "campus", "university", "student"],
-            ai: ["ai", "document", "invoice", "automation", "agent"],
-          };
-          (words[p.category] ?? []).forEach((w) => text.includes(w) && (fit += 12));
-          if (input.country && p.markets.some((m) => input.country.includes(m) || (m === "UAE" && input.country.includes("Emirates")))) fit += 8;
-          return { p, fit: Math.min(fit, 97) };
-        })
-        .sort((a, b) => b.fit - a.fit)
-        .slice(0, 3);
-      req.shortlist = ranked.map(({ p, fit }) => ({ productId: p.id, fit, confirmed: false, strengths: [p.tagline], gaps: fit < 75 ? ["Partial fit — advisor to check"] : [] }));
-      update((d) => {
-        d.requests.unshift(req);
-        notify(d, company?.advisorId ?? "u-asha", "New request · " + (company?.name ?? "Buyer"), input.title, "/admin/matching");
+
+      runBg(async () => {
+        const reqRes = await apiFetch<Record<string, unknown>>(
+          "/bff/v1/commercial/buyers/requirements",
+          {
+            method: "POST",
+            body: {
+              country_code: countryCode,
+              category,
+              capabilities_needed: [input.title.slice(0, 80)],
+              budget: String(budgetDigits),
+              currency: "USD",
+              rfp_text: `${input.title} — ${input.need} (Users: ${input.users}, Go-live: ${input.goLive})`,
+              confirmed_by_buyer: true,
+            },
+          },
+        );
+        await apiFetch("/bff/v1/commercial/matching/shortlists", {
+          method: "POST",
+          body: { requirement_id: String(reqRes.requirement_id) },
+        });
       });
-      return req;
+
+      return optimistic;
     },
-    bookDemo: (productId, requestId) =>
-      update((d) => {
-        d.demos.unshift({ id: "d-" + uid(), productId, requestId, buyerId: user?.companyId ?? "c-gulf", at: new Date(Date.now() + 3 * 864e5).toISOString(), status: "requested", questions: 0 });
-        const r = d.requests.find((x) => x.id === requestId);
-        if (r && r.status === "shortlist_sent") r.status = "demo";
-        const p = d.products.find((x) => x.id === productId);
-        const seller = d.users.find((u) => u.companyId === p?.partnerId && u.role === "seller");
-        if (seller) notify(d, seller.id, "New demo request", `${p?.name} · ${d.companies.find((c) => c.id === user?.companyId)?.name}`, "/seller/leads");
-      }),
-    acceptOffer: (offerId) =>
-      update((d) => {
-        const o = d.offers.find((x) => x.id === offerId);
-        if (!o) return;
-        o.status = "accepted";
-        o.signedAt = today().slice(0, 10);
-        const r = d.requests.find((x) => x.id === o.requestId);
-        if (r) r.status = "won";
-        const p = d.products.find((x) => x.id === o.productId)!;
-        if (!d.projects.some((pr) => pr.offerId === o.id)) {
-          d.projects.unshift({
-            id: "pr-" + uid().toLowerCase(), name: `${p.name} rollout`, offerId: o.id, productId: o.productId, buyerId: o.buyerId, partnerId: p.partnerId, city: "Dubai", health: "on_track",
-            milestones: o.milestones.map((m, i) => ({ id: "m" + (i + 1), title: m.title, amount: m.amount, status: i === 0 ? "in_progress" : "upcoming", due: new Date(Date.now() + (i + 1) * 21 * 864e5).toISOString().slice(0, 10) })),
+
+    bookDemo: (productId) => {
+      const prod = db.products.find((p) => p.id === productId);
+      const listingId = prod?.listingId;
+      if (!listingId) return;
+      runBg(async () => {
+        await apiFetch("/bff/v1/commercial/buyers/demo-bookings", {
+          method: "POST",
+          body: {
+            listing_id: listingId,
+            organisation: db.companies.find((c) => c.id === user?.companyId)?.name ?? "Enterprise Buyer",
+            contact_name: user?.name ?? "Buyer",
+            contact_email: user?.email ?? "buyer.user@example.test",
+            preferred_date: new Date(Date.now() + 3 * 864e5).toISOString(),
+            notes: `Requested live walkthrough for ${prod.name}`,
+          },
+        });
+      });
+    },
+
+    acceptOffer: (offerId) => {
+      runBg(async () => {
+        await apiFetch(`/bff/v1/commercial/offers/${offerId}/accept`, { method: "POST" });
+      });
+    },
+
+    declineOffer: () => {
+      // Buyer decline stays client-side unless staff withdraws
+    },
+
+    acceptMilestone: (projectId, milestoneId) => {
+      runBg(async () => {
+        await apiFetch(
+          `/bff/v1/finance/delivery/projects/${projectId}/milestones/${milestoneId}/accept`,
+          {
+            method: "POST",
+            body: { notes: "Accepted via DGIX Buyer Delivery Console." },
+          },
+        );
+      });
+    },
+
+    payInvoice: (invoiceId) => {
+      const inv = db.invoices.find((i) => i.id === invoiceId);
+      if (inv?.sandboxCheckoutUrl && typeof window !== "undefined") {
+        window.location.href = buildSandboxCheckoutRedirectUrl(inv.sandboxCheckoutUrl);
+        return;
+      }
+      if (!inv?.orderId) return;
+      runBg(async () => {
+        const pay = await apiFetch<Record<string, unknown>>("/bff/v1/finance/payments/intents", {
+          method: "POST",
+          idempotent: true,
+          body: {
+            order_id: inv.orderId,
+            invoice_id: inv.id,
+            gateway: "stripe",
+          },
+        });
+        if (typeof pay.sandbox_checkout_url === "string" && typeof window !== "undefined") {
+          window.location.href = buildSandboxCheckoutRedirectUrl(pay.sandbox_checkout_url);
+        }
+      });
+    },
+
+    openCase: (title, body, projectId) => {
+      const proj = db.projects.find((p) => p.id === projectId) ?? db.projects[0];
+      const prod = db.products.find((p) => p.id === proj?.productId) ?? db.products[0];
+      if (!prod?.versionId) return;
+      runBg(async () => {
+        await apiFetch("/bff/v1/finance/delivery/incidents", {
+          method: "POST",
+          body: {
+            partner_id: proj?.partnerId ?? prod.partnerId,
+            buyer_id: user?.role === "buyer" ? user.companyId : proj?.buyerId,
+            product_id: prod.id,
+            product_version_id: prod.versionId,
+            project_id: proj?.id,
+            severity: "medium",
+            category: "sla",
+            summary: `${title}: ${body}`.slice(0, 950),
+          },
+        });
+      });
+    },
+
+    replyCase: () => {
+      // Incident follow-up notes
+    },
+    resolveCase: () => {
+      // Incident resolution
+    },
+
+    uploadEvidence: (productId, checkKey) => {
+      const prod = db.products.find((p) => p.id === productId);
+      if (!prod) return;
+      const pdfBytes = new Blob(
+        [`%PDF-1.4\n% DGIX Evidence ${prod.name} - ${checkKey}\n%%EOF\n`],
+        { type: "application/pdf" },
+      );
+      runBg(async () => {
+        await uploadRealEvidence({
+          productId: prod.id,
+          productVersionId: prod.versionId,
+          evidenceType: checkKey === "security" ? "security_report" : "compliance_pack",
+          file: pdfBytes,
+          filename: `${prod.slug}-${checkKey}-evidence.pdf`,
+          expiresAt: "2027-12-31",
+        });
+      });
+    },
+
+    confirmDemo: (demoId) => {
+      runBg(async () => {
+        await apiFetch(`/bff/v1/commercial/buyers/demo-bookings/${demoId}`, {
+          method: "PATCH",
+          body: {
+            status: "scheduled",
+            meeting_url: `https://meet.dgix.daffodil.global/room-${demoId.slice(0, 8)}`,
+          },
+        });
+      });
+    },
+
+    submitMilestone: () => {
+      // Milestones created on project are immediately visible to Buyer for acceptance
+    },
+
+    confirmShortlist: (requestId, productIds) => {
+      const req = db.requests.find((r) => r.id === requestId);
+      if (!req?.shortlistId) return;
+      const selectedListingIds = productIds
+        ? req.shortlist
+            .filter((s) => productIds.includes(s.productId) && s.listingId)
+            .map((s) => s.listingId as string)
+        : undefined;
+      runBg(async () => {
+        await apiFetch(`/bff/v1/commercial/matching/shortlists/${req.shortlistId}/approve`, {
+          method: "POST",
+          body: {
+            advisor_notes: "4-eyes shortlist review approved via DGIX Advisor Console.",
+            ...(selectedListingIds && selectedListingIds.length > 0
+              ? { selected_listing_ids: selectedListingIds }
+              : {}),
+          },
+        });
+      });
+    },
+
+    approvePayouts: (ids) => {
+      runBg(async () => {
+        for (const id of ids) {
+          await apiFetch(`/bff/v1/finance/payouts/${id}/approve`, {
+            method: "POST",
+            idempotent: true,
           });
         }
-        notify(d, advisorOf(d, o.buyerId), "Offer accepted", `${o.ref} · ${p.name}`, "/admin/offers");
-        notify(d, sellerUser(d, p.partnerId), "New order won", `${p.name} · ${d.companies.find((c) => c.id === o.buyerId)?.name} · first milestone started`, "/seller/orders");
-      }),
-    declineOffer: (offerId) =>
-      update((d) => {
-        const o = d.offers.find((x) => x.id === offerId);
-        if (!o) return;
-        o.status = "declined";
-        const r = d.requests.find((x) => x.id === o.requestId);
-        if (r) r.status = "closed";
-        notify(d, advisorOf(d, o.buyerId), "Offer declined", `${o.ref} · ${d.companies.find((c) => c.id === o.buyerId)?.name}`, "/admin/offers");
-      }),
-    acceptMilestone: (projectId, milestoneId) =>
-      update((d) => {
-        const pr = d.projects.find((x) => x.id === projectId);
-        const m = pr?.milestones.find((x) => x.id === milestoneId);
-        if (!pr || !m) return;
-        m.status = "done";
-        m.acceptedOn = today().slice(0, 10);
-        const next = pr.milestones.find((x) => x.status === "upcoming");
-        if (next) next.status = "in_progress";
-        const ref = "INV-00" + (45 + d.invoices.length);
-        d.invoices.unshift({ id: "i-" + uid(), ref, buyerId: pr.buyerId, projectId, milestone: m.title, amount: m.amount, due: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), status: "due" });
-        notify(d, sellerUser(d, pr.partnerId), "Milestone accepted", `${pr.name} · ${m.title} · invoice ${ref} raised`, "/seller/orders");
-        notify(d, buyerUser(d, pr.buyerId), "Invoice ready", `${ref} · $${m.amount.toLocaleString()} for ${m.title}`, "/buyer/billing");
-        // Handover: when every milestone is accepted, the licence starts
-        if (pr.milestones.every((x) => x.status === "done")) {
-          pr.health = "on_track";
-          pr.daysLate = undefined;
-          if (!d.licences.some((l) => l.buyerId === pr.buyerId && l.productId === pr.productId)) {
-            const r = d.requests.find((x) => x.id === d.offers.find((o) => o.id === pr.offerId)?.requestId);
-            const seats = parseInt(r?.users ?? "", 10) || 50;
-            d.licences.unshift({ id: "l-" + uid(), buyerId: pr.buyerId, productId: pr.productId, seats, used: 0, renews: new Date(Date.now() + 365 * 864e5).toISOString().slice(0, 10), status: "active" });
-          }
-          notify(d, buyerUser(d, pr.buyerId), "Handover complete · licence active", `${pr.name} · licence starts today`, "/buyer/licences");
-          notify(d, sellerUser(d, pr.partnerId), "Project delivered", `${pr.name} · all milestones accepted`, "/seller/orders");
-          notify(d, advisorOf(d, pr.buyerId), "Project delivered", pr.name, "/admin/delivery");
-        }
-      }),
-    payInvoice: (invoiceId) =>
-      update((d) => {
-        const inv = d.invoices.find((x) => x.id === invoiceId);
-        if (!inv) return;
-        inv.status = "paid";
-        inv.paidOn = today().slice(0, 10);
-        notify(d, "u-farhan", "Payment received", `${inv.ref} · $${inv.amount.toLocaleString()} to verify`, "/admin/finance");
-      }),
-    openCase: (title, body, projectId) =>
-      update((d) => {
-        d.cases.unshift({ id: "cs-" + uid(), ref: "CASE-0" + (113 + d.cases.length), companyId: user?.companyId ?? "", projectId, title, priority: "normal", status: "open", opened: today(), messages: [{ from: user?.id ?? "", at: today(), body }] });
-      }),
-    replyCase: (caseId, body) =>
-      update((d) => {
-        const c = d.cases.find((x) => x.id === caseId);
-        if (c) c.messages.push({ from: user?.id ?? "", at: today(), body });
-      }),
+      });
+    },
 
-    resolveCase: (caseId) =>
-      update((d) => {
-        const c = d.cases.find((x) => x.id === caseId);
-        if (c) c.status = "resolved";
-      }),
-    uploadEvidence: (productId, checkKey) =>
-      update((d) => {
-        const p = d.products.find((x) => x.id === productId);
-        const c = p?.checks.find((x) => x.key === checkKey);
-        if (c) c.note = "Uploaded · awaiting review";
-        // Once every open check has evidence, the next move is DGIX's
-        if (p && p.checks.every((x) => x.score >= x.max || x.note?.startsWith("Uploaded"))) p.waitingOn = "DGIX review";
-        notify(d, "u-asha", "Evidence uploaded", `${p?.name} · ${c?.label}`, "/admin/review");
-      }),
-    confirmDemo: (demoId) =>
-      update((d) => {
-        const dm = d.demos.find((x) => x.id === demoId);
-        if (!dm) return;
-        dm.status = "booked";
-        const buyer = d.users.find((u) => u.companyId === dm.buyerId && u.role === "buyer");
-        const p = d.products.find((x) => x.id === dm.productId);
-        if (buyer) notify(d, buyer.id, "Demo confirmed", `${p?.name} · ${new Date(dm.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, "/buyer/demos");
-      }),
-    submitMilestone: (projectId, milestoneId) =>
-      update((d) => {
-        const pr = d.projects.find((x) => x.id === projectId);
-        const m = pr?.milestones.find((x) => x.id === milestoneId);
-        if (!pr || !m) return;
-        m.status = "in_review";
-        const buyer = d.users.find((u) => u.companyId === pr.buyerId && u.role === "buyer");
-        if (buyer) notify(d, buyer.id, "Milestone ready to review", `${pr.name} · ${m.title}`, `/buyer/projects/${pr.id}`);
-        notify(d, advisorOf(d, pr.buyerId), "Milestone submitted", `${pr.name} · ${m.title}`, "/admin/delivery");
-      }),
+    sendOffer: () => {
+      // Offers created via POST /bff/v1/commercial/offers are immediately sent
+    },
 
-    confirmShortlist: (requestId, productIds) =>
-      update((d) => {
-        const r = d.requests.find((x) => x.id === requestId);
-        if (!r) return;
-        if (productIds) r.shortlist = r.shortlist.filter((s) => productIds.includes(s.productId));
-        r.shortlist.forEach((s) => (s.confirmed = true));
-        r.status = "shortlist_sent";
-        r.ownerId = user?.id ?? "u-asha";
-        const buyer = d.users.find((u) => u.companyId === r.buyerId && u.role === "buyer");
-        if (buyer) notify(d, buyer.id, "Your shortlist is ready", `${r.shortlist.length} verified matches for ${r.title}`, "/buyer/shortlist");
-      }),
-    sendOffer: (offerId) =>
-      update((d) => {
-        const o = d.offers.find((x) => x.id === offerId);
-        if (!o) return;
-        o.status = "sent";
-        o.sentAt = today().slice(0, 10);
-        const r = d.requests.find((x) => x.id === o.requestId);
-        if (r) r.status = "offer";
-        const buyer = d.users.find((u) => u.companyId === o.buyerId && u.role === "buyer");
-        if (buyer) notify(d, buyer.id, "New offer to review", `${o.ref} · $${o.price.toLocaleString()}`, "/buyer/offers");
-      }),
-    approveCheck: (productId, checkKey) =>
-      update((d) => {
-        const p = d.products.find((x) => x.id === productId);
-        const c = p?.checks.find((x) => x.key === checkKey);
-        if (!p || !c) return;
-        c.score = c.max;
-        c.note = undefined;
-        const total = p.checks.reduce((s, x) => s + x.score, 0);
-        const order = ["PG0", "PG1", "PG2", "PG3", "PG4", "PG5"] as const;
-        const byScore = total >= 100 ? 5 : total >= 85 ? 4 : total >= 70 ? 3 : total >= 50 ? 2 : 1;
-        if (order.indexOf(p.gate) < byScore) p.gate = order[byScore];
-        if (total === 100) {
-          p.gate = "PG5";
-          p.status = "listed";
-          p.waitingOn = undefined;
-          p.reviewedOn = today().slice(0, 10);
-        }
-        const seller = d.users.find((u) => u.companyId === p.partnerId);
-        if (seller) notify(d, seller.id, total === 100 ? `${p.name} passed 100/100` : "Check approved", total === 100 ? "You're now listed." : `${c.label} · ${total}/100`, "/seller/products");
-      }),
-    verifyPayment: (invoiceId) =>
-      update((d) => {
-        const inv = d.invoices.find((x) => x.id === invoiceId);
-        if (!inv) return;
-        inv.status = "verified";
-        const pr = d.projects.find((x) => x.id === inv.projectId);
-        if (pr) {
-          const fee = Math.round(inv.amount * 0.15);
-          d.payouts.unshift({ id: "po-" + uid(), partnerId: pr.partnerId, invoiceId: inv.id, gross: inv.amount, fee, net: inv.amount - fee, status: "scheduled", date: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10) });
-          notify(d, sellerUser(d, pr.partnerId), "Payout scheduled", `$${(inv.amount - fee).toLocaleString()} net for ${inv.milestone} · in 14 days`, "/seller/payouts");
-        }
-        notify(d, buyerUser(d, inv.buyerId), "Payment verified · receipt ready", `${inv.ref} · $${inv.amount.toLocaleString()}`, "/buyer/billing");
-      }),
-    approvePayouts: (ids) =>
-      update((d) => {
-        d.payouts.forEach((p) => {
-          if (!ids.includes(p.id) || p.status === "paid") return;
-          p.status = "paid";
-          p.date = today().slice(0, 10);
-          notify(d, sellerUser(d, p.partnerId), "Payout sent", `$${p.net.toLocaleString()} net · payout advice available`, "/seller/payouts");
+    approveCheck: () => {
+      // Detailed gate decisions handled in /admin/review
+    },
+
+    verifyPayment: (invoiceId) => {
+      const inv = db.invoices.find((i) => i.id === invoiceId);
+      if (!inv?.paymentId) return;
+      runBg(async () => {
+        await apiFetch(`/bff/v1/finance/payments/${inv.paymentId}/settle`, {
+          method: "POST",
+          body: { gateway_fee_amount: "0.00" },
         });
-      }),
-    completeDemo: (demoId) =>
-      update((d) => {
-        const dm = d.demos.find((x) => x.id === demoId);
-        if (!dm) return;
-        dm.status = "done";
-        const p = d.products.find((x) => x.id === dm.productId);
-        notify(d, buyerUser(d, dm.buyerId), "How was the demo?", `${p?.name} · rate it so your advisor can prepare an offer`, "/buyer/demos");
-      }),
-    rateDemo: (demoId, rating, notes) =>
-      update((d) => {
-        const dm = d.demos.find((x) => x.id === demoId);
-        if (!dm) return;
-        dm.rating = rating;
-        if (notes) dm.notes = notes;
-        dm.status = "done";
-        const p = d.products.find((x) => x.id === dm.productId);
-        const co = d.companies.find((c) => c.id === dm.buyerId);
-        notify(d, advisorOf(d, dm.buyerId), `Demo rated “${rating}”`, `${co?.name} × ${p?.name}${rating === "Strong fit" ? " · ready for an offer" : ""}`, "/admin/offers");
-      }),
+      });
+    },
+
+    completeDemo: (demoId) => {
+      runBg(async () => {
+        await apiFetch(`/bff/v1/commercial/buyers/demo-bookings/${demoId}`, {
+          method: "PATCH",
+          body: { status: "completed" },
+        });
+      });
+    },
+
+    rateDemo: (demoId, rating, notes) => {
+      runBg(async () => {
+        await apiFetch(`/bff/v1/commercial/buyers/demo-bookings/${demoId}`, {
+          method: "PATCH",
+          body: {
+            status: "completed",
+            notes: `Buyer rating: ${rating}${notes ? ` — ${notes}` : ""}`,
+          },
+        });
+      });
+    },
+
     createOffer: (input) => {
-      const r = db.requests.find((x) => x.id === input.requestId);
-      const offer: Offer = {
-        id: "o-" + uid().toLowerCase(),
-        ref: "OFF-00" + (28 + db.offers.length),
+      const req = db.requests.find((r) => r.id === input.requestId);
+      const prod = db.products.find((p) => p.id === input.productId);
+      const optimistic: Offer = {
+        id: `offer-${uid().toLowerCase()}`,
+        ref: `OFF-${uid()}`,
         requestId: input.requestId,
         productId: input.productId,
-        buyerId: r?.buyerId ?? "",
+        buyerId: req?.buyerId ?? "",
         price: input.price,
         sla: input.sla,
         warranty: input.warranty,
         exit: input.exit,
         milestones: input.milestones,
-        status: input.send ? "sent" : "draft",
-        rating: db.demos.find((x) => x.requestId === input.requestId && x.productId === input.productId)?.rating,
-        sentAt: input.send ? today().slice(0, 10) : undefined,
+        status: "sent",
+        sentAt: today().slice(0, 10),
       };
-      update((d) => {
-        d.offers.unshift(offer);
-        const req = d.requests.find((x) => x.id === input.requestId);
-        if (req && input.send) req.status = "offer";
-        if (input.send) notify(d, buyerUser(d, offer.buyerId), "New offer to review", `${offer.ref} · $${offer.price.toLocaleString()}`, "/buyer/offers");
-      });
-      return offer;
-    },
-    addProduct: (input) => {
-      const id = "p-" + uid().toLowerCase();
-      const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + id.slice(2, 6);
-      update((d) => {
-        d.products.unshift({
-          id, slug, name: input.name, partnerId: user?.companyId ?? "", category: input.category, tagline: input.tagline, description: input.description,
-          version: "1.0", markets: input.markets, gate: "PG0", status: "in_review",
-          checks: CHECK_META.map((m) => ({ ...m, score: 0, note: "Evidence needed" })),
-          metricLabel: "Live customers", metricValue: "New", visual: "ledger", goLive: "6–8 weeks", priceFrom: input.priceFrom,
-          waitingOn: "Partner evidence",
+      if (prod?.listingId && prod?.priceListId && req?.buyerId) {
+        runBg(async () => {
+          await apiFetch("/bff/v1/commercial/offers", {
+            method: "POST",
+            body: {
+              buyer_id: req.buyerId,
+              requirement_id: req.id,
+              shortlist_id: req.shortlistId,
+              listing_id: prod.listingId,
+              price_list_id: prod.priceListId,
+              quantity: 1,
+              sla_terms: input.sla,
+              warranty_terms: input.warranty,
+              exit_terms: input.exit,
+              milestones: input.milestones.map((m, idx) => ({
+                name: m.title,
+                amount: String(m.amount),
+                due_days: (idx + 1) * 21,
+              })),
+              dgix_contact: user?.name ?? "DGIX Commercial Advisor",
+            },
+          });
         });
-        notify(d, advisorOf(d, user?.companyId), "New product submitted", `${input.name} · ${d.companies.find((c) => c.id === user?.companyId)?.name}`, "/admin/review");
-      });
-      return id;
+      }
+      return optimistic;
     },
-    markRead: (id) =>
-      update((d) => {
-        const n = d.notifications.find((x) => x.id === id);
-        if (n) n.read = true;
-      }),
+
+    addProduct: (input) => {
+      const tempId = `prod-${uid().toLowerCase()}`;
+      runBg(async () => {
+        if (!user) return;
+        const createdProd = await apiFetch<Record<string, unknown>>("/bff/v1/products", {
+          method: "POST",
+          body: {
+            name: input.name,
+            category: input.category,
+            pao_user_id: user.id,
+            daffodil_owned: false,
+          },
+        });
+        const pid = String(createdProd.product_id);
+        const createdVer = await apiFetch<Record<string, unknown>>(
+          `/bff/v1/products/${pid}/versions`,
+          {
+            method: "POST",
+            body: { semver: "1.0.0", material_change: false },
+          },
+        );
+        await apiFetch("/bff/v1/iam/pao-bindings", {
+          method: "POST",
+          body: {
+            product_id: pid,
+            pao_user_id: user.id,
+            no_conflict_declared: true,
+          },
+        });
+        const countryCodes = input.markets.map(toIsoCountry);
+        await apiFetch("/bff/v1/governance/assessments", {
+          method: "POST",
+          body: {
+            product_id: pid,
+            product_version_id: String(createdVer.version_id),
+            pao_user_id: user.id,
+            country_codes: countryCodes.length > 0 ? countryCodes : ["UAE"],
+          },
+        }).catch(() => {
+          // Partner KYB may still be pending Legal screening; PAO & product are still saved!
+        });
+      });
+      return tempId;
+    },
+
+    markRead: (id) => {
+      setLocalNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+      );
+    },
   };
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
@@ -449,6 +1711,10 @@ export function useLookup() {
     company: (id?: string) => db.companies.find((c) => c.id === id),
     product: (id?: string) => db.products.find((p) => p.id === id),
     user: (id?: string) => db.users.find((u) => u.id === id),
-    score: (productId?: string) => db.products.find((p) => p.id === productId)?.checks.reduce((s, c) => s + c.score, 0) ?? 0,
+    score: (productId?: string) => {
+      const p = db.products.find((x) => x.id === productId);
+      if (p?.officialScore != null) return p.officialScore;
+      return p?.checks.reduce((s, c) => s + c.score, 0) ?? 0;
+    },
   };
 }

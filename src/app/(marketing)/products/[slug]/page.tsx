@@ -13,7 +13,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { CAT_LABEL, MARKETS, chipFor, score } from "@/components/marketing/catalogue/data";
 import { AdvisorCard, Svg } from "@/components/marketing/catalogue/ui";
 
-type Badge = "verified" | "certified" | "declared" | "review";
+type Badge = "verified" | "certified" | "declared" | "inferred" | "estimated" | "review";
 const CLAIMS: Record<string, { label: string; badge: Badge }[]> = {
   "smart-hospital": [
     { label: "Multi-clinic billing with insurance claims", badge: "verified" },
@@ -27,7 +27,17 @@ const LIMITS: Record<string, string> = {
   "smart-hospital": "Custom reports need configuration. Arabic is declared by the partner and will be checked in your demo.",
 };
 
-function claimsFor(p: Product) {
+function claimsFor(p: Product): { label: string; badge: Badge }[] {
+  if (p.claimsSnapshot && p.claimsSnapshot.length > 0) {
+    return p.claimsSnapshot.map((c) => {
+      const raw = (c.label || "verified").toLowerCase();
+      const badge: Badge =
+        raw === "certified" || raw === "verified" || raw === "declared" || raw === "inferred" || raw === "estimated"
+          ? (raw as Badge)
+          : "verified";
+      return { label: c.statement, badge };
+    });
+  }
   if (CLAIMS[p.slug]) return CLAIMS[p.slug];
   return p.checks.map((c) => ({
     label: c.score >= c.max ? c.label : `${c.label}${c.note ? ` — ${c.note}` : ""}`,
@@ -36,16 +46,19 @@ function claimsFor(p: Product) {
 }
 
 function BadgePill({ b }: { b: Badge }) {
-  const map = {
+  const map: Record<Badge, { bg: string; color: string; text: string; icon: string; label: string }> = {
     verified: { bg: "bg-[#E6F4EC]", color: "#14804A", text: "text-success", icon: "shieldCheck", label: "Verified" },
     certified: { bg: "bg-mist", color: "#1E4FA3", text: "text-primary", icon: "star", label: "Certified" },
     declared: { bg: "border border-line", color: "#5B6478", text: "text-muted", icon: "info", label: "Declared" },
+    inferred: { bg: "bg-[#F3F0FF]", color: "#5B3CC4", text: "text-[#5B3CC4]", icon: "sparkle", label: "Inferred" },
+    estimated: { bg: "bg-[#FFF4E0]", color: "#B86E00", text: "text-[#8A5300]", icon: "clock", label: "Estimated" },
     review: { bg: "bg-[#FFF4E0]", color: "#B86E00", text: "text-[#8A5300]", icon: "clock", label: "In review" },
-  }[b];
+  };
+  const cfg = map[b];
   return (
-    <div className={clsx("flex h-[30px] shrink-0 items-center gap-[6px] rounded-lg pl-2 pr-3", map.bg)}>
-      <Svg name={map.icon} size={16} color={map.color} />
-      <span className={clsx("text-[13px] font-semibold leading-4", map.text)}>{map.label}</span>
+    <div className={clsx("flex h-[30px] shrink-0 items-center gap-[6px] rounded-lg pl-2 pr-3", cfg.bg)}>
+      <Svg name={cfg.icon} size={16} color={cfg.color} />
+      <span className={clsx("text-[13px] font-semibold leading-4", cfg.text)}>{cfg.label}</span>
     </div>
   );
 }
@@ -54,7 +67,7 @@ const marketNames = (p: Product) => p.markets.map((c) => MARKETS.find((m) => m.c
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const { db, user, bookDemo } = useStore();
+  const { db, user, bookDemo, catalogueDisclaimer } = useStore();
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const p = db.products.find((x) => x.slug === slug);
@@ -82,6 +95,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const chip = chipFor(p.category);
   const full = p.checks.filter((c) => c.score >= c.max).length;
   const listed = p.status === "listed";
+  const isPilot = p.status === "pilot" || p.classification === "pilot_eligible";
   const flash = (t: string) => {
     setToast(t);
     setTimeout(() => setToast(null), 3200);
@@ -95,15 +109,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   const steps = [
     { title: "Passport approved", sub: p.reviewedOn ? dateShort(p.reviewedOn) : "Pending", done: !!p.reviewedOn },
-    { title: `Claims verified · ${full}/${p.checks.length}`, sub: "Independent reviewer", done: full === p.checks.length },
-    { title: "Live demo run", sub: listed ? "Run by DGIX · passed" : "Scheduled", done: listed, bold: true },
-    { title: `Readiness score · ${s}/100`, done: s >= 90 },
-    { title: `${listed ? "Listed" : p.status === "pilot" ? "Pilot" : "In review"} · ${p.markets.join(", ")}`, done: listed },
+    { title: `Claims verified · ${full}/${p.checks.length}`, sub: "Independent reviewer & 2-member council", done: full === p.checks.length },
+    { title: "Live demo run", sub: listed ? "Run by DGIX · passed" : "Pilot evaluation", done: listed, bold: true },
+    { title: `Readiness score · ${s}/100`, sub: isPilot ? "Pilot-Eligible — Not Globally Ready (BR-05)" : "Globally Ready (≥90/100)", done: s >= 90 },
+    { title: `${listed ? "Listed" : isPilot ? "Pilot-Eligible" : "In review"} · ${p.markets.join(", ")}`, done: listed },
   ];
 
   return (
     <>
-      {/* Hero */}
       <section className="relative mx-2 mt-2 overflow-hidden rounded-lg bg-night-hero text-white md:mx-4 md:mt-4">
         <SiteNav />
         <div className="relative z-10 flex flex-col gap-10 px-6 pb-10 pt-10 lg:flex-row lg:items-end lg:gap-12 md:px-10 md:pb-12 md:pt-14">
@@ -149,11 +162,18 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             className="flex w-full shrink-0 flex-col gap-[18px] rounded-lg border border-white/16 bg-white/7 p-7 lg:w-[360px]"
           >
             <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)]">
-                <Svg name="check" size={20} color="#08152F" width={2} />
+              <div
+                className={clsx(
+                  "flex size-11 shrink-0 items-center justify-center rounded-full",
+                  isPilot ? "bg-[#FFB938]" : "bg-[linear-gradient(135deg,#7FB6FF_0%,#2F6BD8_100%)]",
+                )}
+              >
+                <Svg name={isPilot ? "clock" : "check"} size={20} color="#08152F" width={2} />
               </div>
               <div className="flex flex-col">
-                <span className="text-base font-semibold leading-5 text-white">{listed ? "Daffodil Verified" : p.status === "pilot" ? "Verified pilot" : "Under review"}</span>
+                <span className="text-base font-semibold leading-5 text-white">
+                  {isPilot ? "Pilot-Eligible — Not Globally Ready" : listed ? "Globally Ready · Council Signed" : "Under review"}
+                </span>
                 <span className="text-[13px] leading-4 text-white/65">{p.reviewedOn ? `Reviewed ${dateLong(p.reviewedOn)}` : `Gate ${p.gate}`}</span>
               </div>
             </div>
@@ -177,9 +197,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         </div>
       </section>
 
-      {/* Body */}
       <section className="mx-2 flex flex-col items-start gap-14 px-4 pb-20 pt-14 md:mx-4 md:px-10 md:pb-24 md:pt-20 lg:flex-row">
-        <div className="flex w-full flex-1 flex-col gap-16">
+        <div className="flex w-full flex-1 flex-col gap-12">
+          <div className="flex items-start gap-3 rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] px-5 py-3.5 text-sm leading-5 text-[#2C3E66]">
+            <Svg name="info" size={18} color="#1E4FA3" className="mt-0.5" />
+            <div>
+              <span className="font-semibold text-ink">Verification Scope Notice (FR-CAT-02): </span>
+              {catalogueDisclaimer}
+            </div>
+          </div>
+
           <Reveal className="flex flex-col gap-6">
             <h2 className="text-[32px] font-light leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-12">Every claim, labelled.</h2>
             <div className="flex flex-col border-t border-ink">
@@ -196,9 +223,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <h2 className="text-[32px] font-light leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-12">What your offer will include.</h2>
             <div className="flex flex-col gap-4 md:flex-row">
               {[
-                { icon: "card", t: "Exact price", d: "Annual licence per user, implementation per project." },
-                { icon: "clock", t: "Signed SLA", d: "1 business-day response, 99.5% uptime." },
-                { icon: "shield", t: "Warranty & exit", d: "12-month warranty. Your data exported if you leave." },
+                { icon: "card", t: "Exact price", d: "Approved above verified cost floor with 4-eyes commercial sign-off." },
+                { icon: "clock", t: "Signed SLA", d: p.supportSummary || "1 business-day response, 99.9% uptime." },
+                { icon: "shield", t: "Warranty & exit", d: "Milestone-backed warranty and full structured data export if you leave." },
               ].map((x) => (
                 <div key={x.t} className="flex flex-1 flex-col gap-3 rounded-lg bg-[#F6F8FC] p-6">
                   <Svg name={x.icon} size={24} color="#0C1F45" />
@@ -210,8 +237,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <div className="flex items-start gap-3 rounded-lg border border-[#F3D9B0] bg-[#FFFBF4] px-5 py-[18px]">
               <Svg name="info" size={20} color="#B86E00" />
               <div className="text-sm leading-[22px] text-[#6B4A12]">
-                <span className="font-semibold">Known limits.</span>{" "}
-                {LIMITS[p.slug] ?? (p.checks.filter((c) => c.note).map((c) => c.note).join(". ") || "Custom reports need configuration. Anything declared by the partner will be checked in your demo.")}
+                <span className="font-semibold">Known limits &amp; scope.</span>{" "}
+                {p.knownLimits ??
+                  LIMITS[p.slug] ??
+                  (p.checks.filter((c) => c.note).map((c) => c.note).join(". ") ||
+                    "Custom integrations require milestone scoping. Declared items are verified during your live demo.")}
               </div>
             </div>
           </Reveal>
@@ -220,7 +250,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         <aside className="flex w-full shrink-0 flex-col gap-5 lg:sticky lg:top-6 lg:w-[400px]">
           <AdvisorCard href={user?.role === "buyer" ? "/buyer/support" : "/contact"} />
           <div className="flex flex-col rounded-lg bg-mist bg-[radial-gradient(ellipse_70%_90%_at_100%_0%,#C9DCFF_0%,#C9DCFF00_60%)] p-7">
-            <div className="pb-5 text-[13px] leading-4 text-muted">Quality gate · {listed ? "passed" : p.status === "pilot" ? "pilot" : "in progress"}</div>
+            <div className="pb-5 text-[13px] leading-4 text-muted">
+              Quality gate · {listed ? "Ed25519 Council Approved" : isPilot ? "Pilot-Eligible (80–89)" : "in progress"}
+            </div>
             {steps.map((st, i) => {
               const last = i === steps.length - 1;
               return (

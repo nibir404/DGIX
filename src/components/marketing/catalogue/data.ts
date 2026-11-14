@@ -38,15 +38,16 @@ export const VISUAL: Record<Product["visual"], string> = {
   ledger: "/media/bars.webp",
 };
 
-export const score = (p: Product) => p.checks.reduce((s, c) => s + c.score, 0);
+export const score = (p: Product) => (typeof p.officialScore === "number" ? Math.round(p.officialScore) : p.checks.reduce((s, c) => s + c.score, 0));
 export const isPublic = (p: Product) => p.status === "listed" || p.status === "pilot";
 export const gateName = (g: Product["gate"]) => GATES.find((x) => x.id === g)?.name ?? "";
 
 /** Market display names; product.markets uses the short code. */
 export const MARKETS: { code: string; slug: string; name: string; short: string }[] = [
   { code: "UAE", slug: "uae", name: "United Arab Emirates", short: "the UAE" },
-  { code: "Qatar", slug: "qatar", name: "Qatar", short: "Qatar" },
   { code: "KSA", slug: "ksa", name: "Saudi Arabia", short: "Saudi Arabia" },
+  { code: "Qatar", slug: "qatar", name: "Qatar", short: "Qatar" },
+  { code: "BGD", slug: "bgd", name: "Bangladesh", short: "Bangladesh" },
   { code: "USA", slug: "usa", name: "United States", short: "the USA" },
 ];
 
@@ -171,6 +172,24 @@ export const MARKET_COPY: Record<string, { checks: { icon: string; label: string
       { q: "Is my data hosted in the US?", a: "US hosting options are verified and labelled on each passport." },
       { q: "Do you check SOC 2?", a: "Security evidence including SOC 2 reports is reviewed by an independent reviewer." },
       { q: "Who supports us during US hours?", a: "Every US listing has a support path with signed response times in US hours." },
+    ],
+  },
+  bgd: {
+    checks: [
+      { icon: "doc", label: "NBR VAT & statutory tax" },
+      { icon: "card", label: "bKash / SSLCommerz & BEFTN" },
+      { icon: "lock", label: "Bangladesh data rules" },
+      { icon: "chat", label: "Bangla & English screens" },
+      { icon: "user", label: "Dhaka engineering support" },
+    ],
+    ai: "AI checked for Bangladesh enterprise & statutory rules before it reaches you.",
+    services: "Engineers who cover Dhaka and Chattogram business hours.",
+    title: 'What "ready for Bangladesh" means.',
+    intro: "Before a product is listed for Bangladesh we verify NBR VAT/Mushak outputs, local BEFTN & SSLCommerz payment compatibility, data governance and Dhaka on-site support.",
+    faqs: [
+      { q: "Does payroll handle Bangladesh tax & BEFTN?", a: "Statutory payroll, tax slabs and BEFTN bank files are verified before listing." },
+      { q: "Can we pay in BDT or USD?", a: "Supported local & cross-border gateways are configured per jurisdiction." },
+      { q: "Who supports us in Dhaka?", a: "Every Bangladesh listing has a named Dhaka engineering support desk." },
     ],
   },
 };

@@ -70,16 +70,17 @@ export const portalConfig: Record<Role, Config> = {
         items: [
           { href: "/admin", label: "Today", icon: "sun" },
           { href: "/admin/matching", label: "Matching desk", icon: "sparkle", badge: (db) => db.requests.filter((r) => r.status === "matching").length },
-          { href: "/admin/review", label: "Product review", icon: "shield", badge: (db) => db.products.filter((p) => p.status === "in_review" && p.gate >= "PG3").length },
+          { href: "/admin/review", label: "Product review", icon: "shield", badge: (db) => db.products.filter((p) => p.status === "in_review").length },
           { href: "/admin/offers", label: "Offers & contracts", icon: "file" },
         ],
       },
       {
-        label: "Operations",
+        label: "Governance & Operations",
         items: [
+          { href: "/admin/governance", label: "Council & audit", icon: "lock" },
           { href: "/admin/delivery", label: "Delivery", icon: "pulse", badge: (db) => db.projects.filter((p) => p.health !== "on_track").length, tone: "red" },
-          { href: "/admin/finance", label: "Finance", icon: "card" },
-          { href: "/admin/partners", label: "Partners & buyers", icon: "users" },
+          { href: "/admin/finance", label: "Finance & ledger", icon: "card" },
+          { href: "/admin/partners", label: "Legal & KYB", icon: "users" },
         ],
       },
     ],
@@ -87,7 +88,7 @@ export const portalConfig: Record<Role, Config> = {
 };
 
 export function PortalShell({ role, children }: { role: Role; children: React.ReactNode }) {
-  const { db, user, ready } = useStore();
+  const { db, user, authSession, syncing, lastError, clearError, refreshLive, ready } = useStore();
   const { company } = useLookup();
   const pathname = usePathname();
   const router = useRouter();
@@ -97,6 +98,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
   const cfg = portalConfig[role];
   const co = company(user?.companyId);
   const unread = user ? db.notifications.filter((n) => n.userId === user.id && !n.read).length : 0;
+  const activeRole = authSession?.user.primary_dgix_role ?? user?.primaryDgixRole ?? role;
 
   if (!ready) return <div className="min-h-screen bg-[#F5F8FC]" />;
   if (!user || user.role !== role) {
@@ -127,13 +129,17 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
         )}
         <div className={clsx("mb-5 flex items-center gap-3 rounded-lg px-2 py-2", collapsed && "justify-center")}>
           <div className={clsx("flex size-[34px] shrink-0 items-center justify-center rounded-lg text-[13px] font-bold text-white", role === "seller" ? "bg-[linear-gradient(135deg,#14804A,#3DDC84)]" : role === "staff" ? "bg-[linear-gradient(135deg,#163C7E,#1E4FA3)]" : "bg-[linear-gradient(135deg,#2F6BD8,#E52A2A)]")}>
-            {(co?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2)}
+            {(co?.name ?? "DG").split(" ").map((w) => w[0]).join("").slice(0, 2)}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold leading-[18px]">{co?.name}</div>
-              <div className={clsx("text-xs leading-4", role === "buyer" ? "text-success" : "text-muted")}>
-                {role === "buyer" ? `Verified buyer · ${co?.country === "United Arab Emirates" ? "UAE" : co?.country}` : role === "seller" ? `Partner · ${co?.city}` : `Staff · ${co?.city}`}
+              <div className={clsx("truncate text-xs leading-4", role === "buyer" ? "text-success" : "text-muted")}>
+                {role === "buyer"
+                  ? `Verified buyer · ${co?.country === "United Arab Emirates" ? "UAE" : co?.country}`
+                  : role === "seller"
+                    ? `Partner · ${activeRole}`
+                    : `OPA Role · ${activeRole}`}
               </div>
             </div>
           )}
@@ -171,7 +177,6 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             </div>
           ))}
         </nav>
-        {/* Only your own account lives here; messaging the advisor is inside the account menu */}
         <div className="border-t border-line pt-4">
           <AccountMenu variant="sidebar" collapsed={collapsed} />
         </div>
@@ -193,7 +198,16 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             <kbd className="hidden sm:block rounded-lg bg-mist px-1.5 py-0.5 font-mono text-[11px] text-muted">⌘K</kbd>
           </label>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {/* Global shortcut, so it's secondary: each page keeps the one solid primary button for its own action. */}
+            <button
+              type="button"
+              onClick={() => void refreshLive()}
+              title="Sync live 9-service state via BFF (:18118)"
+              className="hidden h-11 items-center gap-2 rounded-lg border border-line bg-white px-3 text-xs font-semibold text-ink shadow-[0_1px_2px_rgba(12,31,69,0.04)] hover:bg-mist md:flex"
+            >
+              <span className={clsx("size-2 rounded-full", authSession ? "bg-success" : "bg-amber")} />
+              <span className="font-mono">{activeRole}</span>
+              <span className="text-muted">· {syncing ? "Syncing..." : "Sync"}</span>
+            </button>
             <Link
               href={cfg.primary.href}
               className="hidden h-11 items-center gap-2 rounded-lg border border-primary/25 bg-white px-4 text-[15px] font-semibold text-primary shadow-[0_1px_2px_rgba(12,31,69,0.04)] transition-colors hover:border-primary/50 hover:bg-mist sm:flex"
@@ -204,6 +218,20 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             <AccountMenu />
           </div>
         </header>
+        {lastError && (
+          <div className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-lg border border-[#F2B8B8] bg-[#FFF5F5] px-4 py-3 text-sm text-[#8A1C1C] sm:mx-5 lg:mx-8">
+            <div className="flex items-start gap-2.5">
+              <Icon name="info" size={16} className="mt-0.5 shrink-0" />
+              <div>
+                <div className="font-semibold">Policy / Backend Enforcement Notice</div>
+                <div className="text-xs leading-5">{lastError}</div>
+              </div>
+            </div>
+            <button type="button" onClick={clearError} className="rounded px-2 py-1 text-xs font-semibold hover:bg-white/70">
+              Dismiss
+            </button>
+          </div>
+        )}
         <main className="min-w-0 flex-1 px-4 pb-12 pt-5 sm:px-5 sm:pt-6 lg:px-8">{children}</main>
       </div>
 
@@ -223,7 +251,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
               <Avatar user={user} size={36} />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{user.name}</div>
-                <div className="truncate text-xs text-muted">{co?.name}</div>
+                <div className="truncate text-xs text-muted">{co?.name} · {activeRole}</div>
               </div>
             </Link>
             <Link href={cfg.primary.href} onClick={() => setMenuOpen(false)} className="mb-4 flex h-11 items-center justify-center gap-2 rounded-lg border border-primary/25 bg-white text-[15px] font-semibold text-primary sm:hidden">

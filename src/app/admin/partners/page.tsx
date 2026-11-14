@@ -3,16 +3,29 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { useLookup, useStore } from "@/lib/store";
 import { fmtMoney } from "@/lib/seed";
-import { H1, Kicker, k } from "@/components/admin/kit";
+import { Button, Chip } from "@/components/portal/ui";
+import { H1, Kicker, k, useFlash } from "@/components/admin/kit";
 
 const tones = ["bg-[linear-gradient(135deg,#6FD3A0,#14804A)]", "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)]", "bg-[linear-gradient(135deg,#7FB6FF,#2F6BD8)] text-ink", "bg-[#FBE7E7] text-danger"];
 
 export default function Partners() {
-  const { db } = useStore();
+  const { db, live, authSession, refreshLive } = useStore();
   const L = useLookup();
+  const { flash, toast } = useFlash();
   const [tab, setTab] = useState<"partner" | "buyer">("partner");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [draftForm, setDraftForm] = useState({
+    partnerId: "",
+    productId: "",
+    wholesale: "36000.00",
+    margin: "20.00",
+    hold: "5.00",
+    territory: "UAE",
+  });
+
   const companies = db.companies.filter((c) => c.kind === tab);
   const partnerStats = (id: string) => {
     const products = db.products.filter((p) => p.partnerId === id);
@@ -30,10 +43,91 @@ export default function Partners() {
   const initials = (n: string) => n.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   const short = (c: string) => (c === "United Arab Emirates" ? "UAE" : c === "United States" ? "USA" : c);
 
+  const runKybAndTriage = async (partnerId: string, legalName: string) => {
+    setBusyId(partnerId);
+    try {
+      await apiFetch(`/bff/v1/partners/${partnerId}/screenings`, {
+        method: "POST",
+        body: JSON.stringify({ kyb_documents_verified: true, screening_kind: "initial" }),
+      });
+      await apiFetch(`/bff/v1/partners/${partnerId}/triage`, {
+        method: "POST",
+        body: JSON.stringify({
+          category_fit: "fit",
+          daffodil_overlap: "complementary",
+          overlapping_products: [],
+          decision: "accepted",
+          notes: "Sanctions screening clean and portfolio fit accepted by Legal.",
+        }),
+      });
+      await refreshLive();
+      flash(`${legalName} KYB sanctions & overlap triage approved`);
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "KYB action denied (requires legal / dgix_admin role)");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const draftAgreement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const pid = draftForm.productId || String(live.products[0]?.product_id ?? "");
+    const partnerId = draftForm.partnerId || String(live.partners[0]?.partner_id ?? "");
+    const ver = live.versionsByProduct[pid]?.[0];
+    if (!pid || !partnerId || !ver) {
+      flash("Select a valid live partner & product with an active semver version.");
+      return;
+    }
+    setBusyId("draft-agr");
+    try {
+      await apiFetch("/bff/v1/commercial/rights/agreements", {
+        method: "POST",
+        body: JSON.stringify({
+          partner_id: partnerId,
+          product_id: pid,
+          product_version_id: String(ver.version_id),
+          edition: "standard",
+          territories: [draftForm.territory],
+          brand_model: "co_branded",
+          wholesale_price: draftForm.wholesale,
+          currency: "USD",
+          margin_pct: draftForm.margin,
+          dispute_hold_pct: draftForm.hold,
+          sla_summary: "99.9% availability SLA with 1 business-day response",
+          expires_at: "2028-11-25T00:00:00Z",
+        }),
+      });
+      await refreshLive();
+      flash("Draft Commercial Agreement created · switch to legal.signer for 4-eyes execution");
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "Failed to draft agreement");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const signAgreement = async (agreementId: string) => {
+    setBusyId(agreementId);
+    try {
+      await apiFetch(`/bff/v1/commercial/rights/agreements/${agreementId}/sign`, {
+        method: "POST",
+      });
+      await refreshLive();
+      flash("Commercial Agreement signed via 4-Eyes Legal Sign-Off!");
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "4-Eyes Violation: Switch to legal.signer to countersign");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex flex-col gap-2"><Kicker>Everyone DGIX works with</Kicker><H1>Partners &amp; buyers</H1></div>
+        <div className="flex flex-col gap-2">
+          <Kicker>Legal KYB Sanctions, Portfolio Triage &amp; 4-Eyes Commercial Rights ({authSession?.user.username ?? "staff"})</Kicker>
+          <H1>Legal, KYB &amp; Partners</H1>
+        </div>
         <div className="flex self-start rounded-lg bg-white p-1 text-[13px] md:self-auto">
           {(["partner", "buyer"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={"rounded-lg px-3.5 py-1.5 " + (tab === t ? "bg-night text-white" : "text-muted")}>
@@ -41,6 +135,134 @@ export default function Partners() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Live KYB Onboarding & Commercial Rights 4-Eyes Desk */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-lg bg-white p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-medium">Partner KYB &amp; Sanctions Queue</h2>
+            <span className="text-xs text-muted">Role: legal / dgix_admin</span>
+          </div>
+          {live.partners.length === 0 ? (
+            <p className="text-xs text-muted">No live partner records fetched yet.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-line">
+              {live.partners.map((pt) => {
+                const pid = String(pt.partner_id);
+                const st = String(pt.status ?? pt.kyb_status ?? "pending");
+                const cleared = st === "active" || st === "accepted" || st === "verified" || st === "triaged";
+                return (
+                  <div key={pid} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-ink">{String(pt.legal_name)}</div>
+                      <div className="text-xs text-muted">
+                        Reg: {String(pt.registration_number ?? "—")} · {String(pt.country_code)} · Status: <span className="font-semibold">{st}</span>
+                      </div>
+                    </div>
+                    {cleared ? (
+                      <Chip tone="success">KYB &amp; Triage Cleared</Chip>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={busyId === pid}
+                        onClick={() => void runKybAndTriage(pid, String(pt.legal_name))}
+                      >
+                        {busyId === pid ? "Screening..." : "Screen Sanctions & Accept"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-lg bg-white p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-medium">4-Eyes Commercial Agreements</h2>
+            <span className="text-xs text-muted">Maker: legal.user · Checker: legal.signer</span>
+          </div>
+          <form onSubmit={draftAgreement} className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-[#F8FAFE] p-3 text-xs">
+            <select
+              value={draftForm.partnerId}
+              onChange={(e) => setDraftForm({ ...draftForm, partnerId: e.target.value })}
+              className="h-9 rounded border border-line bg-white px-2"
+            >
+              <option value="">Select partner…</option>
+              {live.partners.map((pt) => (
+                <option key={String(pt.partner_id)} value={String(pt.partner_id)}>
+                  {String(pt.legal_name)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={draftForm.productId}
+              onChange={(e) => setDraftForm({ ...draftForm, productId: e.target.value })}
+              className="h-9 rounded border border-line bg-white px-2"
+            >
+              <option value="">Select product…</option>
+              {live.products.map((pr) => (
+                <option key={String(pr.product_id)} value={String(pr.product_id)}>
+                  {String(pr.name)}
+                </option>
+              ))}
+            </select>
+            <input
+              value={draftForm.wholesale}
+              onChange={(e) => setDraftForm({ ...draftForm, wholesale: e.target.value })}
+              placeholder="Wholesale USD"
+              className="h-9 rounded border border-line bg-white px-2"
+            />
+            <div className="flex gap-2">
+              <select
+                value={draftForm.territory}
+                onChange={(e) => setDraftForm({ ...draftForm, territory: e.target.value })}
+                className="h-9 flex-1 rounded border border-line bg-white px-2"
+              >
+                {["UAE", "SAU", "QAT", "BGD", "USA"].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <Button type="submit" size="sm" disabled={busyId === "draft-agr"}>
+                Draft
+              </Button>
+            </div>
+          </form>
+
+          <div className="flex max-h-[210px] flex-col divide-y divide-line overflow-y-auto">
+            {live.agreements.map((ag) => {
+              const aid = String(ag.agreement_id);
+              const st = String(ag.status ?? "draft");
+              const prod = live.products.find((p) => String(p.product_id) === String(ag.product_id));
+              const sameMaker = authSession?.user.sub && String(ag.created_by) === authSession.user.sub;
+              return (
+                <div key={aid} className="flex items-center justify-between gap-2 py-2.5 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-ink">
+                      {String(prod?.name ?? "Product")} · {(ag.territories as string[] | undefined)?.join(", ")}
+                    </div>
+                    <div className="text-muted">
+                      Wholesale ${String(ag.wholesale_price)} · Margin {String(ag.margin_pct)}% · Hold {String(ag.dispute_hold_pct)}%
+                    </div>
+                  </div>
+                  {st === "signed" ? (
+                    <Chip tone="success">Signed (4-Eyes)</Chip>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={sameMaker ? "outline" : "primary"}
+                      disabled={busyId === aid}
+                      onClick={() => void signAgreement(aid)}
+                    >
+                      {sameMaker ? "Switch to legal.signer" : "Sign (4-Eyes)"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
       <section className="overflow-x-auto rounded-lg bg-white p-6">
@@ -57,7 +279,7 @@ export default function Partners() {
                   <td className="py-3.5 pr-4">
                     <div className="flex items-center gap-3">
                       <span className={"flex size-[34px] items-center justify-center rounded-lg text-xs font-semibold text-white " + (s.watch ? tones[3] : tones[i % 3])}>{initials(c.name)}</span>
-                      <div><div className="text-[15px] font-medium">{c.name}</div><div className={"text-xs " + (s.watch ? "text-danger" : "text-muted")}>{s.watch ? "On watch · missed milestones" : `${c.verified ? "Verified" : "Unverified"} · ${c.city}`}</div></div>
+                      <div><div className="text-[15px] font-medium">{c.name}</div><div className={"text-xs " + (s.watch ? "text-danger" : "text-muted")}>{s.watch ? "On watch · missed milestones" : `${c.verified ? "Verified" : "Pending KYB"} · ${c.city}`}</div></div>
                     </div>
                   </td>
                   <td className="pr-4">{tab === "partner" ? s.products.map((p) => p.name).join(", ") || "—" : db.requests.filter((r) => r.buyerId === c.id).length}</td>
@@ -73,9 +295,9 @@ export default function Partners() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-lg bg-white p-6">
-          <div className="text-sm text-muted">Applications this month</div>
-          <div className="mt-2 text-[34px] font-light">{db.products.filter((p) => p.gate <= "PG2").length + 3}</div>
-          <Link href="/admin/review" className="text-[13px] text-primary">Review applications →</Link>
+          <div className="text-sm text-muted">Products in gate pipeline</div>
+          <div className="mt-2 text-[34px] font-light">{db.products.length}</div>
+          <Link href="/admin/review" className="text-[13px] text-primary">Open gate review →</Link>
         </section>
         <section className="rounded-lg bg-white p-6">
           <div className="text-sm text-muted">Buyers by country</div>
@@ -85,9 +307,9 @@ export default function Partners() {
           </div>
         </section>
         <section className="relative overflow-hidden rounded-lg bg-night-hero p-6 text-white">
-          <div className="text-sm text-haze">Re-reviews due</div>
-          <div className="mt-2 text-[34px] font-light">{reReview.length}</div>
-          <Link href="/admin/review" className="text-[13px] text-glow-amber">{reReview.map((p) => p.name).join(" · ")}</Link>
+          <div className="text-sm text-haze">Re-reviews &amp; gap letters</div>
+          <div className="mt-2 text-[34px] font-light">{live.gapLetters.length || reReview.length}</div>
+          <Link href="/admin/review" className="text-[13px] text-glow-amber">Inspect evidence &amp; gates →</Link>
         </section>
       </div>
 
@@ -105,27 +327,15 @@ export default function Partners() {
           ))}
         </section>
         <section className="rounded-lg bg-white p-6">
-          <h2 className="text-lg">Partner models</h2>
-          <div className="mt-4 flex items-center gap-6">
-            <div className="relative size-[120px] shrink-0">
-              <svg viewBox="0 0 120 120" className="-rotate-90">
-                {[{ v: 3, c: "#1E4FA3" }, { v: 3, c: "#7FB6FF" }, { v: 2, c: "#FFD58A" }].reduce<{ off: number; el: React.ReactNode[] }>((acc, s, i) => {
-                  const len = (s.v / 8) * 0.98;
-                  acc.el.push(<motion.circle key={i} cx={60} cy={60} r={46} fill="none" stroke={s.c} strokeWidth={18} pathLength={1} strokeDasharray={`${len} 1`} strokeDashoffset={-acc.off} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.15 }} />);
-                  acc.off += s.v / 8;
-                  return acc;
-                }, { off: 0, el: [] }).el}
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-[24px] font-light">8</span>
-            </div>
-            <ul className="flex flex-col gap-2 text-[13px]">
-              <li><span className="text-primary">●</span> Direct · 3</li>
-              <li><span className="text-sky">●</span> Co-branded · 3</li>
-              <li><span className="text-glow-amber">●</span> White-label · 2</li>
-            </ul>
+          <h2 className="text-lg">Signed agreements</h2>
+          <div className="mt-4 flex flex-col gap-2 text-[13px]">
+            <div><span className="text-primary">●</span> Active signed agreements · {live.agreements.filter((a) => a.status === "signed").length}</div>
+            <div><span className="text-sky">●</span> Pending 4-eyes signature · {live.agreements.filter((a) => a.status !== "signed").length}</div>
+            <div><span className="text-glow-amber">●</span> Cleared KYB partners · {live.partners.length}</div>
           </div>
         </section>
       </div>
+      {toast}
     </div>
   );
 }

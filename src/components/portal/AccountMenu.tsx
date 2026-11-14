@@ -19,19 +19,22 @@ const GearIcon = () => (
 );
 
 /**
- * Account menu: profile, account settings, help and sign out.
- * `variant="header"` is the round avatar in the top bar (opens downward);
- * `variant="sidebar"` is the user row at the bottom of the sidebar (opens upward).
+ * Account menu: profile, 4-Eyes Keycloak persona switcher, account settings, and sign out.
  */
 export function AccountMenu({ variant = "header", collapsed = false }: { variant?: "header" | "sidebar"; collapsed?: boolean }) {
-  const { user, signOut } = useStore();
+  const { user, authSession, personas, switchPersona, signOut } = useStore();
   const { company, user: findUser } = useLookup();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [switchingUser, setSwitchingUser] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setShowSwitcher(false);
+  }, [pathname]);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
@@ -48,11 +51,26 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
   const base = portalHome[user.role];
   const co = company(user.companyId);
   const advisor = user.role !== "staff" ? findUser(co?.advisorId) : undefined;
+  const activeRole = authSession?.user.primary_dgix_role ?? user.primaryDgixRole ?? user.role;
+  const activeUsername = authSession?.user.username ?? user.username;
   const items = [
     { href: `${base}/account#profile`, label: "Profile", icon: <UserIcon /> },
     { href: `${base}/account#settings`, label: "Account settings", icon: <GearIcon /> },
   ];
   const up = variant === "sidebar";
+
+  const handleSwitch = async (username: string) => {
+    setSwitchingUser(username);
+    try {
+      const next = await switchPersona(username);
+      setOpen(false);
+      if (next.role !== user.role) {
+        router.push(portalHome[next.role]);
+      }
+    } finally {
+      setSwitchingUser(null);
+    }
+  };
 
   return (
     <div ref={ref} className={clsx("relative", variant === "sidebar" && "w-full")}>
@@ -80,7 +98,9 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
             <>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold leading-[18px] text-ink">{user.name}</span>
-                <span className="block truncate text-xs leading-4 text-muted">{user.title}</span>
+                <span className="block truncate text-xs leading-4 text-muted">
+                  {activeRole} · {user.title}
+                </span>
               </span>
               <Icon name="chevronDown" size={14} className={clsx("shrink-0 text-subtle transition-transform", !open && "rotate-180")} />
             </>
@@ -97,19 +117,74 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
             exit={{ opacity: 0, y: up ? 6 : -6, scale: 0.98 }}
             transition={{ duration: 0.14 }}
             className={clsx(
-              "absolute z-50 w-[min(280px,calc(100vw-32px))] rounded-lg border border-line/70 bg-white p-1.5 shadow-[0_24px_60px_rgba(12,31,69,0.18)]",
+              "absolute z-50 w-[min(320px,calc(100vw-32px))] rounded-lg border border-line/70 bg-white p-1.5 shadow-[0_24px_60px_rgba(12,31,69,0.18)]",
               up ? (collapsed ? "bottom-0 left-full ml-3 origin-bottom-left" : "bottom-full left-0 mb-2 origin-bottom-left") : "right-0 top-14 origin-top-right",
             )}
           >
             <div className="flex items-center gap-3 px-2.5 pb-3 pt-2">
               <Avatar user={user} size={40} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-ink">{user.name}</div>
                 <div className="truncate text-xs text-muted">{user.email}</div>
-                <div className="truncate text-xs text-subtle">{co?.name}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  <span className="rounded bg-mist px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-primary">
+                    {activeRole}
+                  </span>
+                  {authSession?.user.mfa_level && (
+                    <span className="rounded bg-[#E6F4EC] px-1.5 py-0.5 text-[10px] font-semibold text-[#145C36]">
+                      MFA: {authSession.user.mfa_level}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="h-px bg-line" />
+
+            {personas.length > 0 && (
+              <>
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowSwitcher((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs font-semibold text-primary hover:bg-mist"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon name="shield" size={14} /> Switch 4-Eyes / UAT Persona
+                    </span>
+                    <Icon name="chevronDown" size={14} className={clsx("transition-transform", showSwitcher && "rotate-180")} />
+                  </button>
+                  {showSwitcher && (
+                    <div className="mt-1 max-h-[220px] overflow-y-auto rounded-md border border-line bg-[#F9FBFF] p-1">
+                      {personas.map((p) => {
+                        const isCurrent = p.username === activeUsername;
+                        return (
+                          <button
+                            key={p.username}
+                            type="button"
+                            disabled={switchingUser !== null || isCurrent}
+                            onClick={() => void handleSwitch(p.username)}
+                            className={clsx(
+                              "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors",
+                              isCurrent ? "bg-mist font-semibold text-primary" : "hover:bg-white text-ink",
+                            )}
+                          >
+                            <span className="min-w-0 flex-1 truncate">
+                              {p.username}{" "}
+                              <span className="text-[10.5px] text-muted">({p.primary_dgix_role})</span>
+                            </span>
+                            <span className="shrink-0 text-[10.5px] font-semibold text-primary">
+                              {isCurrent ? "Active" : switchingUser === p.username ? "..." : "Switch"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="h-px bg-line" />
+              </>
+            )}
+
             {advisor && (
               <>
                 <Link

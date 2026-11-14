@@ -11,12 +11,12 @@ import { CHIPS, MARKETS, isPublic } from "./data";
 import { Chip, HeroStat, NotListed, ProductCard, ServicePanels, SortMenu, Svg, sortProducts } from "./ui";
 
 export function Catalogue() {
-  const { db } = useStore();
+  const { db, catalogueDisclaimer } = useStore();
   const params = useSearchParams();
   const router = useRouter();
   const [cat, setCat] = useState<string>(params.get("category") ?? "all");
   const [q, setQ] = useState(params.get("q") ?? "");
-  const [market, setMarket] = useState<string>(params.get("market") ?? "UAE");
+  const [market, setMarket] = useState<string>(params.get("market") ?? "all");
   const [sort, setSort] = useState("Best fit");
   const [mOpen, setMOpen] = useState(false);
   const mRef = useRef<HTMLDivElement>(null);
@@ -104,6 +104,14 @@ export function Catalogue() {
       </PageHero>
 
       <section className="mx-2 flex flex-col gap-8 px-2 pb-16 pt-10 md:mx-4 md:px-10 md:pb-24 md:pt-12">
+        <div className="flex items-start gap-3 rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] px-4 py-3 text-[13px] leading-5 text-[#2C3E66]">
+          <Svg name="info" size={18} color="#1E4FA3" className="mt-0.5" />
+          <div>
+            <span className="font-semibold text-ink">Verification Scope Notice (FR-CAT-02): </span>
+            {catalogueDisclaimer}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <LayoutGroup id="solutions-chips">
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">

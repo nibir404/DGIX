@@ -5,7 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-11-14
+
+Bangladesh now glows on the home globe, and shared links show a DGIX preview card.
+
 ### Added
+- **Glowing Bangladesh on the hero globe:** the country's real border is drawn in warm amber with a soft breathing glow, bright inner dots and a neon outline. Dhaka is a white-gold point with an amber pulse, and the routes to Dubai, Riyadh, Doha and New York are glowing gold arcs with a spark that travels along each as it draws. Rebuild the border data with `npm run globe:bangladesh`.
 - **Link previews:** a 1200×630 share image and Open Graph / Twitter tags, so shared links show a large DGIX card on WhatsApp, Facebook, Messenger, Discord, LinkedIn, Slack and X. Rebuild the image with `npm run og:image`.
 
 ### Fixed
@@ -101,7 +106,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/nibir404/DGIX/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/nibir404/DGIX/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/nibir404/DGIX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nibir404/DGIX/compare/v1.0.0...v1.1.0

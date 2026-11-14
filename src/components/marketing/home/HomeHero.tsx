@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -70,6 +71,24 @@ export function HomeHero() {
         <div className="pointer-events-auto flex w-full flex-col items-center gap-5">
           <div ref={barRef} className="hero-fade flex w-full justify-center">
             <NeedBar />
+          </div>
+          {/* Partner CTAs */}
+          <div className="hero-fade flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+            <Link
+              href="/apply"
+              className="group inline-flex h-14 items-center justify-center gap-3 rounded-lg bg-white pl-6 pr-2 text-[16px] font-semibold text-night shadow-[0_18px_40px_-14px_rgba(127,182,255,0.55)] transition-transform duration-200 active:scale-[0.97]"
+            >
+              Become a partner
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary text-white transition-transform duration-300 group-hover:rotate-45">
+                <Icon name="arrowUpRight" size={14} strokeWidth={2.2} />
+              </span>
+            </Link>
+            <Link
+              href="/apply?from=sell"
+              className="inline-flex h-14 items-center justify-center rounded-lg border border-white/25 bg-white/10 px-7 text-[16px] font-semibold text-white backdrop-blur transition-[background-color,transform] duration-200 hover:bg-white/16 active:scale-[0.97]"
+            >
+              Sell with us
+            </Link>
           </div>
           {/* Compact film button for phones and tablets; large screens get the thumbnail card */}
           <button onClick={() => setFilm(true)} className="hero-fade group flex items-center gap-3 rounded-full border border-white/25 bg-white/10 py-1.5 pl-1.5 pr-5 backdrop-blur transition-colors hover:bg-white/16 lg:hidden">

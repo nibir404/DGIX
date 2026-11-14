@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-11-14
+
+A cleaner home hero.
+
+### Removed
+- The rotating live activity card ("Shortlist sent to a retail group in Riyadh" and others) from the bottom-right of the home hero.
+
 ## [1.5.0] — 2026-11-14
 
 Software companies can now apply to sell through DGIX straight from the home page.
@@ -121,7 +128,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nibir404/DGIX/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nibir404/DGIX/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nibir404/DGIX/compare/v1.2.1...v1.3.0

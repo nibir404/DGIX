@@ -114,6 +114,7 @@ Vercel deploys every push to `main`, so the release is live once the deploy fini
 
 | Version | Date | Summary |
 | --- | --- | --- |
+| [v1.5.1](https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1) | 2026-11-14 | Live activity card removed from the home hero |
 | [v1.5.0](https://github.com/nibir404/DGIX/compare/v1.4.0...v1.5.0) | 2026-11-14 | Partner application page and "Become a partner" / "Sell with us" hero buttons |
 | [v1.4.0](https://github.com/nibir404/DGIX/compare/v1.3.0...v1.4.0) | 2026-11-14 | More prominent "Why not go direct?" comparison on the home page |
 | [v1.3.0](https://github.com/nibir404/DGIX/compare/v1.2.1...v1.3.0) | 2026-11-14 | Glowing amber Bangladesh and golden routes on the hero globe, social link previews, FAQ fix |

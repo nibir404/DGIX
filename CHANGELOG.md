@@ -5,7 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+- "Message your advisor" moved into the account menu (advisor photo, online status and a Message action); the sidebar foot now shows only your own account.
+- Removed the line above the home hero heading.
 
 ## [1.2.0] — 2026-11-14
 

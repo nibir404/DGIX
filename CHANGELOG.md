@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - **Link previews:** a 1200×630 share image and Open Graph / Twitter tags, so shared links show a large DGIX card on WhatsApp, Facebook, Messenger, Discord, LinkedIn, Slack and X. Rebuild the image with `npm run og:image`.
 
+### Fixed
+- Home page FAQ answers no longer have their first line cut off.
+
 ## [1.2.1] — 2026-11-14
 
 Small polish to the portals and home page.

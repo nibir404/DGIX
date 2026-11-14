@@ -40,9 +40,9 @@ export function FaqList({ items }: { items: { q: string; a: string }[] }) {
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
+                  className="-mt-3 overflow-hidden"
                 >
-                  <p className="-mt-3 pb-6 text-base leading-[26px] text-muted">{f.a}</p>
+                  <p className="pb-6 text-base leading-[26px] text-muted">{f.a}</p>
                 </motion.div>
               )}
             </AnimatePresence>

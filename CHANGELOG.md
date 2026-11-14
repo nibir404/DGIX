@@ -5,9 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-The whole DGIX workflow now runs end to end for buyer, seller and staff, with no dead ends, ready to present live.
+Nothing yet.
+
+## [1.2.0] — 2026-11-14
+
+The whole DGIX workflow now runs end to end for buyer, seller and staff, ready to present live, and the home page has a new centred hero, a line-art globe and an immersive app section.
 
 ### Added
+- **Home hero, redesigned:** centred badge text, heading, description and search over the globe, with the "How DGIX works" film as a poster-thumbnail card in the bottom-left corner and live activity in the bottom-right.
+- **Line-art globe:** a dark sphere with a thin latitude/longitude grid, crisp white coastlines (Natural Earth 50m), a fine land dot grid, a glowing Dhaka marker and routes to Dubai, Riyadh, Doha and New York. Drag to turn; it drifts gently and pauses off screen. Replaces the three.js particle globe.
+- **Sticky search:** "Find my match" is a white pill with a round send button in a frosted, blurred surround. Once you scroll past the hero, a copy stays pinned to the bottom of the screen.
+- **Download app section, rebuilt:** a brand-blue panel with "Download the DGIX app today", black Google Play and direct-APK buttons, and a realistic phone mock-up (metal frame, side buttons, Dynamic Island, DGIX app screen) tilted and bleeding off the panel.
 - **Demo outcome:** sellers can **Mark demo held**, and the buyer's rating (Not for us / Maybe / Strong fit) is saved and sent to their advisor.
 - **Offer drafting for staff:** a **Ready for an offer** list in Offers & contracts shows requests with a shortlist or demo but no offer. **Draft offer** opens a pre-filled offer (price, SLA, warranty, exit terms, 30/40/30 milestones) to save as a draft or send to the buyer.
 - **Add product for sellers:** a dialog (also opened from the top-bar shortcut) creates a product at PG0 with every check open, ready for evidence and DGIX review.
@@ -15,6 +23,9 @@ The whole DGIX workflow now runs end to end for buyer, seller and staff, with no
 - **Notifications at every hand-off:** order won, milestone accepted, invoice ready, payment verified, payout scheduled and sent, offer declined, project delivered, new product submitted, demo rated.
 - "Use sample document" shortcuts on seller evidence and sign-off uploads, so a live demo doesn't need the file picker.
 - [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md): a presenter's script for the full workflow.
+
+### Changed
+- Dot-and-label pill badges ("New · Android app", the hero badge) are replaced with plain eyebrow text.
 
 ### Fixed
 - **Approve payouts** in Finance now marks payouts as paid for the seller (it only changed the screen before).
@@ -75,6 +86,7 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nibir404/DGIX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nibir404/DGIX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nibir404/DGIX/releases/tag/v1.0.0

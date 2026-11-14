@@ -4,7 +4,7 @@ Frontend for **DGIX**, Daffodil's global innovation exchange: verified software 
 
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff), built as a 1-1 implementation of the DGIX Paper design file. All data comes from local seed data, so every flow can be tested end to end without a backend.
 
-> **Status:** v1.1.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+> **Status:** v1.2.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ---
 
@@ -14,7 +14,7 @@ This repository contains the public marketing site and three role-based portals 
 | --- | --- |
 | Framework | [Next.js 15](https://nextjs.org) (App Router) + React 19 + TypeScript |
 | Styling | Tailwind CSS v4 with DGIX design tokens (`src/app/globals.css`) |
-| 3D | three.js via React Three Fiber (hero globe) |
+| Globe | d3-geo orthographic projection on a 2D canvas, Natural Earth data via world-atlas (hero globe) |
 | Motion | GSAP + ScrollTrigger (scroll-linked), Framer Motion (UI transitions), Lenis (smooth scroll) |
 | Fonts | Plus Jakarta Sans, JetBrains Mono (`next/font`) |
 | Data | Client-side store seeded from `src/lib/seed.ts`, persisted to `localStorage` |
@@ -107,7 +107,8 @@ src/
 public/
   brand/                Logos and favicons
   media/                Optimised images (WebP) and the explainer video
-  data/globe-dots.bin   Precomputed land dots for the 3D globe
+  data/globe-dots.bin   Precomputed land dots for the hero globe
+  data/land-50m.json    Natural Earth 50m coastlines for the hero globe
 scripts/
   gen-globe-dots.mjs    Generates globe-dots.bin from Natural Earth data
 docs/
@@ -126,7 +127,7 @@ docs/
 ## Performance notes
 
 - Images are WebP and served through `next/image` where possible. The explainer video is compressed to 720p and loads only when the player opens.
-- The 3D globe is code-split and loaded on demand. Its land dots come precomputed in a 184 KB binary, and rendering pauses when the hero is off screen.
+- The hero globe is code-split and drawn on a 2D canvas. Its land dots come precomputed in a 184 KB binary, the coastlines load after first paint, and drawing pauses when the hero is off screen.
 
 ## Versioning
 
@@ -134,6 +135,7 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 
 | Version | Date | Highlights |
 | --- | --- | --- |
+| v1.2.0 | 2026-11-14 | End-to-end workflow for all three roles, new home hero, line-art globe, sticky search, app section |
 | v1.1.0 | 2026-11-14 | Mobile and tablet support, Android app section, account menu and settings, Next.js security upgrade |
 | v1.0.0 | 2026-11-14 | First complete release |
 

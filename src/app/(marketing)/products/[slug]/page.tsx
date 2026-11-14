@@ -67,26 +67,31 @@ const marketNames = (p: Product) => p.markets.map((c) => MARKETS.find((m) => m.c
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
-  const { db, user, bookDemo, catalogueDisclaimer } = useStore();
+  const { db, user, bookDemo, catalogueDisclaimer, ready, syncing } = useStore();
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const p = db.products.find((x) => x.slug === slug);
   const partner = db.companies.find((c) => c.id === p?.partnerId);
 
   if (!p) {
+    const loading = !ready || syncing;
     return (
       <>
         <section className="relative mx-2 mt-2 overflow-hidden rounded-lg bg-night-hero text-white md:mx-4 md:mt-4">
           <SiteNav />
           <div className="px-6 pb-14 pt-10 md:px-10 md:pt-16">
-            <h1 className="text-[44px] font-light leading-[46px] tracking-[-0.05em] md:text-[72px] md:leading-[72px]">Product not found.</h1>
+            <h1 className="text-[44px] font-light leading-[46px] tracking-[-0.05em] md:text-[72px] md:leading-[72px]">
+              {loading ? "Loading verified passport…" : "Product not found."}
+            </h1>
           </div>
         </section>
-        <div className="px-6 py-16 md:px-14">
-          <Link href="/solutions" className="text-primary underline">
-            Back to all solutions
-          </Link>
-        </div>
+        {!loading && (
+          <div className="px-6 py-16 md:px-14">
+            <Link href="/solutions" className="text-primary underline">
+              Back to all solutions
+            </Link>
+          </div>
+        )}
       </>
     );
   }

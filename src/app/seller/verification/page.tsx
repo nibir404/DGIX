@@ -40,8 +40,18 @@ export default function VerificationPage() {
   if (!p) return <Empty title="No products in verification" body="Start a product passport to begin the six gates." />;
 
   const livePid = p.id;
-  const productEvidence = live.evidence.filter((ev) => String(ev.product_id) === livePid);
-  const productClaims = live.claims.filter((cl) => String(cl.product_id) === livePid);
+  const prodVerIds = new Set(
+    [
+      ...(p.versionId ? [p.versionId] : []),
+      ...(live.versionsByProduct[livePid] ?? []).map((v) => String(v.version_id)),
+    ].filter(Boolean),
+  );
+  const productEvidence = live.evidence.filter(
+    (ev) => String(ev.product_id) === livePid || prodVerIds.has(String(ev.product_version_id)),
+  );
+  const productClaims = live.claims.filter(
+    (cl) => String(cl.product_id) === livePid || prodVerIds.has(String(cl.product_version_id)),
+  );
   const productGaps = live.gapLetters.filter((g) => {
     const assessment = live.assessments.find((a) => String(a.assessment_id) === String(g.assessment_id));
     return assessment && String(assessment.product_id) === livePid;
@@ -84,22 +94,35 @@ export default function VerificationPage() {
       flash("FR-CAT-03: Claims cannot contain the word 'ultimate'.");
       return;
     }
-    if ((claimLabel === "certified" || claimLabel === "verified") && !claimEvId) {
-      flash("Certified & Verified claims require a clean primary evidence artifact.");
+    const cleanEvList = productEvidence.filter((ev) => String(ev.scan_status) === "clean");
+    const chosenEvId =
+      claimLabel === "certified" || claimLabel === "verified"
+        ? claimEvId
+        : claimEvId || (cleanEvList[0] ? String(cleanEvList[0].evidence_id) : "");
+    if (!chosenEvId) {
+      flash(
+        claimLabel === "certified" || claimLabel === "verified"
+          ? "Certified & Verified claims require selecting a clean primary evidence artifact."
+          : "Upload and ClamAV-scan at least one primary evidence artifact before recording a claim.",
+      );
+      return;
+    }
+    const verId = p.versionId ?? (live.versionsByProduct[livePid]?.[0] ? String(live.versionsByProduct[livePid][0].version_id) : "");
+    if (!verId) {
+      flash("No active semver product version found.");
       return;
     }
     setClaimBusy(true);
     try {
       await apiFetch("/bff/v1/claims", {
         method: "POST",
-        body: JSON.stringify({
-          product_id: livePid,
-          product_version_id: p.versionId ?? null,
+        body: {
+          evidence_id: chosenEvId,
+          product_version_id: verId,
           statement: claimStmt.trim(),
           label: claimLabel,
-          verification_method: claimMethod,
-          evidence_ids: claimEvId ? [claimEvId] : [],
-        }),
+          method: claimMethod,
+        },
       });
       setClaimStmt("");
       await refreshLive();
@@ -125,19 +148,24 @@ export default function VerificationPage() {
       <Head kicker={<>{p.name} · reviewed by DGIX</>} title="Verification" right={<ProductTabs products={products} value={p.id} onChange={setSel} />} />
 
       {productGaps.map((gap) => {
+        const missing = Array.isArray(gap.missing_items) ? (gap.missing_items as string[]) : [];
         const items = Array.isArray(gap.gaps) ? (gap.gaps as Array<Record<string, unknown>>) : [];
+        const totalItems = missing.length || items.length;
         return (
-          <Panel key={String(gap.letter_id)} className="border border-[#F3D9B0] bg-[#FFFBF4] p-5">
+          <Panel key={String(gap.gap_letter_id ?? gap.letter_id)} className="border border-[#F3D9B0] bg-[#FFFBF4] p-5">
             <div className="flex items-start gap-3">
               <Icon name="info" size={18} className="mt-0.5 shrink-0 text-[#B86E00]" />
               <div className="flex flex-col gap-1.5">
                 <div className="text-sm font-semibold text-[#6B4A12]">
-                  Reviewer Evidence Gap Letter Issued ({items.length} remediation item{items.length === 1 ? "" : "s"})
+                  Reviewer Evidence Gap Letter Issued ({totalItems} remediation item{totalItems === 1 ? "" : "s"})
                 </div>
                 {gap.summary ? <div className="text-xs text-[#6B4A12]">{String(gap.summary)}</div> : null}
                 <ul className="list-disc space-y-1 pl-4 text-xs text-[#6B4A12]">
+                  {missing.map((m, idx) => (
+                    <li key={`m-${idx}`}>{m}</li>
+                  ))}
                   {items.map((it, idx) => (
-                    <li key={idx}>
+                    <li key={`g-${idx}`}>
                       <span className="font-mono font-semibold">{String(it.criterion_id ?? it.gate_code ?? "Gate")}:</span>{" "}
                       {String(it.remediation ?? it.description ?? "Upload primary evidence artifact")}
                     </li>

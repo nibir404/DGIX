@@ -5,11 +5,18 @@
  * Never stores or transmits raw cardholder PAN/CVV (PCI DSS v4.0.1 SAQ A).
  */
 
-export const BFF_BASE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_BFF_URL
-    ? process.env.NEXT_PUBLIC_BFF_URL
-    : "http://localhost:18118"
-  ).replace(/\/+$/, "");
+const configuredBff =
+  typeof process !== "undefined" && typeof process.env.NEXT_PUBLIC_BFF_URL === "string"
+    ? process.env.NEXT_PUBLIC_BFF_URL.trim()
+    : "";
+
+export const BFF_BASE = (
+  configuredBff
+    ? configuredBff
+    : typeof window !== "undefined"
+      ? ""
+      : (typeof process !== "undefined" && process.env.DGIX_INTERNAL_BFF_URL) || "http://127.0.0.1:18118"
+).replace(/\/+$/, "");
 
 export const SESSION_STORAGE_KEY = "dgix.bff.session.v2";
 export const ULTIMATE_WORD_RE = /\bultimate\b/i;
@@ -248,7 +255,7 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiRequestOption
   let payload: BodyInit | undefined = rawBody;
   if (body !== undefined && rawBody === undefined) {
     headers["Content-Type"] = contentType ?? "application/json";
-    payload = JSON.stringify(body);
+    payload = typeof body === "string" ? body : JSON.stringify(body);
   } else if (contentType) {
     headers["Content-Type"] = contentType;
   }
@@ -451,7 +458,8 @@ export function buildSandboxCheckoutRedirectUrl(
   const ret =
     returnUrl ??
     (typeof window !== "undefined" ? `${window.location.origin}/buyer/billing` : "http://localhost:3000/buyer/billing");
-  const sep = sandboxCheckoutUrl.includes("?") ? "&" : "?";
-  return `${sandboxCheckoutUrl}${sep}return_url=${encodeURIComponent(ret)}`;
+  const normalized = sandboxCheckoutUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1):18118\/checkout\//i, "/checkout/");
+  const sep = normalized.includes("?") ? "&" : "?";
+  return `${normalized}${sep}return_url=${encodeURIComponent(ret)}`;
 }
 

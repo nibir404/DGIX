@@ -11,7 +11,7 @@ import { CHIPS, MARKETS, isPublic } from "./data";
 import { Chip, HeroStat, NotListed, ProductCard, ServicePanels, SortMenu, Svg, sortProducts } from "./ui";
 
 export function Catalogue() {
-  const { db, catalogueDisclaimer } = useStore();
+  const { db, catalogueDisclaimer, syncing, lastError, refreshLive } = useStore();
   const params = useSearchParams();
   const router = useRouter();
   const [cat, setCat] = useState<string>(params.get("category") ?? "all");
@@ -145,9 +145,23 @@ export function Catalogue() {
             ))}
           </AnimatePresence>
         </motion.div>
+        {lastError && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-[#F5C6C6] bg-[#FFF5F5] px-4 py-3 text-sm text-danger">
+            <span>{lastError}</span>
+            <button
+              type="button"
+              onClick={() => void refreshLive()}
+              className="shrink-0 rounded bg-white px-3 py-1 text-xs font-semibold text-ink shadow-sm"
+            >
+              Retry Live Sync
+            </button>
+          </div>
+        )}
         {shown.length === 0 && (
           <div className="rounded-lg border border-dashed border-line px-6 py-14 text-center text-muted">
-            No verified products match yet{chip ? ` in ${chip.label}` : ""}. Try another country or describe your need below.
+            {syncing && pub.length === 0
+              ? "Syncing live verified regional listings from DGIX Commercial & Governance services…"
+              : `No verified products match yet${chip ? ` in ${chip.label}` : ""}. Try another country or describe your need below.`}
           </div>
         )}
 

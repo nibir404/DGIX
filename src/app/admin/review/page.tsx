@@ -25,7 +25,15 @@ export default function ProductReview() {
   const open = p?.checks.filter((c) => c.score < c.max) ?? [];
   const listed = db.products.filter((x) => x.status === "listed").length;
   const livePid = p?.id ?? "";
-  const productEvidence = live.evidence.filter((ev) => String(ev.product_id) === livePid);
+  const reviewVerIds = new Set(
+    [
+      ...(p?.versionId ? [p.versionId] : []),
+      ...(live.versionsByProduct[livePid] ?? []).map((v) => String(v.version_id)),
+    ].filter(Boolean),
+  );
+  const productEvidence = live.evidence.filter(
+    (ev) => String(ev.product_id) === livePid || reviewVerIds.has(String(ev.product_version_id)),
+  );
   const productAssessment = live.assessments.find((a) => String(a.product_id) === livePid);
 
   const approve = (key: string) => {

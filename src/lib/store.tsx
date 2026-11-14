@@ -17,7 +17,7 @@ import {
   saveStoredSession,
   uploadEvidenceBinary,
 } from "./api";
-import { CHECK_META, seed } from "./seed";
+import { CHECK_META } from "./seed";
 import type {
   BuyerRequest,
   Category,
@@ -921,9 +921,9 @@ function hydrateDbFromLive(params: {
   });
 
   return {
-    users: users.length > 0 ? users : seed.users,
+    users,
     companies: Array.from(companiesMap.values()),
-    products: products.length > 0 ? products : seed.products,
+    products,
     requests,
     demos,
     offers,
@@ -934,6 +934,21 @@ function hydrateDbFromLive(params: {
     cases,
     notifications: [],
   };
+}
+
+async function runBatchedTasks<T>(tasks: Array<() => Promise<T>>, concurrency = 5): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < tasks.length) {
+      const idx = cursor++;
+      results[idx] = await tasks[idx]();
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, Math.max(1, tasks.length)) }, () => worker()),
+  );
+  return results;
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
@@ -960,7 +975,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const [pList, pubCat] = await Promise.all([
           personasArg && personasArg.length > 0 ? Promise.resolve(personasArg) : fetchUatPersonas(),
-          fetchPublicCatalogue(),
+          apiFetch<{ disclaimer: string; count: number; listings: LiveListing[] }>(
+            "/bff/v1/public/listings",
+            { method: "GET", auth: false },
+          ).catch((err) => {
+            if (mountedRef.current) {
+              setLastError(
+                err instanceof Error
+                  ? `BFF connection error: ${err.message}`
+                  : "Could not reach DGIX BFF Gateway (:18118)",
+              );
+            }
+            return fetchPublicCatalogue();
+          }),
         ]);
 
         if (!mountedRef.current) return;
@@ -979,6 +1006,104 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const isBuyer = portalRole === "buyer";
         const canAudit =
           roles.has("auditor") || roles.has("council_member") || roles.has("dgix_admin");
+
+        const batched = await runBatchedTasks<unknown>(
+          [
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/partners", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/products", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/pao-bindings", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/reviewers", [])
+                : Promise.resolve([]),
+            () =>
+              isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence", [])
+                : isStaff
+                  ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence?include_all=true", [])
+                  : Promise.resolve([]),
+            () =>
+              isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims", [])
+                : isStaff
+                  ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims?include_all=true", [])
+                  : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/assessments", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/approvals", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/country-readiness", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/rights/agreements", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/cost-floors", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/price-lists", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/requirements", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/matching/shortlists", [])
+                : Promise.resolve([]),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/offers", []),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/orders", []),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/demo-bookings", []),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/fx-rates", []),
+            () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/invoices", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payments", [])
+                : Promise.resolve([]),
+            () =>
+              isSeller || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payouts", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/refunds", [])
+                : Promise.resolve([]),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/projects", []),
+            () => safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/incidents", []),
+            () =>
+              canAudit
+                ? safeGet<{ entries: Array<Record<string, unknown>> }>("/bff/v1/audit/entries?limit=60", {
+                    entries: [],
+                  })
+                : Promise.resolve({ entries: [] }),
+            () =>
+              canAudit
+                ? safeGet<LiveBackendState["auditVerification"]>("/bff/v1/audit/verify", null)
+                : Promise.resolve(null),
+          ],
+          5,
+        );
 
         const [
           partners,
@@ -1007,84 +1132,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           incidents,
           auditPage,
           auditVerify,
-        ] = await Promise.all([
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/partners", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/products", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/pao-bindings", [])
-            : Promise.resolve([]),
-          isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/iam/reviewers", [])
-            : Promise.resolve([]),
-          isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence", [])
-            : isStaff
-              ? safeGet<Array<Record<string, unknown>>>("/bff/v1/evidence?include_all=true", [])
-              : Promise.resolve([]),
-          isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims", [])
-            : isStaff
-              ? safeGet<Array<Record<string, unknown>>>("/bff/v1/claims?include_all=true", [])
-              : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/assessments", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/approvals", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/governance/country-readiness", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/rights/agreements", [])
-            : Promise.resolve([]),
-          isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/cost-floors", [])
-            : Promise.resolve([]),
-          isStaff || isSeller
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/price-lists", [])
-            : Promise.resolve([]),
-          isBuyer || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/requirements", [])
-            : Promise.resolve([]),
-          isBuyer || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/matching/shortlists", [])
-            : Promise.resolve([]),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/offers", []),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/orders", []),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/buyers/demo-bookings", []),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/fx-rates", []),
-          isBuyer || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/invoices", [])
-            : Promise.resolve([]),
-          isBuyer || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payments", [])
-            : Promise.resolve([]),
-          isSeller || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/payouts", [])
-            : Promise.resolve([]),
-          isBuyer || isStaff
-            ? safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/refunds", [])
-            : Promise.resolve([]),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/projects", []),
-          safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/incidents", []),
-          canAudit
-            ? safeGet<{ entries: Array<Record<string, unknown>> }>("/bff/v1/audit/entries?limit=60", {
-                entries: [],
-              })
-            : Promise.resolve({ entries: [] }),
-          canAudit
-            ? safeGet<LiveBackendState["auditVerification"]>("/bff/v1/audit/verify", null)
-            : Promise.resolve(null),
-        ]);
+        ] = batched as [
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          { entries: Array<Record<string, unknown>> },
+          LiveBackendState["auditVerification"],
+        ];
 
         // Load versions for each visible product and gap letters for blocked assessments
-        const versionsEntries = await Promise.all(
-          productsRaw.slice(0, 25).map(async (pr) => {
+        const versionsEntries = await runBatchedTasks(
+          productsRaw.slice(0, 25).map((pr) => async () => {
             const pid = String(pr.product_id);
             const vers = await safeGet<Array<Record<string, unknown>>>(
               `/bff/v1/products/${pid}/versions`,
@@ -1092,19 +1171,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             );
             return [pid, vers] as const;
           }),
+          4,
         );
         const versionsByProduct: Record<string, Array<Record<string, unknown>>> =
           Object.fromEntries(versionsEntries);
 
-        const gapLettersNested = await Promise.all(
+        const gapLettersNested = await runBatchedTasks(
           assessments
             .filter((a) => Boolean(a.handoff_blocked))
-            .map((a) =>
+            .map((a) => () =>
               safeGet<Array<Record<string, unknown>>>(
                 `/bff/v1/governance/assessments/${String(a.assessment_id)}/gap-letters`,
                 [],
               ),
             ),
+          4,
         );
 
         if (!mountedRef.current) return;
@@ -1151,6 +1232,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const stored = loadStoredSession();
       if (stored) {
         setAuthSession(stored);
+      } else if (typeof document !== "undefined") {
+        document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
+        document.cookie = "dgix_role=; path=/; max-age=0";
       }
       const pList = await fetchUatPersonas();
       if (mountedRef.current && pList.length > 0) {

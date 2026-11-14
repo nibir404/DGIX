@@ -93,7 +93,7 @@ export default function GovernanceAndAuditPage() {
         body: JSON.stringify({
           product_id: pid,
           product_version_id: verId,
-          trigger_type: "security_cve",
+          trigger_type: "critical_cve",
           severity: triggerSeverity,
           summary: triggerSummary,
         }),

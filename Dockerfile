@@ -7,7 +7,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=1024"
-ARG NEXT_PUBLIC_BFF_URL=http://localhost:18118
+ARG NEXT_PUBLIC_BFF_URL=""
 ENV NEXT_PUBLIC_BFF_URL=${NEXT_PUBLIC_BFF_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -17,8 +17,8 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max-old-space-size=160"
-ARG NEXT_PUBLIC_BFF_URL=http://localhost:18118
+ENV NODE_OPTIONS="--max-old-space-size=256"
+ARG NEXT_PUBLIC_BFF_URL=""
 ENV NEXT_PUBLIC_BFF_URL=${NEXT_PUBLIC_BFF_URL}
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json

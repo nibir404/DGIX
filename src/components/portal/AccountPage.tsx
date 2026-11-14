@@ -37,9 +37,13 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
       aria-checked={on}
       aria-label={label}
       onClick={() => onChange(!on)}
-      className={clsx("relative h-6 w-11 shrink-0 rounded-full transition-colors", on ? "bg-primary" : "bg-line")}
+      className={clsx(
+        "inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20",
+        on ? "bg-primary" : "bg-[#D5DCE8]",
+      )}
     >
-      <span className={clsx("absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform", on ? "translate-x-[22px]" : "translate-x-0.5")} />
+      {/* knob lives inside the track: 20px knob + 2px padding each side in a 44px track = 20px of travel */}
+      <span className={clsx("block size-5 rounded-full bg-white shadow-[0_1px_3px_rgba(12,31,69,0.25)] transition-transform duration-200", on ? "translate-x-5" : "translate-x-0")} />
     </button>
   );
 }

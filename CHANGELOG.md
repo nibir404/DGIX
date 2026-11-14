@@ -9,6 +9,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - "Message your advisor" moved into the account menu (advisor photo, online status and a Message action); the sidebar foot now shows only your own account.
 - Removed the line above the home hero heading.
 
+### Fixed
+- Notification toggles on Profile & settings: the knob now sits inside its track.
+
 ## [1.2.0] — 2026-11-14
 
 The whole DGIX workflow now runs end to end for buyer, seller and staff, ready to present live, and the home page has a new centred hero, a line-art globe and an immersive app section.

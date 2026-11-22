@@ -69,7 +69,9 @@ export default function Licences() {
                 <div className="flex justify-between gap-3">
                   <div className="flex min-w-0 flex-col">
                     <div className="text-[18px] font-semibold leading-[22px] text-ink">{p?.name}</div>
-                    <div className="text-xs leading-4 text-muted">Renews {dayMonth(l.renews)} · {money(perSeat(l))} / seat / yr</div>
+                    <div className="text-xs leading-4 text-muted">
+                      LIC-{l.id.slice(0, 8).toUpperCase()} · Renews {dayMonth(l.renews)} · {money(perSeat(l))} / seat / yr
+                    </div>
                   </div>
                   <span className={clsx("h-fit shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", renewed[l.id] ? "bg-[#E6F4EC] text-[#0E6439]" : l.status === "expiring" ? "bg-[#FFF3DC] text-warning" : "bg-[#E6F4EC] text-[#0E6439]")}>{renewed[l.id] ? "Renewed" : l.status === "expiring" ? "Expiring" : "Active"}</span>
                 </div>

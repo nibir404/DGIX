@@ -179,6 +179,27 @@ export function ProjectDetail({ project }: { project: Project }) {
               })}
             </div>
           </div>
+          {current?.status === "in_review" && (
+            <div className="flex flex-col gap-2 rounded-lg border border-[#FFE2AE] bg-[#FFFBF0] p-3 text-xs">
+              <div className="font-semibold text-ink">Submission Deliverables &amp; Evidence:</div>
+              {current.submissionNotes && (
+                <div className="text-muted"><span className="font-medium text-ink">Notes:</span> {current.submissionNotes}</div>
+              )}
+              {current.evidenceRefs && current.evidenceRefs.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="font-medium text-ink">Evidence Refs:</span>
+                  {current.evidenceRefs.map((ref, idx) => (
+                    <span key={idx} className="rounded bg-paper px-2 py-0.5 border border-[#E3E9F4] font-mono text-[11px] text-primary">
+                      {ref}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted italic">Evidence registered on DGIX compliance ledger.</div>
+              )}
+            </div>
+          )}
+
           <div className="mt-auto flex flex-wrap gap-2.5">
             {current?.status === "in_review" && (
               <>
@@ -187,12 +208,10 @@ export function ProjectDetail({ project }: { project: Project }) {
                   onClick={async () => {
                     setBusy(true);
                     try {
-                      await apiFetch(
-                        `/bff/v1/finance/delivery/projects/${project.id}/milestones/${current.id}/accept`,
-                        { method: "POST", body: JSON.stringify({ notes: "Accepted by buyer" }) },
-                      ).catch(() => undefined);
-                      b.acceptMilestone(project.id, current.id);
+                      await b.acceptMilestoneLive(project.id, current.id, "Accepted by enterprise buyer");
                       flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`);
+                    } catch (err) {
+                      flash(err instanceof Error ? err.message : "Accept failed");
                     } finally {
                       setBusy(false);
                     }
@@ -338,10 +357,7 @@ export function ProjectDetail({ project }: { project: Project }) {
             if (!current || !rejectReason.trim()) return;
             setBusy(true);
             try {
-              await apiFetch(
-                `/bff/v1/finance/delivery/projects/${project.id}/milestones/${current.id}/reject`,
-                { method: "POST", body: JSON.stringify({ reason: rejectReason.trim() }) },
-              ).catch(() => undefined);
+              await b.rejectMilestoneLive(project.id, current.id, rejectReason.trim());
               b.openCase(
                 `${project.name}: Milestone ${current.title} rejected`,
                 `Milestone rejected with written reason: ${rejectReason.trim()}`,
@@ -350,6 +366,8 @@ export function ProjectDetail({ project }: { project: Project }) {
               flash("Milestone rejected with recorded reason · Partner notified for remediation (BRD P-39)");
               setRejectOpen(false);
               setRejectReason("");
+            } catch (err) {
+              flash(err instanceof Error ? err.message : "Reject failed");
             } finally {
               setBusy(false);
             }

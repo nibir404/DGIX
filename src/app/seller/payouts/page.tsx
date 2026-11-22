@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import clsx from "clsx";
 import { fmtMoney } from "@/lib/seed";
 import type { Payout } from "@/lib/types";
 import { Empty } from "@/components/portal/ui";
+import { Dialog } from "@/components/buyer/kit";
 import { Bars, Head, NIGHT_BANNER, Panel, Pill, dayMonth, lastSixMonths, orderRef, useSeller } from "@/components/seller/kit";
 
 export default function PayoutsPage() {
-  const { db, company, payouts } = useSeller();
+  const { db, company, payouts, createPayoutQueryLive } = useSeller();
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
+  const [inquiryQuestion, setInquiryQuestion] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const label = (p: Payout) => {
     const inv = db.invoices.find((i) => i.id === p.invoiceId);
@@ -89,44 +96,127 @@ export default function PayoutsPage() {
               <div className="text-[11px] font-normal text-muted">
                 Gross {fmtMoney(p.gross)} − Fee {fmtMoney(p.fee)}
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const advice = [
-                    "============================================================",
-                    "DGIX REMITTANCE ADVICE & PAYOUT STATEMENT",
-                    "============================================================",
-                    `Payout Reference: PAY-${p.id.slice(0, 8).toUpperCase()}`,
-                    `Date: ${p.date}`,
-                    `Beneficiary: ${company?.name ?? "Partner"}`,
-                    `Order / Milestone: ${label(p)}`,
-                    `Status: ${p.status.toUpperCase()}`,
-                    "",
-                    "BREAKDOWN:",
-                    `Gross Invoice Amount:     ${fmtMoney(p.gross)}`,
-                    `DGIX Platform Fee:        − ${fmtMoney(p.fee)}`,
-                    `Contractual Reserve (5%): − ${fmtMoney(p.disputeHold ?? 0)}`,
-                    "------------------------------------------------------------",
-                    `NET BANK DISBURSEMENT:    ${fmtMoney(p.net)}`,
-                    "============================================================",
-                    "Disbursed via UAE Central Bank Direct Wire Settlement.",
-                  ].join("\n");
-                  const blob = new Blob([advice], { type: "text/plain" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `payout-advice-${p.id.slice(0, 8)}.txt`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                className="mt-1 text-[11px] font-medium text-primary hover:underline block"
-              >
-                Download Advice (BRD P-76)
-              </button>
+              <div className="mt-1 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const advice = [
+                      "============================================================",
+                      "DGIX REMITTANCE ADVICE & PAYOUT STATEMENT",
+                      "============================================================",
+                      `Payout Reference: PAY-${p.id.slice(0, 8).toUpperCase()}`,
+                      `Date: ${p.date}`,
+                      `Beneficiary: ${company?.name ?? "Partner"}`,
+                      `Order / Milestone: ${label(p)}`,
+                      `Status: ${p.status.toUpperCase()}`,
+                      "",
+                      "BREAKDOWN:",
+                      `Gross Invoice Amount:     ${fmtMoney(p.gross)}`,
+                      `DGIX Platform Fee:        − ${fmtMoney(p.fee)}`,
+                      `Contractual Reserve (5%): − ${fmtMoney(p.disputeHold ?? 0)}`,
+                      "------------------------------------------------------------",
+                      `NET BANK DISBURSEMENT:    ${fmtMoney(p.net)}`,
+                      "============================================================",
+                      "Disbursed via UAE Central Bank Direct Wire Settlement.",
+                    ].join("\n");
+                    const blob = new Blob([advice], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `payout-advice-${p.id.slice(0, 8)}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="text-[11px] font-medium text-primary hover:underline"
+                >
+                  Download Advice (BRD P-76)
+                </button>
+                <span className="text-[#C9D4E8]">·</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPayout(p);
+                    setInquiryQuestion("");
+                    setInquiryOpen(true);
+                  }}
+                  className="text-[11px] font-medium text-[#D97706] hover:underline"
+                >
+                  Dispute / Inquire (BRD P-77)
+                </button>
+              </div>
+
+              {p.queries && p.queries.length > 0 && (
+                <div className="mt-2.5 flex flex-col gap-1.5 rounded-lg border border-[#F1F4FA] bg-[#F8FAFC] p-2.5 text-left text-xs">
+                  <div className="font-semibold text-ink">Inquiry History (BRD P-77):</div>
+                  {p.queries.map((q) => (
+                    <div key={q.id} className="flex flex-col gap-0.5 border-t border-[#E2E8F0] pt-1.5 first:border-0 first:pt-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-ink">Q: {q.question}</span>
+                        <span className={clsx("rounded px-1.5 py-0.5 text-[10px] font-semibold", q.status === "answered" ? "bg-[#DCFCE7] text-[#15803D]" : "bg-[#FEF3C7] text-[#B45309]")}>
+                          {q.status}
+                        </span>
+                      </div>
+                      {q.reply && (
+                        <div className="text-muted"><span className="font-medium text-[#15803D]">Finance reply:</span> {q.reply}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
       </Panel>
+
+      <Dialog open={inquiryOpen} onClose={() => setInquiryOpen(false)} title="Payout Inquiry / Dispute (BRD P-77)">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!selectedPayout || !inquiryQuestion.trim()) return;
+            setSubmitting(true);
+            try {
+              await createPayoutQueryLive(selectedPayout.id, inquiryQuestion.trim());
+              setFeedback("Inquiry sent to DGIX Finance Desk. We will review and reply within 1 business day.");
+              setInquiryOpen(false);
+              setInquiryQuestion("");
+            } catch (err) {
+              setFeedback(err instanceof Error ? err.message : "Failed to submit inquiry");
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          className="flex flex-col gap-3"
+        >
+          <p className="text-xs text-muted">
+            Have questions regarding deductions, reserve holdback (5%), or exchange rates for payout {selectedPayout ? `PAY-${selectedPayout.id.slice(0, 8).toUpperCase()}` : ""}? Enter your inquiry below.
+          </p>
+          <textarea
+            autoFocus
+            required
+            rows={4}
+            value={inquiryQuestion}
+            onChange={(e) => setInquiryQuestion(e.target.value)}
+            placeholder="e.g., Requesting breakdown of the 5% contractual reserve holdback..."
+            className="w-full resize-none rounded-lg border border-[#CBD5E1] p-3 text-xs outline-none focus:border-primary"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setInquiryOpen(false)}
+              className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-xs font-semibold text-ink hover:bg-[#F8FAFC]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !inquiryQuestion.trim()}
+              className="rounded-lg bg-night px-4 py-2 text-xs font-semibold text-paper hover:bg-slate-800 disabled:opacity-50"
+            >
+              {submitting ? "Submitting..." : "Send to Finance"}
+            </button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

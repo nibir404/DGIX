@@ -566,7 +566,12 @@ export default function Partners() {
               />
               <select
                 value={templateForm.contract_type}
-                onChange={(e) => setTemplateForm({ ...templateForm, contract_type: e.target.value as any })}
+                onChange={(e) =>
+                  setTemplateForm({
+                    ...templateForm,
+                    contract_type: e.target.value as "MOU" | "NDA" | "SLA" | "MSA" | "DPA" | "OTHER",
+                  })
+                }
                 className="h-8 rounded border border-line bg-white px-2"
               >
                 <option value="NDA">NDA (Mutual Non-Disclosure)</option>

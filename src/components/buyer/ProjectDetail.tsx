@@ -34,6 +34,24 @@ export function ProjectDetail({ project }: { project: Project }) {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [crOpen, setCrOpen] = useState(false);
+  const [changeRequests, setChangeRequests] = useState<
+    Array<{
+      id: string;
+      title: string;
+      reason: string;
+      daysImpact: number;
+      costImpact: string;
+      status: "pending" | "approved" | "rejected";
+      requestedAt: string;
+    }>
+  >([]);
+  const [crForm, setCrForm] = useState({
+    title: "Additional Data Integration Pipeline",
+    reason: "Integration with legacy ERP required 2 extra schema transformations.",
+    daysImpact: 5,
+    costImpact: "2500.00",
+  });
 
   const ms = project.milestones;
   const done = ms.filter((m) => m.status === "done").length;
@@ -193,6 +211,7 @@ export function ProjectDetail({ project }: { project: Project }) {
                 </Btn>
               </>
             )}
+            <Btn variant="outline" onClick={() => setCrOpen(true)} className="h-[46px] border-[#C9D4E8]">Change Request</Btn>
             <Btn variant="outline" onClick={() => setIssue(true)} className="h-[46px] border-[#C9D4E8]">Raise an issue</Btn>
           </div>
         </Panel>
@@ -228,6 +247,69 @@ export function ProjectDetail({ project }: { project: Project }) {
           </div>
         </Panel>
       </div>
+
+      {/* Scope Change Requests (BRD P-53..P-55) */}
+      <Panel className="flex flex-col gap-3 p-6 bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[18px] font-medium leading-[22px] text-ink">Change Requests &amp; Scope Adjustments (BRD P-53)</div>
+            <p className="text-xs text-muted">Joint buyer-seller scope revisions with timeline and budget impact tracking.</p>
+          </div>
+          <Btn size="sm" variant="outline" onClick={() => setCrOpen(true)}>
+            + Submit Change Request
+          </Btn>
+        </div>
+
+        {changeRequests.length === 0 ? (
+          <p className="text-xs text-muted">No change requests raised for this project. Delivery running on baseline scope.</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-line">
+            {changeRequests.map((cr) => (
+              <div key={cr.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 text-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-ink">{cr.title}</span>
+                    <Pill tone={cr.status === "approved" ? "success" : cr.status === "rejected" ? "danger" : "warning"}>
+                      {cr.status}
+                    </Pill>
+                  </div>
+                  <div className="text-muted mt-0.5">{cr.reason}</div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    Impact: +{cr.daysImpact} days · +${cr.costImpact} · Requested {cr.requestedAt}
+                  </div>
+                </div>
+                {cr.status === "pending" && (
+                  <div className="flex items-center gap-2">
+                    <Btn
+                      size="sm"
+                      onClick={() => {
+                        setChangeRequests((prev) =>
+                          prev.map((x) => (x.id === cr.id ? { ...x, status: "approved" } : x)),
+                        );
+                        flash(`Change Request approved · Delivery timeline updated (+${cr.daysImpact} days)`);
+                      }}
+                    >
+                      Approve CR
+                    </Btn>
+                    <Btn
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setChangeRequests((prev) =>
+                          prev.map((x) => (x.id === cr.id ? { ...x, status: "rejected" } : x)),
+                        );
+                        flash("Change Request rejected");
+                      }}
+                    >
+                      Reject CR
+                    </Btn>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
 
       <Dialog open={issue} onClose={() => setIssue(false)} title="Raise an issue">
         <form
@@ -292,6 +374,77 @@ export function ProjectDetail({ project }: { project: Project }) {
             </Btn>
             <Btn type="submit" disabled={busy || !rejectReason.trim()} variant="dark" className="flex-1 !bg-danger !text-white">
               {busy ? "Rejecting..." : "Confirm Rejection"}
+            </Btn>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog open={crOpen} onClose={() => setCrOpen(false)} title="Submit Change Request (BRD P-53)">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!crForm.title.trim()) return;
+            const newCr = {
+              id: `CR-${Date.now().toString(36).toUpperCase()}`,
+              title: crForm.title.trim(),
+              reason: crForm.reason.trim(),
+              daysImpact: Number(crForm.daysImpact) || 0,
+              costImpact: crForm.costImpact || "0.00",
+              status: "pending" as const,
+              requestedAt: new Date().toLocaleDateString("en-GB"),
+            };
+            setChangeRequests((prev) => [...prev, newCr]);
+            setCrOpen(false);
+            flash(`Change Request logged: ${newCr.title} (+${newCr.daysImpact} days) · Awaiting review`);
+          }}
+          className="flex flex-col gap-3 text-sm"
+        >
+          <div>
+            <label className="text-xs font-medium text-muted">Change Request Title *</label>
+            <input
+              required
+              value={crForm.title}
+              onChange={(e) => setCrForm({ ...crForm, title: e.target.value })}
+              className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted">Reason &amp; Technical Justification *</label>
+            <textarea
+              required
+              rows={3}
+              value={crForm.reason}
+              onChange={(e) => setCrForm({ ...crForm, reason: e.target.value })}
+              className="mt-1 w-full rounded border border-line p-2 text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted">Timeline Impact (Days)</label>
+              <input
+                type="number"
+                min={0}
+                max={90}
+                value={crForm.daysImpact}
+                onChange={(e) => setCrForm({ ...crForm, daysImpact: Number(e.target.value) || 0 })}
+                className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted">Cost Impact ($ USD)</label>
+              <input
+                value={crForm.costImpact}
+                onChange={(e) => setCrForm({ ...crForm, costImpact: e.target.value })}
+                className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Btn variant="outline" type="button" onClick={() => setCrOpen(false)} className="flex-1">
+              Cancel
+            </Btn>
+            <Btn type="submit" className="flex-1">
+              Submit Change Request
             </Btn>
           </div>
         </form>

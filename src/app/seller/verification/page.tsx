@@ -15,8 +15,10 @@ const STEPS = ["Application", "Documents", "Product demo", "Technical review", "
 
 const EVIDENCE: Record<string, { title: string; body: string; backendType: string }> = {
   quality: { title: "Release & delivery record", body: "Release notes and delivery history for the last 12 months. PDF, max 20 MB.", backendType: "architecture_doc" },
+  qa: { title: "QA & test suite results", body: "Unit and integration test coverage pass logs and benchmarks. PDF.", backendType: "test_report" },
   evidence: { title: "Customer references", body: "Signed references or case studies from live customers. PDF, max 20 MB.", backendType: "customer_reference" },
   security: { title: "Penetration test report", body: "A test by an independent firm, done in the last 12 months. PDF, max 20 MB.", backendType: "pentest_report" },
+  certs: { title: "Compliance certificates", body: "ISO 9001/27001, SOC 2 Type II, CMMI, HIPAA or regulatory audits. PDF.", backendType: "certificate" },
   legal: { title: "Proof of IP ownership", body: "Company registration and source-code ownership documents. PDF, max 20 MB.", backendType: "ip_attestation" },
   pricing: { title: "Price list & economics", body: "Your list prices and discount rules for DGIX buyers. PDF or XLSX.", backendType: "pricing_schedule" },
   support: { title: "Support & continuity plan", body: "Support hours, escalation path and escrow / continuity terms. PDF.", backendType: "sla_document" },

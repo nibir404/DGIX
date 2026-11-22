@@ -6,7 +6,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { Button, Empty } from "@/components/portal/ui";
-import { AddProductDialog } from "@/components/seller/AddProductDialog";
+import { ProductSubmissionWizard } from "@/components/seller/ProductSubmissionWizard";
 import { Icon } from "@/components/ui/Icon";
 import { useFlash } from "@/components/admin/kit";
 import { Head, NIGHT_CARD, Panel, ProductTabs, scoreOf, useSeller } from "@/components/seller/kit";
@@ -38,13 +38,17 @@ function Products() {
 
   const dialog = (
     <>
-      <AddProductDialog
+      <ProductSubmissionWizard
         open={adding}
         onClose={() => setAdding(false)}
-        onAdded={(id, name) => {
+        onAdded={(id, name, isDraft) => {
           setAdding(false);
           setSel(id);
-          flash(`${name} submitted · upload evidence in Verification`);
+          flash(
+            isDraft
+              ? `Draft passport saved for ${name} · resume anytime from Products & Verification`
+              : `${name} registered & submitted for Gate PG1 assurance review!`,
+          );
         }}
       />
       {toast}

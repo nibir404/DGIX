@@ -283,8 +283,12 @@ export async function registerOrganization(input: {
   full_name: string;
   email: string;
   password: string;
-  company_name: string;
+  company_name?: string;
+  phone_number?: string;
+  dial_code?: string;
+  entity_type?: "INDIVIDUAL" | "COMPANY";
   country_code?: string;
+  trade_license_ref?: string;
   skip_partner_bootstrap?: boolean;
 }): Promise<AuthSession> {
   const session = await apiFetch<AuthSession>("/bff/auth/register", {
@@ -292,7 +296,11 @@ export async function registerOrganization(input: {
     auth: false,
     body: {
       ...input,
-      country_code: input.country_code ?? "UAE",
+      company_name: input.company_name || input.full_name,
+      country_code: input.country_code ?? "BGD",
+      entity_type: input.entity_type ?? "COMPANY",
+      phone_number: input.phone_number ?? "",
+      dial_code: input.dial_code ?? "+880",
     },
   });
   saveStoredSession(session);

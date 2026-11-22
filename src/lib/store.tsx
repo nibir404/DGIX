@@ -130,8 +130,12 @@ type Ctx = {
     full_name: string;
     email: string;
     password: string;
-    company_name: string;
+    company_name?: string;
+    phone_number?: string;
+    dial_code?: string;
+    entity_type?: "INDIVIDUAL" | "COMPANY";
     country_code?: string;
+    trade_license_ref?: string;
     skip_partner_bootstrap?: boolean;
   }) => Promise<User>;
   applyPartnerLive: (input: {
@@ -1372,8 +1376,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       full_name: string;
       email: string;
       password: string;
-      company_name: string;
+      company_name?: string;
+      phone_number?: string;
+      dial_code?: string;
+      entity_type?: "INDIVIDUAL" | "COMPANY";
       country_code?: string;
+      trade_license_ref?: string;
       skip_partner_bootstrap?: boolean;
     }): Promise<User> => {
       setLastError(null);

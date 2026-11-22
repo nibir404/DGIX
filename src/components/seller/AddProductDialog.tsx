@@ -31,6 +31,8 @@ export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; on
   const { addProduct } = useStore();
   const [f, setF] = useState({ name: "", category: "erp" as Category, tagline: "", description: "", price: "" });
   const [markets, setMarkets] = useState<string[]>(["UAE"]);
+  const [attachments, setAttachments] = useState<{ file: File; evidenceType: string }[]>([]);
+  const [docType, setDocType] = useState("architecture_doc");
   const price = Number(f.price.replace(/[^0-9]/g, "")) || 0;
   const prohibited = hasProhibitedUltimateWording(f.name, f.tagline, f.description);
   const ok = f.name.trim().length > 1 && f.tagline.trim().length > 2 && markets.length > 0 && price > 0 && !prohibited;
@@ -45,10 +47,12 @@ export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; on
       description: f.description.trim() || f.tagline.trim(),
       markets,
       priceFrom: price,
+      attachments,
     });
     onAdded(id, f.name.trim());
     setF({ name: "", category: "erp", tagline: "", description: "", price: "" });
     setMarkets(["UAE"]);
+    setAttachments([]);
   };
 
   return (
@@ -109,6 +113,65 @@ export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; on
                 </button>
               );
             })}
+          </div>
+        </fieldset>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1.5 text-[13px] font-medium">Product documents &amp; resources (optional)</legend>
+          <div className="flex flex-col gap-2.5 rounded-lg border border-dashed border-line bg-[#F8FAFD] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                className="h-9 rounded-lg border border-line bg-white px-2.5 text-xs text-ink"
+              >
+                <option value="architecture_doc">Architecture / Product Brochure</option>
+                <option value="pentest_report">Security / Pentest Report</option>
+                <option value="certificate">ISO 27001 / SOC 2 Certificate</option>
+                <option value="ip_attestation">IP Ownership Proof</option>
+                <option value="pricing_schedule">Pricing Schedule</option>
+                <option value="sla_document">SLA &amp; Support Plan</option>
+                <option value="user_manual">User Manual / API Docs</option>
+              </select>
+              <label className="inline-flex h-9 cursor-pointer items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper hover:bg-primary">
+                + Upload file(s)
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xlsx,.csv,.zip,.json,.png,.jpg,.jpeg"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length > 0) {
+                      setAttachments((prev) => [
+                        ...prev,
+                        ...files.map((file) => ({ file, evidenceType: docType })),
+                      ]);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((att, idx) => (
+                  <span
+                    key={`${att.file.name}-${idx}`}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-line bg-white px-2.5 py-1 text-xs text-ink"
+                  >
+                    <span className="font-mono text-[10px] text-primary">{att.evidenceType}</span>
+                    <span className="max-w-[160px] truncate">{att.file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                      className="font-semibold text-muted hover:text-danger"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </fieldset>
         <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">

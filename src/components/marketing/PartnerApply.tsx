@@ -120,6 +120,8 @@ export function PartnerApply() {
   const [dir, setDir] = useState(1);
   const [done, setDone] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [attachments, setAttachments] = useState<{ file: File; evidenceType: string }[]>([]);
+  const [docType, setDocType] = useState("kyb");
   const card = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -191,6 +193,7 @@ export function PartnerApply() {
         fullName: f.name.trim(),
         email: f.email.trim(),
         password: f.password,
+        attachments,
       });
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
       setDone(true);
@@ -393,6 +396,63 @@ export function PartnerApply() {
                       </Field>
                       <Field label="How would you like to work with us?">
                         <Select value={f.mode} onChange={text("mode")} options={MODES} placeholder={false} />
+                      </Field>
+                      <Field label="Supporting KYB & product documents" hint="optional — PDF, DOCX, ZIP, PNG (uploaded securely for review)" full as="div">
+                        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-line bg-mist/40 p-4">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <select
+                              value={docType}
+                              onChange={(e) => setDocType(e.target.value)}
+                              className="h-10 rounded-lg border border-line bg-white px-3 text-sm text-ink"
+                            >
+                              <option value="kyb">Company KYB / Trade License</option>
+                              <option value="architecture_doc">Product Architecture / Brochure</option>
+                              <option value="certificate">ISO 27001 / SOC 2 Certificate</option>
+                              <option value="pentest_report">Penetration Test / Security Report</option>
+                              <option value="ip_attestation">IP Ownership Proof</option>
+                              <option value="user_manual">User Manual / Demo Pack</option>
+                            </select>
+                            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-night px-4 text-xs font-semibold text-paper hover:bg-primary">
+                              + Attach file(s)
+                              <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.xlsx,.csv,.zip,.json,.png,.jpg,.jpeg"
+                                className="sr-only"
+                                onChange={(e) => {
+                                  const files = Array.from(e.target.files ?? []);
+                                  if (files.length > 0) {
+                                    setAttachments((prev) => [
+                                      ...prev,
+                                      ...files.map((file) => ({ file, evidenceType: docType })),
+                                    ]);
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          </div>
+                          {attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {attachments.map((att, idx) => (
+                                <span
+                                  key={`${att.file.name}-${idx}`}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 text-xs text-ink"
+                                >
+                                  <span className="font-mono text-[11px] text-primary">{att.evidenceType}</span>
+                                  <span className="max-w-[200px] truncate">{att.file.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                                    className="font-semibold text-muted hover:text-danger"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </Field>
                     </Grid>
                   )}

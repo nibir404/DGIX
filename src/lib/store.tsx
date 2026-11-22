@@ -128,6 +128,7 @@ type Ctx = {
     password: string;
     company_name: string;
     country_code?: string;
+    registration_number?: string;
     skip_partner_bootstrap?: boolean;
   }) => Promise<User>;
   applyPartnerLive: (input: {
@@ -148,6 +149,7 @@ type Ctx = {
     fullName?: string;
     email?: string;
     password?: string;
+    attachments?: { file: File; evidenceType: string }[];
   }) => Promise<User>;
   uploadRealEvidence: (params: {
     productId: string;
@@ -201,6 +203,7 @@ type Ctx = {
     description: string;
     markets: string[];
     priceFrom: number;
+    attachments?: { file: File; evidenceType: string }[];
   }) => string;
   updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
   changePassword: (current: string, next: string) => boolean;
@@ -1400,6 +1403,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       fullName?: string;
       email?: string;
       password?: string;
+      attachments?: { file: File; evidenceType: string }[];
     }): Promise<User> => {
       setLastError(null);
       let activeSession = loadStoredSession() ?? authSession;
@@ -1482,12 +1486,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         },
       }).catch(() => undefined);
 
+      const verId = String(createdVer.version_id);
+      if (input.attachments && input.attachments.length > 0) {
+        for (const att of input.attachments) {
+          await uploadEvidenceBinary({
+            productVersionId: verId,
+            evidenceType: att.evidenceType,
+            file: att.file,
+            filename: att.file.name,
+          }).catch(() => undefined);
+        }
+      }
+
       const countryCodes = input.markets.map(toIsoCountry);
       await apiFetch("/bff/v1/governance/assessments", {
         method: "POST",
         body: {
           product_id: pid,
-          product_version_id: String(createdVer.version_id),
+          product_version_id: verId,
           pao_user_id: u.id,
           country_codes: countryCodes.length > 0 ? countryCodes : [isoCountry],
         },
@@ -1977,12 +1993,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             no_conflict_declared: true,
           },
         });
+        const verId = String(createdVer.version_id);
+        if (input.attachments && input.attachments.length > 0) {
+          for (const att of input.attachments) {
+            await uploadEvidenceBinary({
+              productVersionId: verId,
+              evidenceType: att.evidenceType,
+              file: att.file,
+              filename: att.file.name,
+            }).catch(() => undefined);
+          }
+        }
         const countryCodes = input.markets.map(toIsoCountry);
         await apiFetch("/bff/v1/governance/assessments", {
           method: "POST",
           body: {
             product_id: pid,
-            product_version_id: String(createdVer.version_id),
+            product_version_id: verId,
             pao_user_id: user.id,
             country_codes: countryCodes.length > 0 ? countryCodes : ["UAE"],
           },

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Field, inputCls, PrimaryButton } from "./AuthShell";
 import { Icon } from "@/components/ui/Icon";
+import { apiFetch } from "@/lib/api";
 import { portalHome, useStore } from "@/lib/store";
 import type { User } from "@/lib/types";
 
@@ -36,7 +37,7 @@ export function CreateAccountForm() {
   const { registerLive } = useStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [mode, setMode] = useState<Mode>("buy");
-  const [f, setF] = useState({ name: "", company: "", email: "", password: "", country: "UAE" });
+  const [f, setF] = useState({ name: "", company: "", regNumber: "", email: "", password: "", country: "UAE" });
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,18 @@ export function CreateAccountForm() {
         password: f.password,
         company_name: f.company.trim(),
         country_code: f.country,
+        registration_number: f.regNumber.trim() || undefined,
       });
+      if (mode === "buy" && f.regNumber.trim()) {
+        await apiFetch("/bff/v1/iam/buyer-verifications", {
+          method: "POST",
+          body: {
+            company_name: f.company.trim(),
+            country_code: f.country,
+            registration_number: f.regNumber.trim(),
+          },
+        }).catch(() => undefined);
+      }
       setCreatedUser(u);
       setStep(2);
     } catch (err) {
@@ -142,6 +154,9 @@ export function CreateAccountForm() {
                 </select>
               </Field>
             </div>
+            <Field label="Company registration / trade license no. (for verification)">
+              <input value={f.regNumber} onChange={(e) => setF({ ...f, regNumber: e.target.value })} placeholder="e.g. RJSC-C-184920 or DED-90831" className={inputCls} />
+            </Field>
             <Field label="Password (min 8 chars)">
               <input type="password" required minLength={8} autoComplete="new-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} className={inputCls} />
               <div className="flex gap-1.5 px-1 pt-1">

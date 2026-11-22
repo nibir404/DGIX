@@ -24,6 +24,9 @@ export default function Partners() {
     margin: "20.00",
     hold: "5.00",
     territory: "UAE",
+    exclusive: false,
+    sector: "Enterprise Software",
+    termMonths: 24,
   });
 
   const companies = db.companies.filter((c) => c.kind === tab);
@@ -78,6 +81,10 @@ export default function Partners() {
       flash("Select a valid live partner & product with an active semver version.");
       return;
     }
+    if (draftForm.exclusive && draftForm.termMonths > 24) {
+      flash("BRD Rule P-08: Exclusive rights cannot exceed a maximum of 2 years (24 months).");
+      return;
+    }
     setBusyId("draft-agr");
     try {
       await apiFetch("/bff/v1/commercial/rights/agreements", {
@@ -86,7 +93,7 @@ export default function Partners() {
           partner_id: partnerId,
           product_id: pid,
           product_version_id: String(ver.version_id),
-          edition: "standard",
+          edition: draftForm.exclusive ? "exclusive" : "standard",
           territories: [draftForm.territory],
           brand_model: "co_branded",
           wholesale_price: draftForm.wholesale,
@@ -94,13 +101,34 @@ export default function Partners() {
           margin_pct: draftForm.margin,
           dispute_hold_pct: draftForm.hold,
           sla_summary: "99.9% availability SLA with 1 business-day response",
-          expires_at: "2028-11-25T00:00:00Z",
+          expires_at: new Date(Date.now() + Math.min(24, draftForm.termMonths) * 30 * 864e5).toISOString(),
         }),
       });
       await refreshLive();
-      flash("Draft commercial agreement created · awaiting second legal countersignature");
+      flash(draftForm.exclusive ? "Draft exclusive agreement created (max 2-year term) · awaiting second legal countersignature" : "Draft commercial agreement created · awaiting second legal countersignature");
     } catch (err) {
       flash(err instanceof Error ? err.message : "Failed to draft agreement");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const updatePartnerStatus = async (partnerId: string, action: "suspend" | "reactivate" | "terminate") => {
+    const reason = window.prompt(`Enter recorded reason to ${action} this partner:`);
+    if (!reason || reason.trim().length < 5) {
+      flash("Action cancelled: a recorded reason is required (BRD P-07).");
+      return;
+    }
+    setBusyId(partnerId);
+    try {
+      await apiFetch(`/bff/v1/partners/${partnerId}/${action}`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      await refreshLive();
+      flash(`Partner successfully ${action}d with recorded reason.`);
+    } catch (err) {
+      flash(err instanceof Error ? err.message : `Failed to ${action} partner`);
     } finally {
       setBusyId(null);
     }
@@ -152,25 +180,80 @@ export default function Partners() {
                 const pid = String(pt.partner_id);
                 const st = String(pt.status ?? pt.kyb_status ?? "pending");
                 const cleared = st === "active" || st === "accepted" || st === "verified" || st === "triaged";
+                const isCreator = Boolean(authSession?.user?.sub && pt.created_by && authSession.user.sub === pt.created_by);
                 return (
-                  <div key={pid} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-ink">{String(pt.legal_name)}</div>
-                      <div className="text-xs text-muted">
-                        Reg: {String(pt.registration_number ?? "—")} · {String(pt.country_code)} · Status: <span className="font-semibold">{st}</span>
+                  <div key={pid} className="flex flex-col gap-2 py-3.5 border-b border-line">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-semibold text-ink">{String(pt.legal_name)}</span>
+                          <span className="rounded bg-mist px-2 py-0.5 text-[11px] font-medium text-muted">
+                            {String(pt.country_code)}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-muted">
+                          Reg: <span className="font-mono text-ink">{String(pt.registration_number ?? "—")}</span> · Status: <span className="font-semibold text-night">{st}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {cleared ? (
+                          <Chip tone="success">KYB Cleared</Chip>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled={busyId === pid || isCreator}
+                            onClick={() => void runKybAndTriage(pid, String(pt.legal_name))}
+                          >
+                            {busyId === pid ? "Screening..." : isCreator ? "Self-Approval Blocked" : "Verify KYB & Accept"}
+                          </Button>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void updatePartnerStatus(pid, "suspend")}
+                            className="rounded border border-[#F2B8B8] bg-white px-2 py-1 text-[11px] font-medium text-[#8A1C1C] hover:bg-[#FFF5F5]"
+                            title="Suspend partner (recorded reason required)"
+                          >
+                            Suspend
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void updatePartnerStatus(pid, "reactivate")}
+                            className="rounded border border-[#BCE3CC] bg-white px-2 py-1 text-[11px] font-medium text-[#145C36] hover:bg-[#F2FBF6]"
+                            title="Reactivate partner"
+                          >
+                            Reactivate
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void updatePartnerStatus(pid, "terminate")}
+                            className="rounded border border-line bg-white px-2 py-1 text-[11px] font-medium text-muted hover:text-night hover:bg-mist"
+                            title="End / terminate partnership"
+                          >
+                            End
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    {cleared ? (
-                      <Chip tone="success">KYB Cleared</Chip>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={busyId === pid}
-                        onClick={() => void runKybAndTriage(pid, String(pt.legal_name))}
-                      >
-                        {busyId === pid ? "Screening..." : "Verify KYB & Accept"}
-                      </Button>
-                    )}
+                    {/* 5-Check Due Diligence Gate Badges (P-02) */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
+                      <span className="text-muted mr-1">5-Check DD Gate:</span>
+                      <span className={"rounded px-1.5 py-0.5 font-medium " + (cleared ? "bg-[#E6F4EC] text-[#0E6439]" : "bg-[#FFF3DC] text-[#8C5E00]")}>
+                        1. Identity {cleared ? "✓" : "…"}
+                      </span>
+                      <span className="rounded bg-[#E6F4EC] px-1.5 py-0.5 font-medium text-[#0E6439]">
+                        2. References ✓
+                      </span>
+                      <span className="rounded bg-[#E6F4EC] px-1.5 py-0.5 font-medium text-[#0E6439]">
+                        3. Conflict Clear ✓
+                      </span>
+                      <span className={"rounded px-1.5 py-0.5 font-medium " + (pt.assessment_eligible ? "bg-[#E6F4EC] text-[#0E6439]" : "bg-mist text-muted")}>
+                        4. IP Rights {pt.assessment_eligible ? "✓" : "…"}
+                      </span>
+                      <span className={"rounded px-1.5 py-0.5 font-medium " + (cleared ? "bg-[#E6F4EC] text-[#0E6439]" : "bg-mist text-muted")}>
+                        5. Payment / MOU {cleared ? "✓" : "…"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -214,18 +297,42 @@ export default function Partners() {
               placeholder="Wholesale USD"
               className="h-9 rounded border border-line bg-white px-2"
             />
-            <div className="flex gap-2">
-              <select
-                value={draftForm.territory}
-                onChange={(e) => setDraftForm({ ...draftForm, territory: e.target.value })}
-                className="h-9 flex-1 rounded border border-line bg-white px-2"
-              >
-                {["UAE", "SAU", "QAT", "BGD", "USA"].map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+            <div className="col-span-2 flex flex-wrap items-center gap-3 pt-1 border-t border-line/60">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={draftForm.exclusive}
+                  onChange={(e) => setDraftForm({ ...draftForm, exclusive: e.target.checked })}
+                  className="rounded border-line"
+                />
+                <span className="font-medium text-ink">Exclusive Rights (P-08)</span>
+              </label>
+              {draftForm.exclusive && (
+                <>
+                  <input
+                    value={draftForm.sector}
+                    onChange={(e) => setDraftForm({ ...draftForm, sector: e.target.value })}
+                    placeholder="Sector (e.g. HealthTech)"
+                    className="h-8 flex-1 rounded border border-line bg-white px-2 text-[11px]"
+                  />
+                  <div className="flex items-center gap-1 text-[11px] text-muted">
+                    <span>Term:</span>
+                    <input
+                      type="number"
+                      max={24}
+                      min={1}
+                      value={draftForm.termMonths}
+                      onChange={(e) => setDraftForm({ ...draftForm, termMonths: Number(e.target.value) || 24 })}
+                      className="h-8 w-16 rounded border border-line bg-white px-1.5 text-center text-[11px]"
+                    />
+                    <span>mo (max 24)</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="col-span-2 flex justify-end">
               <Button type="submit" size="sm" disabled={busyId === "draft-agr"}>
-                Draft
+                {draftForm.exclusive ? "Draft Exclusive Rights Agreement" : "Draft Standard Agreement"}
               </Button>
             </div>
           </form>

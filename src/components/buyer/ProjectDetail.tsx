@@ -104,7 +104,11 @@ export function ProjectDetail({ project }: { project: Project }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-[18px] font-medium leading-[22px] text-ink">{current ? (current.status === "in_review" ? `Review ${current.title.toLowerCase()}` : current.title) : "All milestones accepted"}</div>
             <div className="text-[13px] leading-4 text-muted">
-              {current?.status === "in_review" ? `Submitted by ${partner?.name}` : current ? `${partner?.name} is working on it` : `Delivered by ${partner?.name}`}
+              {current?.status === "in_review"
+                ? `Submitted by ${partner?.name ?? "DGIX Verified Partner"}`
+                : current
+                  ? `${partner?.name ?? "DGIX Verified Partner"} is working on it`
+                  : `Delivered by ${partner?.name ?? "DGIX Verified Partner"}`}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -155,7 +159,22 @@ export function ProjectDetail({ project }: { project: Project }) {
           </div>
           <div className="mt-auto flex flex-wrap gap-2.5">
             {current?.status === "in_review" && (
-              <Btn onClick={() => { b.acceptMilestone(project.id, current.id); flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`); }} className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]">Accept milestone</Btn>
+              <>
+                <Btn onClick={() => { b.acceptMilestone(project.id, current.id); flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`); }} className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]">Accept milestone</Btn>
+                <Btn
+                  variant="outline"
+                  onClick={() => {
+                    const reason = window.prompt("Reason for rejecting and reopening this milestone:");
+                    if (reason && reason.trim().length >= 3) {
+                      b.rejectMilestone(project.id, current.id, reason.trim());
+                      flash(`${current.title} reopened for seller rework`);
+                    }
+                  }}
+                  className="h-[46px] border-[#F2B8B8] text-[#8A1C1C]"
+                >
+                  Request rework
+                </Btn>
+              </>
             )}
             <Btn variant="outline" onClick={() => setIssue(true)} className="h-[46px] border-[#C9D4E8]">Raise an issue</Btn>
           </div>

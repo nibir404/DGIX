@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { StoreProvider } from "@/lib/store";
+import { LocaleProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800"] });
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${jakarta.variable} ${jetbrains.variable} antialiased`}>
-        <StoreProvider>{children}</StoreProvider>
+        <LocaleProvider>
+          <StoreProvider>{children}</StoreProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

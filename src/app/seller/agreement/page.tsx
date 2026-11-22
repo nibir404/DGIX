@@ -1,9 +1,20 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
+import { apiFetch } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { Empty } from "@/components/portal/ui";
 import { Head, Panel, Pill, useFlash, useSeller } from "@/components/seller/kit";
+
+type PartnerContractRow = {
+  contract_id: string;
+  contract_type: string;
+  title: string;
+  status: string;
+  template_version: number;
+  signed_at: string | null;
+};
 
 const TERMS = [
   ["You keep", "All IP and source code. DGIX receives non-exclusive regional distribution rights only."],
@@ -17,6 +28,34 @@ export default function AgreementPage() {
   const { company, products } = useSeller();
   const { live } = useStore();
   const { flash, toast } = useFlash();
+  const [contracts, setContracts] = useState<PartnerContractRow[]>([]);
+  const [signingId, setSigningId] = useState<string | null>(null);
+
+  const loadContracts = useCallback(async () => {
+    try {
+      const rows = await apiFetch<PartnerContractRow[]>("/bff/v1/commercial/contracts");
+      setContracts(Array.isArray(rows) ? rows : []);
+    } catch {
+      setContracts([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadContracts();
+  }, [loadContracts]);
+
+  const signPartnerContract = async (contractId: string) => {
+    setSigningId(contractId);
+    try {
+      await apiFetch(`/bff/v1/commercial/contracts/${contractId}/sign`, { method: "POST" });
+      flash("Contract signed and recorded in the immutable audit ledger");
+      await loadContracts();
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Failed to sign contract");
+    } finally {
+      setSigningId(null);
+    }
+  };
 
   const partnerAgreements = live.agreements.filter(
     (a) => !company?.id || String(a.partner_id) === company.id,
@@ -99,6 +138,38 @@ export default function AgreementPage() {
             <div className="text-xs leading-4 text-muted">{c.s}</div>
           </div>
         ))}
+      </Panel>
+
+      <Panel className="flex flex-col bg-paper px-4 py-2 md:px-6">
+        <div className="border-b border-[#F1F4FA] py-[14px] text-base font-medium leading-5 text-ink">
+          Partner NDAs, MOUs &amp; Legal Contracts ({contracts.length})
+        </div>
+        {contracts.length === 0 ? (
+          <div className="py-5 text-sm text-muted">No partner-level NDA or MOU contracts issued yet.</div>
+        ) : (
+          contracts.map((c, i) => (
+            <div key={c.contract_id} className={clsx("flex flex-wrap items-center justify-between gap-3 py-3.5", i < contracts.length - 1 && "border-b border-[#F1F4FA]")}>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-ink">{c.title}</span>
+                  <Pill tone={c.status === "signed" ? "success" : c.status === "sent" ? "info" : "warning"}>{c.status}</Pill>
+                  <Pill tone="amber">{c.contract_type} v{c.template_version}</Pill>
+                </div>
+                {c.signed_at && <div className="mt-1 text-xs text-muted">Signed on {c.signed_at.slice(0, 10)}</div>}
+              </div>
+              {c.status === "sent" && (
+                <button
+                  type="button"
+                  disabled={signingId === c.contract_id}
+                  onClick={() => void signPartnerContract(c.contract_id)}
+                  className="inline-flex h-9 items-center rounded-lg bg-night px-4 text-xs font-semibold text-paper hover:bg-primary disabled:opacity-50"
+                >
+                  {signingId === c.contract_id ? "Signing…" : "Review & sign"}
+                </button>
+              )}
+            </div>
+          ))
+        )}
       </Panel>
 
       <Panel className="flex flex-col bg-paper px-4 py-2 md:px-6">

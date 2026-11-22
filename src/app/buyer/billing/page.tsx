@@ -23,6 +23,31 @@ function BillingInner() {
   const { flash, toast } = useFlash();
   const [paying, setPaying] = useState<Invoice | null>(null);
   const justPaid = params.get("paid") === "1";
+  const expiredPayment = params.get("expired_payment");
+
+  const downloadReceipt = (inv: Invoice) => {
+    const lines = [
+      "DGIX OFFICIAL PAYMENT RECEIPT",
+      "=============================",
+      `Invoice Reference : ${inv.ref}`,
+      `Payment ID        : ${inv.paymentId ?? "N/A"}`,
+      `Project           : ${projName(inv.projectId)}`,
+      `Milestone         : ${inv.milestone}`,
+      `Amount Paid       : ${money(inv.amount)} USD`,
+      `Status            : ${inv.status.toUpperCase()}`,
+      `Paid Date         : ${inv.paidOn ?? new Date().toISOString().slice(0, 10)}`,
+      `E-Invoice Ref     : ${inv.einvoiceClearanceId ?? "Standard Tax Invoice"}`,
+      "",
+      "Issued by Daffodil Global Innovation Exchange (DGIX).",
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([lines], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `DGIX-Receipt-${inv.ref}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    flash(`Receipt downloaded · ${inv.ref}`);
+  };
 
   useEffect(() => {
     if (justPaid) {
@@ -83,6 +108,11 @@ function BillingInner() {
       {justPaid && (
         <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] px-4 py-3 text-sm text-[#145C36]">
           <strong>Payment confirmed:</strong> Thank you. Your online payment has been received and your invoice status has been updated.
+        </div>
+      )}
+      {expiredPayment && (
+        <div className="rounded-lg border border-[#F5D08A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#8A5A00]">
+          <strong>Previous checkout session expired:</strong> Click <em>Pay invoice</em> below to start a fresh checkout session automatically.
         </div>
       )}
 
@@ -178,6 +208,11 @@ function BillingInner() {
                   </div>
                   <div className="flex flex-1 basis-0 items-center justify-end gap-2.5">
                     {isDue && <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>}
+                    {!isDue && (
+                      <button onClick={() => downloadReceipt(i)} className="inline-flex h-[30px] items-center rounded-lg border border-[#C9D4E8] bg-white px-2.5 text-xs font-medium text-ink hover:bg-mist">
+                        Receipt
+                      </button>
+                    )}
                     <span className={clsx("text-right text-[15px] leading-[18px] text-ink", isDue && "font-semibold")}>{money(i.amount)}</span>
                   </div>
                 </div>

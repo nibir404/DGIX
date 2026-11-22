@@ -168,6 +168,7 @@ type Ctx = {
   acceptOffer: (offerId: string) => void;
   declineOffer: (offerId: string) => void;
   acceptMilestone: (projectId: string, milestoneId: string) => void;
+  rejectMilestone: (projectId: string, milestoneId: string, reason: string) => void;
   payInvoice: (invoiceId: string) => void;
   openCase: (title: string, body: string, projectId?: string) => void;
   replyCase: (caseId: string, body: string) => void;
@@ -871,12 +872,23 @@ function hydrateDbFromLive(params: {
   const payouts: Payout[] = live.payouts.map((po) => {
     const pay = live.payments.find((p) => String(p.payment_id) === String(po.payment_id));
     const inv = live.invoices.find((i) => String(i.order_id) === String(po.order_id));
-    const gross = pay ? Number(pay.amount ?? 0) : Number(po.amount ?? 0);
     const net = Number(po.amount ?? 0);
-    const holdPct = pay ? Number(pay.dispute_hold_pct ?? 0) : 0.05;
-    const wholesale = pay ? Number(pay.wholesale_amount ?? net) : net;
-    const holdAmt = Math.round(wholesale * holdPct);
-    const fee = Math.max(0, Math.round(gross - net));
+    const hasServerBreakdown = po.gross_amount !== undefined && po.gross_amount !== null;
+    const gross = hasServerBreakdown
+      ? Number(po.gross_amount)
+      : pay
+        ? Number(pay.amount ?? 0)
+        : net;
+    const holdAmt =
+      po.dispute_hold_amount !== undefined && po.dispute_hold_amount !== null
+        ? Number(po.dispute_hold_amount)
+        : pay
+          ? Math.round(gross * Number(pay.dispute_hold_pct ?? 0))
+          : 0;
+    const fee =
+      po.dgix_fee_amount !== undefined && po.dgix_fee_amount !== null
+        ? Number(po.dgix_fee_amount)
+        : Math.max(0, Math.round(gross - net - holdAmt));
     const rawStatus = String(po.status ?? "pending_approval");
     const status: Payout["status"] =
       rawStatus === "approved" || rawStatus === "paid" || rawStatus === "disbursed"
@@ -1658,9 +1670,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
 
+    rejectMilestone: (projectId, milestoneId, reason) => {
+      runBg(async () => {
+        await apiFetch(
+          `/bff/v1/finance/delivery/projects/${projectId}/milestones/${milestoneId}/reject`,
+          {
+            method: "POST",
+            body: { reason: reason.trim() || "Reopened by buyer for rework." },
+          },
+        );
+      });
+    },
+
     payInvoice: (invoiceId) => {
       const inv = db.invoices.find((i) => i.id === invoiceId);
-      if (inv?.sandboxCheckoutUrl && typeof window !== "undefined") {
+      const isStale = inv?.paymentStatus === "expired" || inv?.paymentStatus === "cancelled";
+      if (!isStale && inv?.sandboxCheckoutUrl && typeof window !== "undefined") {
         window.location.href = buildSandboxCheckoutRedirectUrl(inv.sandboxCheckoutUrl);
         return;
       }
@@ -1677,6 +1702,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
         if (typeof pay.sandbox_checkout_url === "string" && typeof window !== "undefined") {
           window.location.href = buildSandboxCheckoutRedirectUrl(pay.sandbox_checkout_url);
+        } else if (typeof pay.payment_id === "string" && typeof window !== "undefined") {
+          const fallbackUrl = `/checkout/hosted/${pay.payment_id}?gateway=stripe&amount=${encodeURIComponent(String(inv.amount))}&currency=USD&order_id=${encodeURIComponent(inv.orderId ?? "")}`;
+          window.location.href = buildSandboxCheckoutRedirectUrl(fallbackUrl);
         }
       });
     },
@@ -1764,8 +1792,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
 
-    submitMilestone: () => {
-      void refreshLive();
+    submitMilestone: (projectId, milestoneId) => {
+      runBg(async () => {
+        await apiFetch(
+          `/bff/v1/finance/delivery/projects/${projectId}/milestones/${milestoneId}/submit`,
+          {
+            method: "POST",
+            body: {
+              evidence_refs: [`delivery-signoff-${milestoneId.slice(0, 8)}.pdf`],
+              notes: "Milestone deliverable & sign-off evidence submitted for buyer review.",
+            },
+          },
+        );
+      });
     },
 
     confirmShortlist: (requestId, productIds) => {

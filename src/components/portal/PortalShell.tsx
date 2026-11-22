@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
 import { AccountMenu } from "./AccountMenu";
+import { LanguageToggle } from "@/lib/i18n";
 import { staffHomeForRole, useLookup, useStore } from "@/lib/store";
 import type { Db, Role, User } from "@/lib/types";
 
@@ -24,6 +25,7 @@ const STAFF_ITEMS: Record<string, Item> = {
   delivery: { href: "/admin/delivery", label: "Delivery", icon: "pulse", badge: (db) => db.projects.filter((p) => p.health !== "on_track").length, tone: "red" },
   finance: { href: "/admin/finance", label: "Finance & ledger", icon: "card" },
   partners: { href: "/admin/partners", label: "Partners & agreements", icon: "users" },
+  contracts: { href: "/admin/contracts", label: "Contracts & templates", icon: "file" },
 };
 
 export const portalConfig: Record<Role, Config> = {
@@ -92,6 +94,7 @@ export const portalConfig: Record<Role, Config> = {
           STAFF_ITEMS.delivery,
           STAFF_ITEMS.finance,
           STAFF_ITEMS.partners,
+          STAFF_ITEMS.contracts,
         ],
       },
     ],
@@ -130,7 +133,7 @@ function getStaffConfigForUser(user?: User | null): Config {
       search: "Search partners, screenings, agreements",
       groups: [
         {
-          items: [STAFF_ITEMS.partners, STAFF_ITEMS.offers],
+          items: [STAFF_ITEMS.partners, STAFF_ITEMS.contracts, STAFF_ITEMS.offers],
         },
       ],
     };
@@ -319,6 +322,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
               </Link>
             )}
+            <LanguageToggle />
             <NotificationBell count={unread} />
             <AccountMenu />
           </div>

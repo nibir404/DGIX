@@ -68,6 +68,11 @@ export interface LiveBackendState {
   refunds: Array<Record<string, unknown>>;
   projects: Array<Record<string, unknown>>;
   incidents: Array<Record<string, unknown>>;
+  buyerLicences: Array<Record<string, unknown>>;
+  exclusiveRights: Array<Record<string, unknown>>;
+  customizationQuotes: Array<Record<string, unknown>>;
+  scopeChangeRequests: Array<Record<string, unknown>>;
+  payoutQueries: Array<Record<string, unknown>>;
   auditEntries: Array<Record<string, unknown>>;
   auditVerification: {
     ok: boolean;
@@ -108,6 +113,11 @@ const EMPTY_LIVE: LiveBackendState = {
   refunds: [],
   projects: [],
   incidents: [],
+  buyerLicences: [],
+  exclusiveRights: [],
+  customizationQuotes: [],
+  scopeChangeRequests: [],
+  payoutQueries: [],
   auditEntries: [],
   auditVerification: null,
 };
@@ -176,6 +186,24 @@ type Ctx = {
   acceptOffer: (offerId: string) => void;
   declineOffer: (offerId: string) => void;
   acceptMilestone: (projectId: string, milestoneId: string) => void;
+  submitMilestoneLive: (
+    projectId: string,
+    milestoneId: string,
+    notes?: string,
+    evidenceRefs?: string[],
+  ) => Promise<void>;
+  rejectMilestoneLive: (
+    projectId: string,
+    milestoneId: string,
+    reason: string,
+  ) => Promise<void>;
+  acceptMilestoneLive: (
+    projectId: string,
+    milestoneId: string,
+    notes?: string,
+  ) => Promise<void>;
+  createPayoutQueryLive: (payoutId: string, question: string) => Promise<void>;
+  replyPayoutQueryLive: (queryId: string, reply: string) => Promise<void>;
   payInvoice: (invoiceId: string) => void;
   openCase: (title: string, body: string, projectId?: string) => void;
   replyCase: (caseId: string, body: string) => void;
@@ -794,19 +822,30 @@ function hydrateDbFromLive(params: {
       let uiStat: Project["milestones"][number]["status"] = "upcoming";
       if (mStat === "accepted") {
         uiStat = "done";
+      } else if (mStat === "submitted") {
+        uiStat = "in_review";
+      } else if (mStat === "reopened" || mStat === "rejected") {
+        uiStat = "in_progress";
+      } else if (mStat === "in_progress") {
+        uiStat = "in_progress";
       } else if (!assignedReview) {
         uiStat = "in_review";
         assignedReview = true;
       } else {
-        uiStat = "in_progress";
+        uiStat = "upcoming";
       }
       return {
         id: String(m.milestone_id),
         title: String(m.title ?? `Milestone ${idx + 1}`),
         status: uiStat,
-        due: new Date(Date.now() + (idx + 1) * 14 * 864e5).toISOString().slice(0, 10),
+        due: m.due_date
+          ? String(m.due_date).slice(0, 10)
+          : new Date(Date.now() + (idx + 1) * 14 * 864e5).toISOString().slice(0, 10),
         acceptedOn: m.accepted_at ? String(m.accepted_at).slice(0, 10) : undefined,
         amount: Number(m.amount ?? 0),
+        evidenceRefs: Array.isArray(m.evidence_refs) ? (m.evidence_refs as string[]) : undefined,
+        submissionNotes: typeof m.submission_notes === "string" ? m.submission_notes : undefined,
+        rejectionReason: typeof m.rejection_reason === "string" ? m.rejection_reason : undefined,
       };
     });
 
@@ -890,6 +929,16 @@ function hydrateDbFromLive(params: {
       rawStatus === "approved" || rawStatus === "paid" || rawStatus === "disbursed"
         ? "paid"
         : "scheduled";
+    const poQueries = live.payoutQueries
+      .filter((q) => String(q.payout_id) === String(po.payout_id))
+      .map((q) => ({
+        id: String(q.query_id),
+        question: String(q.question),
+        reply: typeof q.reply === "string" ? q.reply : undefined,
+        status: (String(q.status) === "answered" ? "answered" : "open") as "open" | "answered",
+        createdAt: String(q.created_at ?? today()).slice(0, 10),
+        repliedAt: q.replied_at ? String(q.replied_at).slice(0, 10) : undefined,
+      }));
     return {
       id: String(po.payout_id),
       partnerId: String(po.partner_id),
@@ -906,32 +955,44 @@ function hydrateDbFromLive(params: {
       createdBy: String(po.created_by ?? ""),
       status,
       date: String(po.approved_at ?? po.created_at ?? today()).slice(0, 10),
+      queries: poQueries,
     };
   });
 
-  // 10. Licences (derived from accepted Commercial Orders & Delivery Milestones)
-  const licences: Licence[] = live.orders.map((ord) => {
-    const linkedOffer = live.offers.find((o) => String(o.offer_id) === String(ord.offer_id));
-    const qty = Number(linkedOffer?.quantity ?? 1);
-    const seats = qty > 1 ? qty : 100;
-    const proj = projects.find((p) => p.orderId === String(ord.order_id));
-    const doneRatio =
-      proj && proj.milestones.length > 0
-        ? proj.milestones.filter((m) => m.status === "done").length / proj.milestones.length
-        : 0.5;
-    const used = Math.max(1, Math.min(seats, Math.round(seats * Math.max(0.25, doneRatio))));
-    return {
-      id: String(ord.order_id),
-      buyerId: String(ord.buyer_id),
-      productId: String(ord.product_id),
-      seats,
-      used,
-      renews: new Date(new Date(String(ord.created_at ?? today())).getTime() + 365 * 864e5)
-        .toISOString()
-        .slice(0, 10),
-      status: "active",
-    };
-  });
+  // 10. Licences (prefer real digital licenses from /delivery/licences, fallback to orders)
+  const licences: Licence[] =
+    live.buyerLicences.length > 0
+      ? live.buyerLicences.map((lic) => ({
+          id: String(lic.licence_id),
+          buyerId: String(lic.buyer_id),
+          productId: String(lic.product_id),
+          seats: Number(lic.seat_count ?? 100),
+          used: Number(lic.seats_allocated ?? 1),
+          renews: String(lic.valid_until ?? today()).slice(0, 10),
+          status: "active",
+        }))
+      : live.orders.map((ord) => {
+          const linkedOffer = live.offers.find((o) => String(o.offer_id) === String(ord.offer_id));
+          const qty = Number(linkedOffer?.quantity ?? 1);
+          const seats = qty > 1 ? qty : 100;
+          const proj = projects.find((p) => p.orderId === String(ord.order_id));
+          const doneRatio =
+            proj && proj.milestones.length > 0
+              ? proj.milestones.filter((m) => m.status === "done").length / proj.milestones.length
+              : 0.5;
+          const used = Math.max(1, Math.min(seats, Math.round(seats * Math.max(0.25, doneRatio))));
+          return {
+            id: String(ord.order_id),
+            buyerId: String(ord.buyer_id),
+            productId: String(ord.product_id),
+            seats,
+            used,
+            renews: new Date(new Date(String(ord.created_at ?? today())).getTime() + 365 * 864e5)
+              .toISOString()
+              .slice(0, 10),
+            status: "active",
+          };
+        });
 
   // 11. Support Cases (derived from Delivery Incidents)
   const cases: SupportCase[] = live.incidents.map((inc, idx) => {
@@ -1145,6 +1206,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             () => safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/projects", []),
             () => safeGet<Array<Record<string, unknown>>>("/bff/v1/finance/delivery/incidents", []),
             () =>
+              isBuyer || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/delivery/licences", [])
+                : Promise.resolve([]),
+            () =>
+              isSeller || isStaff
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/rights/exclusivities", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/customization/quotes", [])
+                : Promise.resolve([]),
+            () =>
+              isBuyer || isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/customization/change-requests", [])
+                : Promise.resolve([]),
+            () =>
               canAudit
                 ? safeGet<{ entries: Array<Record<string, unknown>> }>("/bff/v1/audit/entries?limit=60", {
                     entries: [],
@@ -1185,9 +1262,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           refunds,
           projects,
           incidents,
+          buyerLicences,
+          exclusiveRights,
+          customizationQuotes,
+          scopeChangeRequests,
           auditPage,
           auditVerify,
         ] = batched as [
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
@@ -1245,6 +1330,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           4,
         );
 
+        const payoutQueriesNested = await runBatchedTasks(
+          payouts.slice(0, 15).map((po) => () =>
+            safeGet<Array<Record<string, unknown>>>(
+              `/bff/v1/payouts/${String(po.payout_id)}/queries`,
+              [],
+            ),
+          ),
+          4,
+        );
+
         if (!mountedRef.current) return;
         setLive({
           listings: pubCat.listings,
@@ -1276,6 +1371,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           refunds,
           projects,
           incidents,
+          buyerLicences,
+          exclusiveRights,
+          customizationQuotes,
+          scopeChangeRequests,
+          payoutQueries: payoutQueriesNested.flat(),
           auditEntries: auditPage?.entries ?? [],
           auditVerification: auditVerify,
         });
@@ -1675,13 +1775,61 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     acceptMilestone: (projectId, milestoneId) => {
       runBg(async () => {
         await apiFetch(
-          `/bff/v1/finance/delivery/projects/${projectId}/milestones/${milestoneId}/accept`,
+          `/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/accept`,
           {
             method: "POST",
             body: { notes: "Milestone accepted." },
           },
         );
       });
+    },
+
+    submitMilestoneLive: async (projectId, milestoneId, notes, evidenceRefs) => {
+      setLastError(null);
+      await apiFetch(`/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/submit`, {
+        method: "POST",
+        body: {
+          notes: notes || "Milestone deliverables submitted for review.",
+          evidence_refs: evidenceRefs || [],
+        },
+      });
+      await refreshLive();
+    },
+
+    rejectMilestoneLive: async (projectId, milestoneId, reason) => {
+      setLastError(null);
+      await apiFetch(`/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/reject`, {
+        method: "POST",
+        body: { reason },
+      });
+      await refreshLive();
+    },
+
+    acceptMilestoneLive: async (projectId, milestoneId, notes) => {
+      setLastError(null);
+      await apiFetch(`/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/accept`, {
+        method: "POST",
+        body: { notes: notes || "Milestone deliverables accepted." },
+      });
+      await refreshLive();
+    },
+
+    createPayoutQueryLive: async (payoutId, question) => {
+      setLastError(null);
+      await apiFetch(`/bff/v1/payouts/${payoutId}/queries`, {
+        method: "POST",
+        body: { question },
+      });
+      await refreshLive();
+    },
+
+    replyPayoutQueryLive: async (queryId, reply) => {
+      setLastError(null);
+      await apiFetch(`/bff/v1/payouts/queries/${queryId}/reply`, {
+        method: "POST",
+        body: { reply },
+      });
+      await refreshLive();
     },
 
     payInvoice: (invoiceId) => {
@@ -1790,8 +1938,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
 
-    submitMilestone: () => {
-      void refreshLive();
+    submitMilestone: (projectId, milestoneId) => {
+      runBg(async () => {
+        await apiFetch(
+          `/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/submit`,
+          {
+            method: "POST",
+            body: {
+              notes: "Milestone deliverables submitted for review.",
+              evidence_refs: [],
+            },
+          },
+        );
+      });
     },
 
     confirmShortlist: (requestId, productIds) => {

@@ -209,6 +209,9 @@ export type Project = {
     due: string;
     acceptedOn?: string;
     amount: number;
+    evidenceRefs?: string[];
+    submissionNotes?: string;
+    rejectionReason?: string;
   }[];
 };
 
@@ -251,6 +254,14 @@ export type Payout = {
   createdBy?: string;
   status: "pending_payment" | "scheduled" | "paid";
   date: string;
+  queries?: {
+    id: string;
+    question: string;
+    reply?: string;
+    status: "open" | "answered";
+    createdAt: string;
+    repliedAt?: string;
+  }[];
 };
 
 export type Licence = {

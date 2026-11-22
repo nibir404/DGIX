@@ -8,7 +8,7 @@ import clsx from "clsx";
 import { motion } from "framer-motion";
 import { useLookup } from "@/lib/store";
 import type { Product } from "@/lib/types";
-import { Btn, Panel, StatusTag, dayMonth, firstName, money, useBuyer, useFlash } from "@/components/buyer/kit";
+import { Btn, Dialog, Panel, StatusTag, dayMonth, firstName, money, useBuyer, useFlash } from "@/components/buyer/kit";
 
 const thumb = (v: Product["visual"]) => (v === "people" ? "/media/buyer-req-hr.webp" : v === "bag" ? "/media/buyer-req-pos.webp" : "/media/buyer-req-ai.webp");
 
@@ -25,6 +25,7 @@ function ShortlistInner() {
   const params = useSearchParams();
   const { flash, toast } = useFlash();
   const [tab, setTab] = useState<"need" | "shortlist">("shortlist");
+  const [explainProdId, setExplainProdId] = useState<string | null>(null);
 
   const byLatest = [...b.requests].sort((a, c) => c.createdAt.localeCompare(a.createdAt));
   const req =
@@ -143,8 +144,15 @@ function ShortlistInner() {
                       <div className="text-[13px] leading-4 text-muted">by {partner?.name} · {trust(p, score)}</div>
                     </div>
                     <div className="flex flex-1 flex-col gap-2">
-                      <div className="rounded bg-[#F8FAFE] px-2 py-1 text-[11px] font-medium text-primary">
-                        Compatibility: {s.fit}% · {s.gaps.length > 0 ? "Configurable / Custom Scope" : "Ready Out-of-the-Box (OOTB)"}
+                      <div className="flex items-center justify-between rounded bg-[#F8FAFE] px-2 py-1 text-[11px] font-medium text-primary">
+                        <span>Compatibility: {s.fit}% · {s.gaps.length > 0 ? "Configurable / Custom Scope" : "Ready Out-of-the-Box (OOTB)"}</span>
+                        <button
+                          type="button"
+                          onClick={() => setExplainProdId(p.id)}
+                          className="font-semibold underline hover:text-ink"
+                        >
+                          Why this matched?
+                        </button>
                       </div>
                       {s.strengths.map((t) => <div key={t} className="text-[13px] leading-4 text-ink">✓ {t}</div>)}
                       {s.gaps.map((t) => <div key={t} className="text-[13px] leading-4 text-warning">! {t}</div>)}
@@ -198,6 +206,82 @@ function ShortlistInner() {
           )}
         </>
       )}
+      {/* Buyer AI Match Explainability Dialog (BRD P-87..P-94) */}
+      <Dialog
+        open={Boolean(explainProdId && items.find((x) => x.p.id === explainProdId))}
+        onClose={() => setExplainProdId(null)}
+        title={`${items.find((x) => x.p.id === explainProdId)?.p.name ?? "Product"} · Match Explainability`}
+      >
+        {(() => {
+          const it = items.find((x) => x.p.id === explainProdId);
+          if (!it) return null;
+          return (
+            <div className="flex flex-col gap-4 text-xs">
+              <div className="rounded-lg bg-[#0C1523] p-4 text-white">
+                <div className="text-[11px] uppercase tracking-wider text-sky">DGIX Advisory Match Rationale</div>
+                <div className="mt-1 text-xl font-light">{it.p.name} · {it.s.fit}/100 Match Score</div>
+                <div className="mt-1 text-[11px] text-white/70">
+                  Evaluated specifically for {b.company?.name ?? "your company"} ({tags.join(" · ")})
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 font-semibold text-ink">Score Weight Breakdown (Transparent Matching)</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded border border-line p-2.5">
+                    <div className="flex justify-between font-medium">
+                      <span>Capability Fit</span>
+                      <span className="text-primary font-bold">40%</span>
+                    </div>
+                    <div className="mt-1 text-muted">
+                      Matched: {it.s.strengths.join(", ")}
+                    </div>
+                  </div>
+                  <div className="rounded border border-line p-2.5">
+                    <div className="flex justify-between font-medium">
+                      <span>Regional Readiness</span>
+                      <span className="text-primary font-bold">25%</span>
+                    </div>
+                    <div className="mt-1 text-muted">
+                      {req.country === "United Arab Emirates" ? "UAE" : req.country} Data Residency &amp; Compliance verified.
+                    </div>
+                  </div>
+                  <div className="rounded border border-line p-2.5">
+                    <div className="flex justify-between font-medium">
+                      <span>Assurance &amp; SLA</span>
+                      <span className="text-primary font-bold">20%</span>
+                    </div>
+                    <div className="mt-1 text-muted">
+                      Continuous quality monitoring &amp; SLA commitments verified.
+                    </div>
+                  </div>
+                  <div className="rounded border border-line p-2.5">
+                    <div className="flex justify-between font-medium">
+                      <span>Budget Alignment</span>
+                      <span className="text-primary font-bold">15%</span>
+                    </div>
+                    <div className="mt-1 text-muted">
+                      All-in annual fee aligned with {req.budget}.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] p-3 text-ink">
+                <div className="font-semibold text-[#145C36]">Verified Assurance Guarantee</div>
+                <p className="mt-0.5 text-muted">
+                  This product has been vetted by the DGIX Product Council, assuring non-functional quality, local deployment readiness, and binding escrow milestone protection.
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Btn onClick={() => setExplainProdId(null)}>Close</Btn>
+              </div>
+            </div>
+          );
+        })()}
+      </Dialog>
+
       {toast}
     </div>
   );

@@ -26,6 +26,7 @@ const STAFF_ITEMS: Record<string, Item> = {
   finance: { href: "/admin/finance", label: "Finance & ledger", icon: "card" },
   partners: { href: "/admin/partners", label: "Partners & agreements", icon: "users" },
   contracts: { href: "/admin/contracts", label: "Contracts & templates", icon: "file" },
+  brdOps: { href: "/admin/brd-ops", label: "Ops & customization", icon: "shield" },
 };
 
 export const portalConfig: Record<Role, Config> = {
@@ -95,6 +96,7 @@ export const portalConfig: Record<Role, Config> = {
           STAFF_ITEMS.finance,
           STAFF_ITEMS.partners,
           STAFF_ITEMS.contracts,
+          STAFF_ITEMS.brdOps,
         ],
       },
     ],

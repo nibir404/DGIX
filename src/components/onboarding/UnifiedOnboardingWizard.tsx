@@ -8,6 +8,11 @@ import { apiFetch, hasProhibitedUltimateWording } from "@/lib/api";
 import { portalHome, useStore } from "@/lib/store";
 import type { Category, User } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
+import {
+  CountryPhoneInput,
+  formatE164,
+  validateCountryPhone,
+} from "@/components/ui/CountryPhoneInput";
 
 type Mode = "buy" | "sell";
 type Attachment = { file: File; evidenceType: string; label: string };
@@ -91,6 +96,8 @@ export function UnifiedOnboardingWizard({
   const [companyName, setCompanyName] = useState("");
   const [regNumber, setRegNumber] = useState("");
   const [country, setCountry] = useState(initialMode === "sell" ? "BGD" : "UAE");
+  const [phoneCountry, setPhoneCountry] = useState(initialMode === "sell" ? "BGD" : "UAE");
+  const [mobile, setMobile] = useState("");
   const [city, setCity] = useState(initialMode === "sell" ? "Dhaka" : "Dubai");
   const [website, setWebsite] = useState("");
 
@@ -131,6 +138,11 @@ export function UnifiedOnboardingWizard({
 
   const submitBuyer = async (e: React.FormEvent) => {
     e.preventDefault();
+    const phoneErr = validateCountryPhone(phoneCountry, mobile);
+    if (phoneErr) {
+      setError(phoneErr);
+      return;
+    }
     if (!agree || pwScore < 1 || busy) return;
     setError(null);
     setBusy(true);
@@ -166,6 +178,8 @@ export function UnifiedOnboardingWizard({
     if (s === 1) {
       if (companyName.trim().length < 2) return "Enter your legal company name.";
       if (regNumber.trim().length < 2) return "Enter your company registration or trade license number.";
+      const phoneErr = validateCountryPhone(phoneCountry, mobile);
+      if (phoneErr) return phoneErr;
       if (!alreadySeller) {
         if (fullName.trim().length < 2) return "Enter the primary contact (PAO) full name.";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Enter a valid work email.";
@@ -211,7 +225,7 @@ export function UnifiedOnboardingWizard({
         productName: productName.trim(),
         category,
         tagline: `${deliveryModel} · ${tagline.trim()}`,
-        description: `${description.trim() || tagline.trim()}\nDelivery: ${deliveryModel}\nIP: ${ipOwnership}\nModel: ${commercialModel}${demoUrl ? `\nDemo: ${demoUrl}` : ""}`,
+        description: `${description.trim() || tagline.trim()}\nMobile: ${formatE164(phoneCountry, mobile)}\nDelivery: ${deliveryModel}\nIP: ${ipOwnership}\nModel: ${commercialModel}${demoUrl ? `\nDemo: ${demoUrl}` : ""}`,
         markets,
         priceFrom: numericPrice,
         fullName: fullName.trim(),
@@ -326,7 +340,14 @@ export function UnifiedOnboardingWizard({
             </label>
             <label className="flex flex-col gap-1 text-xs font-medium text-muted">
               Jurisdiction *
-              <select value={country} onChange={(e) => setCountry(e.target.value)} className={INPUT}>
+              <select
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  setPhoneCountry(e.target.value);
+                }}
+                className={INPUT}
+              >
                 {COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.label}
@@ -335,6 +356,13 @@ export function UnifiedOnboardingWizard({
               </select>
             </label>
           </div>
+          <CountryPhoneInput
+            countryCode={phoneCountry}
+            onCountryChange={setPhoneCountry}
+            value={mobile}
+            onChange={setMobile}
+            label="Mobile number (country-specific) *"
+          />
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">
             Company registration / trade license no. (unlocks verified-buyer catalogue)
             <input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} className={INPUT} placeholder="e.g. DED-90831" />
@@ -403,7 +431,14 @@ export function UnifiedOnboardingWizard({
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-medium text-muted">
                     Jurisdiction *
-                    <select value={country} onChange={(e) => setCountry(e.target.value)} className={INPUT}>
+                    <select
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  setPhoneCountry(e.target.value);
+                }}
+                className={INPUT}
+              >
                       {COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code}>
                           {c.label}
@@ -440,6 +475,14 @@ export function UnifiedOnboardingWizard({
                     </label>
                   </div>
                 )}
+
+                <CountryPhoneInput
+                  countryCode={phoneCountry}
+                  onCountryChange={setPhoneCountry}
+                  value={mobile}
+                  onChange={setMobile}
+                  label="Primary contact / PAO mobile number *"
+                />
 
                 <div className="rounded-lg border border-dashed border-line bg-[#F8FAFD] p-3.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">

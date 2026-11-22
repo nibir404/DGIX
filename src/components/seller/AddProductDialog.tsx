@@ -5,6 +5,11 @@ import clsx from "clsx";
 import { Dialog } from "@/components/buyer/kit";
 import { Button } from "@/components/portal/ui";
 import { Icon } from "@/components/ui/Icon";
+import {
+  CountryPhoneInput,
+  formatE164,
+  validateCountryPhone,
+} from "@/components/ui/CountryPhoneInput";
 import { hasProhibitedUltimateWording } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import type { Category } from "@/lib/types";
@@ -58,12 +63,15 @@ export function AddProductDialog({
     sla: "99.9% uptime · 60m P1 response",
   });
   const [markets, setMarkets] = useState<string[]>(["UAE"]);
+  const [phoneCountry, setPhoneCountry] = useState("BGD");
+  const [supportMobile, setSupportMobile] = useState("");
   const [attachments, setAttachments] = useState<{ file: File; evidenceType: string }[]>([]);
 
   const price = Number(f.price.replace(/[^0-9]/g, "")) || 0;
   const prohibited = hasProhibitedUltimateWording(f.name, f.tagline, f.description);
+  const phoneErr = validateCountryPhone(phoneCountry, supportMobile);
   const step1Ok = f.name.trim().length > 1 && f.tagline.trim().length > 2 && !prohibited;
-  const step2Ok = markets.length > 0 && price > 0;
+  const step2Ok = markets.length > 0 && price > 0 && !phoneErr;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +80,7 @@ export function AddProductDialog({
       name: f.name.trim(),
       category: f.category,
       tagline: `${f.deliveryModel} · ${f.tagline.trim()}`,
-      description: `${f.description.trim() || f.tagline.trim()}\nDelivery: ${f.deliveryModel}\nSLA: ${f.sla}`,
+      description: `${f.description.trim() || f.tagline.trim()}\nDelivery: ${f.deliveryModel}\nSLA: ${f.sla}\nSupport Mobile: ${formatE164(phoneCountry, supportMobile)}`,
       markets,
       priceFrom: price,
       attachments,
@@ -162,6 +170,13 @@ export function AddProductDialog({
                 <input value={f.sla} onChange={(e) => setF({ ...f, sla: e.target.value })} className={clsx(FIELD, "h-11")} />
               </label>
             </div>
+            <CountryPhoneInput
+              countryCode={phoneCountry}
+              onCountryChange={setPhoneCountry}
+              value={supportMobile}
+              onChange={setSupportMobile}
+              label="Product owner / support mobile number *"
+            />
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1.5 text-[13px] font-medium">Target markets *</legend>
               <div className="flex flex-wrap gap-2">

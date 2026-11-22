@@ -6,6 +6,11 @@ import { useStore } from "@/lib/store";
 import { Btn, Dialog, Panel } from "@/components/buyer/kit";
 import { Head, Pill } from "@/components/seller/kit";
 import { useFlash } from "@/components/admin/kit";
+import {
+  CountryPhoneInput,
+  formatE164,
+  validateCountryPhone,
+} from "@/components/ui/CountryPhoneInput";
 
 type CatalogControl = { catalog_open: boolean; reason: string | null };
 type BuyerVer = { buyer_id: string; company_name: string; country_code: string; status: string };
@@ -47,6 +52,8 @@ export default function AdminBrdOpsPage() {
   const [legalName, setLegalName] = useState("");
   const [regNo, setRegNo] = useState("");
   const [country, setCountry] = useState("BGD");
+  const [phoneCountry, setPhoneCountry] = useState("BGD");
+  const [partnerMobile, setPartnerMobile] = useState("");
   const [director, setDirector] = useState("");
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
@@ -130,6 +137,11 @@ export default function AdminBrdOpsPage() {
   };
 
   const submitAssisted = async () => {
+    const phoneErr = validateCountryPhone(phoneCountry, partnerMobile);
+    if (phoneErr) {
+      flash(phoneErr);
+      return;
+    }
     setBusy(true);
     try {
       await apiFetch("/bff/v1/partners/assisted", {
@@ -138,13 +150,14 @@ export default function AdminBrdOpsPage() {
           legal_name: legalName.trim(),
           registration_number: regNo.trim(),
           country_code: country.trim().toUpperCase(),
-          product_summary: summary.trim(),
+          product_summary: `${summary.trim()} [Contact mobile: ${formatE164(phoneCountry, partnerMobile)}]`,
           directors: [{ full_name: director.trim(), country_code: country.trim().toUpperCase(), role_title: "Director" }],
         },
       });
       setAssistedOpen(false);
       setLegalName("");
       setRegNo("");
+      setPartnerMobile("");
       setDirector("");
       setSummary("");
       flash("Assisted partner onboarding submitted (requires a second approver)");
@@ -322,10 +335,17 @@ export default function AdminBrdOpsPage() {
           <input placeholder="Registration number" value={regNo} onChange={(e) => setRegNo(e.target.value)} className="rounded-lg border border-[#DCE4F2] px-3 py-2 text-sm text-ink" />
           <input placeholder="Country code (e.g. BGD, UAE)" value={country} onChange={(e) => setCountry(e.target.value)} className="rounded-lg border border-[#DCE4F2] px-3 py-2 text-sm text-ink" />
           <input placeholder="Managing director full name" value={director} onChange={(e) => setDirector(e.target.value)} className="rounded-lg border border-[#DCE4F2] px-3 py-2 text-sm text-ink" />
+          <CountryPhoneInput
+            countryCode={phoneCountry}
+            onCountryChange={setPhoneCountry}
+            value={partnerMobile}
+            onChange={setPartnerMobile}
+            label="Partner primary mobile number *"
+          />
           <textarea rows={3} placeholder="Product & capability summary" value={summary} onChange={(e) => setSummary(e.target.value)} className="rounded-lg border border-[#DCE4F2] px-3 py-2 text-sm text-ink" />
           <div className="flex justify-end gap-2 pt-2">
             <Btn variant="outline" onClick={() => setAssistedOpen(false)}>Cancel</Btn>
-            <Btn disabled={busy || !legalName || !regNo || !director || !summary} onClick={() => void submitAssisted()}>Submit assisted record</Btn>
+            <Btn disabled={busy || !legalName || !regNo || !director || !summary || !!validateCountryPhone(phoneCountry, partnerMobile)} onClick={() => void submitAssisted()}>Submit assisted record</Btn>
           </div>
         </div>
       </Dialog>

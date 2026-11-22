@@ -6,12 +6,29 @@ import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import clsx from "clsx";
 import { Icon } from "@/components/ui/Icon";
+import {
+  CountryPhoneInput,
+  formatE164,
+  validateCountryPhone,
+} from "@/components/ui/CountryPhoneInput";
 import { submitPublicInquiry } from "@/lib/api";
 import { useLookup, useStore } from "@/lib/store";
 import { Toast } from "@/components/portal/ui";
 
 const COUNTRIES = ["United Arab Emirates", "Saudi Arabia", "Qatar", "Kuwait", "Bahrain", "Oman", "United States", "Bangladesh", "Malaysia", "United Kingdom", "Other"];
 const COUNTRY_ALIAS: Record<string, string> = { UAE: "United Arab Emirates", USA: "United States", US: "United States", KSA: "Saudi Arabia", UK: "United Kingdom" };
+const COUNTRY_TO_ISO: Record<string, string> = {
+  "United Arab Emirates": "UAE",
+  "Saudi Arabia": "SAU",
+  Qatar: "QAT",
+  Kuwait: "KWT",
+  Bahrain: "BHR",
+  Oman: "OMN",
+  "United States": "USA",
+  Bangladesh: "BGD",
+  Malaysia: "MYS",
+  "United Kingdom": "GBR",
+};
 
 type Mode = "buy" | "sell";
 
@@ -25,6 +42,8 @@ export function ContactForm() {
 
   const [mode, setMode] = useState<Mode>(params.get("role") === "seller" ? "sell" : "buy");
   const [f, setF] = useState({ name: "", email: "", company: "", country: "United Arab Emirates", need: "" });
+  const [phoneCountry, setPhoneCountry] = useState("UAE");
+  const [mobile, setMobile] = useState("");
   const [sent, setSent] = useState<null | { ref?: string }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,16 +66,26 @@ export function ContactForm() {
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setError(null);
-    setF((p) => ({ ...p, [k]: e.target.value }));
+    const val = e.target.value;
+    setF((p) => ({ ...p, [k]: val }));
+    if (k === "country" && COUNTRY_TO_ISO[val]) {
+      setPhoneCountry(COUNTRY_TO_ISO[val]);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const phoneErr = validateCountryPhone(phoneCountry, mobile);
+    if (phoneErr) {
+      setError(phoneErr);
+      return;
+    }
     setError(null);
+    const formattedPhone = formatE164(phoneCountry, mobile);
     if (user?.role === "buyer" && mode === "buy") {
       const firstLine = f.need.split(/[.\n]/)[0].trim().slice(0, 80) || "New request from contact form";
-      const req = createRequest({ title: firstLine, need: f.need, country: f.country, budget: "45000", users: "250", goLive: "6 weeks" });
+      const req = createRequest({ title: firstLine, need: `${f.need}\n[Mobile: ${formattedPhone}]`, country: f.country, budget: "45000", users: "250", goLive: "6 weeks" });
       setSent({ ref: req.ref });
       setToast(true);
       setTimeout(() => setToast(false), 3200);
@@ -70,7 +99,7 @@ export function ContactForm() {
         email: f.email.trim(),
         company: f.company.trim(),
         country: f.country,
-        need: f.need.trim(),
+        need: `${f.need.trim()} [Mobile: ${formattedPhone}]`,
       });
       setSent({ ref: res.reference });
       setToast(true);
@@ -132,6 +161,16 @@ export function ContactForm() {
                 </div>
               </Field>
             </div>
+            <CountryPhoneInput
+              countryCode={phoneCountry}
+              onCountryChange={setPhoneCountry}
+              value={mobile}
+              onChange={(v) => {
+                setError(null);
+                setMobile(v);
+              }}
+              label="Mobile number *"
+            />
             <Field label={mode === "buy" ? "What do you need?" : "What do you sell?"}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.textarea

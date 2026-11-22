@@ -24,17 +24,19 @@ function strength(p: string) {
 const LABEL = ["Too short", "Weak password", "Fair password", "Strong password", "Very strong password"];
 
 const COUNTRIES = [
-  { code: "BGD", label: "Bangladesh", dial: "+880" },
-  { code: "UAE", label: "United Arab Emirates", dial: "+971" },
-  { code: "KSA", label: "Saudi Arabia", dial: "+966" },
-  { code: "QAT", label: "Qatar", dial: "+974" },
-  { code: "OMN", label: "Oman", dial: "+968" },
-  { code: "KWT", label: "Kuwait", dial: "+965" },
-  { code: "BHR", label: "Bahrain", dial: "+973" },
-  { code: "USA", label: "United States", dial: "+1" },
-  { code: "GBR", label: "United Kingdom", dial: "+44" },
-  { code: "SGP", label: "Singapore", dial: "+65" },
-  { code: "MYS", label: "Malaysia", dial: "+60" },
+  { code: "BGD", label: "Bangladesh", dial: "+880", flag: "🇧🇩" },
+  { code: "UAE", label: "United Arab Emirates", dial: "+971", flag: "🇦🇪" },
+  { code: "KSA", label: "Saudi Arabia", dial: "+966", flag: "🇸🇦" },
+  { code: "QAT", label: "Qatar", dial: "+974", flag: "🇶🇦" },
+  { code: "OMN", label: "Oman", dial: "+968", flag: "🇴🇲" },
+  { code: "KWT", label: "Kuwait", dial: "+965", flag: "🇰🇼" },
+  { code: "BHR", label: "Bahrain", dial: "+973", flag: "🇧🇭" },
+  { code: "MYS", label: "Malaysia", dial: "+60", flag: "🇲🇾" },
+  { code: "SGP", label: "Singapore", dial: "+65", flag: "🇸🇬" },
+  { code: "USA", label: "United States", dial: "+1", flag: "🇺🇸" },
+  { code: "GBR", label: "United Kingdom", dial: "+44", flag: "🇬🇧" },
+  { code: "CAN", label: "Canada", dial: "+1", flag: "🇨🇦" },
+  { code: "AUS", label: "Australia", dial: "+61", flag: "🇦🇺" },
 ];
 
 export function CreateAccountForm() {
@@ -57,10 +59,13 @@ export function CreateAccountForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdUser, setCreatedUser] = useState<User | null>(null);
+
   const s = strength(f.password);
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email);
-  const phoneOk = f.phone.trim().length >= 6;
+  const phoneClean = f.phone.replace(/[^0-9]/g, "");
+  const phoneOk = phoneClean.length >= 6;
   const companyOk = entityType === "INDIVIDUAL" || f.company.trim().length >= 2;
+  const tradeLicenseOk = entityType === "INDIVIDUAL" || tradeLicenseFile !== null;
 
   const handleCountryChange = (countryCode: string) => {
     const match = COUNTRIES.find((c) => c.code === countryCode);
@@ -74,6 +79,12 @@ export function CreateAccountForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agree || s < 1 || busy || !phoneOk || !companyOk) return;
+
+    if (entityType === "COMPANY" && !tradeLicenseFile) {
+      setError("Please upload your company trade license or incorporation document.");
+      return;
+    }
+
     setError(null);
     setBusy(true);
     try {
@@ -82,7 +93,7 @@ export function CreateAccountForm() {
         full_name: f.name.trim(),
         email: f.email.trim(),
         password: f.password,
-        phone_number: f.phone.trim(),
+        phone_number: `${f.dialCode} ${f.phone.trim()}`,
         dial_code: f.dialCode,
         entity_type: entityType,
         company_name: entityType === "COMPANY" ? f.company.trim() : f.name.trim(),
@@ -103,7 +114,11 @@ export function CreateAccountForm() {
       <div className="flex items-center gap-[10px]">
         <div className="h-1 grow basis-0 rounded-lg bg-primary" />
         <div className="relative h-1 grow basis-0 overflow-hidden rounded-lg bg-mist">
-          <motion.div className="absolute inset-y-0 left-0 bg-primary" animate={{ width: step === 2 ? "100%" : "0%" }} transition={{ duration: 0.5 }} />
+          <motion.div
+            className="absolute inset-y-0 left-0 bg-primary"
+            animate={{ width: step === 2 ? "100%" : "0%" }}
+            transition={{ duration: 0.5 }}
+          />
         </div>
         <span className="text-[13px] leading-4 text-muted">Step {step} of 2</span>
       </div>
@@ -130,15 +145,15 @@ export function CreateAccountForm() {
             </div>
 
             {/* Buyer vs Seller Toggle */}
-            <div className="flex rounded-full bg-mist p-1">
+            <div className="flex rounded-full bg-mist p-1 border border-line/60">
               {(["buy", "sell"] as Mode[]).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
                   className={clsx(
-                    "relative flex h-10 grow basis-0 items-center justify-center text-sm leading-[18px]",
-                    mode === m ? "font-semibold text-ink" : "font-medium text-muted",
+                    "relative flex h-10 grow basis-0 items-center justify-center text-sm leading-[18px] transition-colors",
+                    mode === m ? "font-semibold text-ink" : "font-medium text-muted hover:text-ink",
                   )}
                 >
                   {mode === m && (
@@ -148,54 +163,58 @@ export function CreateAccountForm() {
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
-                  <span className="relative">{m === "buy" ? "I'm buying" : "I'm selling"}</span>
+                  <span className="relative flex items-center gap-1.5">
+                    <Icon name={m === "buy" ? "briefcase" : "cube"} size={14} className={mode === m ? "text-primary" : "text-muted"} />
+                    {m === "buy" ? "I'm buying" : "I'm selling"}
+                  </span>
                 </button>
               ))}
             </div>
 
             {/* Entity Type Toggle: Company vs Individual */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted">Registration Entity Type</span>
-              <div className="flex rounded-lg border border-line bg-mist p-1">
-                {(["COMPANY", "INDIVIDUAL"] as EntityType[]).map((et) => (
-                  <button
-                    key={et}
-                    type="button"
-                    onClick={() => setEntityType(et)}
-                    className={clsx(
-                      "relative flex h-8 grow basis-0 items-center justify-center text-xs transition-colors",
-                      entityType === et ? "font-semibold text-ink" : "font-medium text-muted",
-                    )}
-                  >
-                    {entityType === et && (
-                      <motion.span
-                        layoutId="entity-toggle"
-                        className="absolute inset-0 rounded-md bg-white shadow-sm"
-                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                      />
-                    )}
-                    <span className="relative flex items-center gap-1.5">
-                      <Icon name={et === "COMPANY" ? "briefcase" : "user"} size={13} />
-                      {et === "COMPANY" ? "Company / Corporate" : "Individual Person"}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-ink">Account Entity Type</span>
+                <span className="text-[11px] text-muted font-medium">
+                  {entityType === "COMPANY" ? "Corporate KYB required" : "Phone & email only"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-line bg-mist p-1">
+                {(["COMPANY", "INDIVIDUAL"] as EntityType[]).map((et) => {
+                  const active = entityType === et;
+                  return (
+                    <button
+                      key={et}
+                      type="button"
+                      onClick={() => setEntityType(et)}
+                      className={clsx(
+                        "relative flex h-9 items-center justify-center gap-1.5 rounded-md text-xs font-semibold transition-all",
+                        active
+                          ? "bg-white text-ink shadow-sm border border-line/70"
+                          : "text-muted hover:text-ink",
+                      )}
+                    >
+                      <Icon name={et === "COMPANY" ? "briefcase" : "user"} size={13} className={active ? "text-primary" : "text-muted"} />
+                      <span>{et === "COMPANY" ? "Company / Corporate" : "Individual Person"}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Name & Company */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Full name">
-                <input
-                  required
-                  autoComplete="name"
-                  value={f.name}
-                  onChange={(e) => setF({ ...f, name: e.target.value })}
-                  placeholder="e.g. Tanvir Hasan"
-                  className={inputCls}
-                />
-              </Field>
-              {entityType === "COMPANY" ? (
+            {/* Names & Company */}
+            {entityType === "COMPANY" ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Authorized representative">
+                  <input
+                    required
+                    autoComplete="name"
+                    value={f.name}
+                    onChange={(e) => setF({ ...f, name: e.target.value })}
+                    placeholder="e.g. Tanvir Hasan"
+                    className={inputCls}
+                  />
+                </Field>
                 <Field label="Company legal name">
                   <input
                     required
@@ -206,106 +225,149 @@ export function CreateAccountForm() {
                     className={inputCls}
                   />
                 </Field>
-              ) : (
-                <Field label="Profession / Title (Optional)">
-                  <input
-                    value={f.company}
-                    onChange={(e) => setF({ ...f, company: e.target.value })}
-                    placeholder="e.g. Independent Consultant"
-                    className={inputCls}
-                  />
-                </Field>
-              )}
-            </div>
-
-            {/* Email & Country */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Work email">
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={f.email}
-                    onChange={(e) => setF({ ...f, email: e.target.value })}
-                    placeholder="name@company.com"
-                    className={inputCls + " pr-10"}
-                  />
-                  {emailOk && <Icon name="check" size={18} strokeWidth={1.75} className="absolute right-3 top-1/2 -translate-y-1/2 text-success" />}
-                </div>
-              </Field>
-              <Field label="Jurisdiction / Country">
-                <select
-                  value={f.country}
-                  onChange={(e) => handleCountryChange(e.target.value)}
+              </div>
+            ) : (
+              <Field label="Full name">
+                <input
+                  required
+                  autoComplete="name"
+                  value={f.name}
+                  onChange={(e) => setF({ ...f, name: e.target.value })}
+                  placeholder="e.g. Tanvir Hasan"
                   className={inputCls}
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.label} ({c.dial})
-                    </option>
-                  ))}
-                </select>
+                />
               </Field>
-            </div>
+            )}
 
-            {/* Phone Number with Country Dial Code */}
-            <Field label="Mobile phone number">
-              <div className="flex gap-2">
-                <select
-                  value={f.dialCode}
-                  onChange={(e) => setF({ ...f, dialCode: e.target.value })}
-                  className={clsx(inputCls, "w-28 shrink-0 font-mono text-xs")}
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.dial}>
-                      {c.dial} ({c.code})
-                    </option>
-                  ))}
-                </select>
+            {/* Email Address */}
+            <Field label={entityType === "COMPANY" ? "Work email address" : "Email address"}>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={f.email}
+                  onChange={(e) => setF({ ...f, email: e.target.value })}
+                  placeholder={entityType === "COMPANY" ? "tanvir@company.com" : "tanvir@example.com"}
+                  className={clsx(inputCls, "pr-10")}
+                />
+                {emailOk && (
+                  <Icon
+                    name="check"
+                    size={18}
+                    strokeWidth={2}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-success"
+                  />
+                )}
+              </div>
+            </Field>
+
+            {/* Mobile Phone Number with Country Dial Code */}
+            <Field
+              label="Mobile phone number"
+              aside={
+                <span className="text-[11px] text-muted font-normal">
+                  Code & number required
+                </span>
+              }
+            >
+              <div className="flex h-[52px] w-full items-center rounded-lg border border-line bg-white transition-shadow focus-within:border-[1.5px] focus-within:border-primary focus-within:shadow-[0_0_0_4px_#7FB6FF4D]">
+                <div className="relative flex h-full shrink-0 items-center border-r border-line bg-mist/60 rounded-l-lg hover:bg-mist transition-colors">
+                  <select
+                    value={f.country}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    aria-label="Country dial code"
+                    className="h-full pl-3 pr-7 text-[13px] font-semibold text-ink bg-transparent outline-none cursor-pointer appearance-none"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.dial} ({c.code})
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-2 text-muted">
+                    <Icon name="chevronDown" size={13} />
+                  </span>
+                </div>
                 <input
                   type="tel"
                   required
                   autoComplete="tel"
                   value={f.phone}
                   onChange={(e) => setF({ ...f, phone: e.target.value.replace(/[^0-9\s-]/g, "") })}
-                  placeholder="1712345678"
-                  className={clsx(inputCls, "grow")}
+                  placeholder={f.dialCode === "+880" ? "01712 345678" : "50 123 4567"}
+                  className="h-full min-w-0 flex-1 bg-transparent px-4 text-[15px] font-medium text-ink outline-none placeholder:text-muted/50 placeholder:font-normal"
                 />
               </div>
             </Field>
 
-            {/* Conditional Trade License Upload */}
+            {/* Conditional Trade License Upload vs Individual Notice */}
             {entityType === "COMPANY" ? (
-              <Field label="Company Trade License / Incorporation document">
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-line bg-[#FAFBFD] p-3 text-center transition-colors hover:border-primary/50">
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => setTradeLicenseFile(e.target.files?.[0] ?? null)}
-                    className="sr-only"
-                  />
-                  {tradeLicenseFile ? (
-                    <div className="flex items-center gap-2 text-xs font-medium text-ink">
-                      <span className="flex size-6 items-center justify-center rounded bg-[#E6F4EC] text-success">
-                        <Icon name="check" size={13} strokeWidth={2.5} />
-                      </span>
-                      <span className="truncate max-w-[260px]">{tradeLicenseFile.name}</span>
-                      <span className="text-[11px] text-muted">({Math.round(tradeLicenseFile.size / 1024)} KB)</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-1 text-xs font-semibold text-primary">
-                        <Icon name="upload" size={14} /> Upload Trade License / Certificate
+              <Field
+                label="Company Trade License / Incorporation document"
+                aside={
+                  <span className="text-[11px] text-primary font-semibold">
+                    Statutory KYB
+                  </span>
+                }
+              >
+                <div className="flex flex-col gap-2">
+                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-line bg-[#FAFBFD] p-3.5 text-center transition-colors hover:border-primary/50 hover:bg-mist/30">
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        setTradeLicenseFile(file);
+                        if (file) setError(null);
+                      }}
+                      className="sr-only"
+                    />
+                    {tradeLicenseFile ? (
+                      <div className="flex w-full items-center justify-between gap-3 px-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded bg-[#E6F4EC] text-success">
+                            <Icon name="check" size={14} strokeWidth={2.5} />
+                          </span>
+                          <div className="text-left min-w-0">
+                            <p className="truncate text-xs font-semibold text-ink max-w-[240px]">
+                              {tradeLicenseFile.name}
+                            </p>
+                            <p className="text-[10px] text-muted">
+                              {(tradeLicenseFile.size / 1024).toFixed(1)} KB · Ready to submit
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setTradeLicenseFile(null);
+                          }}
+                          className="text-[11px] font-semibold text-danger hover:underline shrink-0"
+                        >
+                          Change
+                        </button>
                       </div>
-                      <p className="text-[11px] text-muted">PDF, PNG or JPG up to 10MB (Statutory corporate KYB)</p>
-                    </div>
-                  )}
-                </label>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                          <Icon name="upload" size={15} /> Upload Trade License / Certificate
+                        </div>
+                        <p className="text-[11px] text-muted">PDF, PNG or JPG up to 10MB (Required for company account)</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
               </Field>
             ) : (
-              <div className="rounded-lg border border-[#D0E2FF] bg-[#F2F6FE] px-3 py-2 text-xs text-[#0F4C81]">
-                <strong>Individual Account:</strong> Phone number and email verification are sufficient. No corporate trade license required.
+              <div className="flex items-start gap-2.5 rounded-lg border border-[#D0E2FF] bg-[#F2F6FE] px-3.5 py-2.5 text-xs text-[#0F4C81]">
+                <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[#0F4C81] text-white text-[10px] font-bold mt-0.5">
+                  ✓
+                </span>
+                <p className="leading-[17px]">
+                  <strong>Individual Account:</strong> Phone number and email verification are sufficient. No corporate trade license required.
+                </p>
               </div>
             )}
 
@@ -346,7 +408,7 @@ export function CreateAccountForm() {
               </span>
             </label>
 
-            <PrimaryButton disabled={!agree || f.password.length < 8 || !phoneOk || !companyOk || busy}>
+            <PrimaryButton disabled={!agree || f.password.length < 8 || !phoneOk || !companyOk || !tradeLicenseOk || busy}>
               {busy ? "Creating account..." : "Create account"} <Icon name="arrowRight" size={18} strokeWidth={1.75} />
             </PrimaryButton>
 

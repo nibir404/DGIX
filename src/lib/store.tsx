@@ -871,12 +871,12 @@ function hydrateDbFromLive(params: {
   const payouts: Payout[] = live.payouts.map((po) => {
     const pay = live.payments.find((p) => String(p.payment_id) === String(po.payment_id));
     const inv = live.invoices.find((i) => String(i.order_id) === String(po.order_id));
-    const gross = pay ? Number(pay.amount ?? 0) : Number(po.amount ?? 0);
-    const net = Number(po.amount ?? 0);
+    const rawWholesale = Number(po.amount ?? 0);
     const holdPct = pay ? Number(pay.dispute_hold_pct ?? 0) : 0.05;
-    const wholesale = pay ? Number(pay.wholesale_amount ?? net) : net;
-    const holdAmt = Math.round(wholesale * holdPct);
-    const fee = Math.max(0, Math.round(gross - net));
+    const holdAmt = Math.round(rawWholesale * holdPct);
+    const gross = pay ? Number(pay.amount ?? 0) : (rawWholesale + 8000);
+    const fee = Math.max(0, Math.round(gross - rawWholesale));
+    const net = Math.max(0, rawWholesale - holdAmt);
     const rawStatus = String(po.status ?? "pending_approval");
     const status: Payout["status"] =
       rawStatus === "approved" || rawStatus === "paid" || rawStatus === "disbursed"
@@ -1047,11 +1047,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const batched = await runBatchedTasks<unknown>(
           [
             () =>
-              isStaff || isSeller
+              isStaff || isSeller || isBuyer
                 ? safeGet<Array<Record<string, unknown>>>("/bff/v1/partners", [])
                 : Promise.resolve([]),
             () =>
-              isStaff || isSeller
+              isStaff || isSeller || isBuyer
                 ? safeGet<Array<Record<string, unknown>>>("/bff/v1/products", [])
                 : Promise.resolve([]),
             () =>

@@ -104,7 +104,11 @@ export function ProjectDetail({ project }: { project: Project }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-[18px] font-medium leading-[22px] text-ink">{current ? (current.status === "in_review" ? `Review ${current.title.toLowerCase()}` : current.title) : "All milestones accepted"}</div>
             <div className="text-[13px] leading-4 text-muted">
-              {current?.status === "in_review" ? `Submitted by ${partner?.name}` : current ? `${partner?.name} is working on it` : `Delivered by ${partner?.name}`}
+              {current?.status === "in_review"
+                ? `Submitted by ${partner?.name || "Verified Partner"}`
+                : current
+                  ? `${partner?.name || "Verified Partner"} is working on it`
+                  : `Delivered by ${partner?.name || "DGIX Delivery & Partner"}`}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">

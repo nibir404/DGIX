@@ -22,6 +22,7 @@ function BillingInner() {
   const params = useSearchParams();
   const { flash, toast } = useFlash();
   const [paying, setPaying] = useState<Invoice | null>(null);
+  const [receiptInv, setReceiptInv] = useState<Invoice | null>(null);
   const justPaid = params.get("paid") === "1";
 
   useEffect(() => {
@@ -177,7 +178,11 @@ function BillingInner() {
                     <span className={clsx("whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", s.c)}>{s.t}</span>
                   </div>
                   <div className="flex flex-1 basis-0 items-center justify-end gap-2.5">
-                    {isDue && <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>}
+                    {isDue ? (
+                      <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>
+                    ) : (
+                      <button onClick={() => setReceiptInv(i)} className="inline-flex h-[30px] items-center rounded-lg border border-[#CBD7EE] bg-white px-2.5 text-xs font-medium text-ink hover:bg-mist">Receipt</button>
+                    )}
                     <span className={clsx("text-right text-[15px] leading-[18px] text-ink", isDue && "font-semibold")}>{money(i.amount)}</span>
                   </div>
                 </div>
@@ -220,7 +225,46 @@ function BillingInner() {
       </div>
 
       <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Pay invoice · ${paying?.ref ?? ""}`}>
-        {paying && (
+        {receiptInv && (
+        <Dialog open onClose={() => setReceiptInv(null)} title={`Tax Receipt · ${receiptInv.ref}`}>
+          <div className="flex flex-col gap-4 text-sm text-ink">
+            <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] p-4 text-[#145C36]">
+              <div className="font-semibold text-base">Payment Confirmed & Verified</div>
+              <div className="text-xs text-[#2A724A] mt-0.5">Transaction has been cleared through official DGIX escrow gateway.</div>
+            </div>
+            <div className="flex flex-col gap-2 rounded-lg bg-[#F8FAFC] p-4 text-xs">
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Invoice Ref:</span>
+                <span className="font-mono font-medium">{receiptInv.ref}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Amount Paid:</span>
+                <span className="font-bold text-sm text-night">{money(receiptInv.amount)} {receiptInv.currency}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Paid Date:</span>
+                <span>{receiptInv.paidOn ? dayMonth(receiptInv.paidOn) : "Today"}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Payment Channel:</span>
+                <span className="uppercase font-medium">{receiptInv.gateway || "Stripe / Regional Bank"}</span>
+              </div>
+              {receiptInv.einvoiceClearanceId && (
+                <div className="flex justify-between py-1">
+                  <span className="text-muted">E-Invoice Clearance ID:</span>
+                  <span className="font-mono">{receiptInv.einvoiceClearanceId}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Btn variant="outline" onClick={() => window.print()}>Print Receipt</Btn>
+              <Btn onClick={() => setReceiptInv(null)}>Close</Btn>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {paying && (
           <div className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between">
               <div className="text-sm text-muted">{projName(paying.projectId)} · {paying.milestone}</div>

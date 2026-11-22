@@ -319,6 +319,35 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
               </Link>
             )}
+            <div className="flex items-center rounded-lg border border-line bg-white p-0.5 text-xs font-semibold shadow-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("dgix_lang", "en");
+                    window.dispatchEvent(new Event("dgix_lang_change"));
+                  }
+                }}
+                className="rounded px-2 py-1 text-night hover:bg-mist"
+                title="English"
+              >
+                EN
+              </button>
+              <span className="text-line">|</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("dgix_lang", "bn");
+                    window.dispatchEvent(new Event("dgix_lang_change"));
+                  }
+                }}
+                className="rounded px-2 py-1 text-muted hover:text-night hover:bg-mist"
+                title="বাংলা (Bangla)"
+              >
+                বাং
+              </button>
+            </div>
             <NotificationBell count={unread} />
             <AccountMenu />
           </div>

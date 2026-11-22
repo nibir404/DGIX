@@ -51,15 +51,15 @@ export const portalConfig: Record<Role, Config> = {
     ],
   },
   seller: {
-    primary: { label: "+ Add product", href: "/seller/products?new=1" },
+    primary: { label: "+ Register Software", href: "/seller/products?new=1" },
     search: "Search leads, orders, payouts",
     groups: [
       {
         items: [
           { href: "/seller", label: "Home", icon: "home" },
-          { href: "/seller/products", label: "Products & passport", icon: "box" },
-          { href: "/seller/verification", label: "Verification", icon: "shield", badge: (db, c) => db.products.filter((p) => p.partnerId === c && p.status === "in_review").flatMap((p) => p.checks.filter((x) => x.score < x.max)).length },
-          { href: "/seller/leads", label: "Leads & demos", icon: "users", badge: (db, c) => db.demos.filter((d) => db.products.find((p) => p.id === d.productId)?.partnerId === c && d.status !== "done").length },
+          { href: "/seller/products", label: "Software & Passports", icon: "box" },
+          { href: "/seller/verification", label: "Verification & Evidence (9 Docs)", icon: "shield", badge: (db, c) => db.products.filter((p) => p.partnerId === c && p.status === "in_review").flatMap((p) => p.checks.filter((x) => x.score < x.max)).length },
+          { href: "/seller/leads", label: "Leads & Demos", icon: "users", badge: (db, c) => db.demos.filter((d) => db.products.find((p) => p.id === d.productId)?.partnerId === c && d.status !== "done").length },
         ],
       },
       {

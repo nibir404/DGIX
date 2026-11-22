@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 /* DGIX design tokens — mirrored from the Paper file "Design System v2" */
@@ -21,9 +22,9 @@
   --color-glow-amber: #ffd58a;
   --color-haze: #aebbd6;
 
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-display: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --text-display: 104px;
   --text-display--line-height: 104px;

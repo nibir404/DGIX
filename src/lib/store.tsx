@@ -52,6 +52,8 @@ export interface LiveBackendState {
   approvals: Array<Record<string, unknown>>;
   countryReadiness: Array<Record<string, unknown>>;
   agreements: Array<Record<string, unknown>>;
+  contracts: Array<Record<string, unknown>>;
+  contractTemplates: Array<Record<string, unknown>>;
   costFloors: Array<Record<string, unknown>>;
   priceLists: Array<Record<string, unknown>>;
   requirements: Array<Record<string, unknown>>;
@@ -90,6 +92,8 @@ const EMPTY_LIVE: LiveBackendState = {
   approvals: [],
   countryReadiness: [],
   agreements: [],
+  contracts: [],
+  contractTemplates: [],
   costFloors: [],
   priceLists: [],
   requirements: [],
@@ -1091,6 +1095,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/rights/agreements", [])
                 : Promise.resolve([]),
             () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/contracts", [])
+                : Promise.resolve([]),
+            () =>
+              isStaff || isSeller
+                ? safeGet<Array<Record<string, unknown>>>("/bff/v1/contract-templates", [])
+                : Promise.resolve([]),
+            () =>
               isStaff
                 ? safeGet<Array<Record<string, unknown>>>("/bff/v1/commercial/pricing/cost-floors", [])
                 : Promise.resolve([]),
@@ -1153,6 +1165,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           approvals,
           countryReadiness,
           agreements,
+          contracts,
+          contractTemplates,
           costFloors,
           priceLists,
           requirements,
@@ -1170,6 +1184,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           auditPage,
           auditVerify,
         ] = batched as [
+          Array<Record<string, unknown>>,
+          Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
           Array<Record<string, unknown>>,
@@ -1240,6 +1256,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           approvals,
           countryReadiness,
           agreements,
+          contracts,
+          contractTemplates,
           costFloors,
           priceLists,
           requirements,

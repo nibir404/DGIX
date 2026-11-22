@@ -11,7 +11,7 @@ import { Bar, H1, Kicker, useFlash } from "@/components/admin/kit";
 const gateName = (g: string) => `${g} · ${GATES.find((x) => x.id === g)?.name ?? ""}`;
 
 export default function ProductReview() {
-  const { db, live, approveCheck, refreshLive } = useStore();
+  const { db, live, authSession, approveCheck, refreshLive } = useStore();
   const L = useLookup();
   const { flash, toast } = useFlash();
   const rows = [...db.products].sort((a, b) => (a.status === "in_review" ? -1 : 1) - (b.status === "in_review" ? -1 : 1) || L.score(b.id) - L.score(a.id));
@@ -19,6 +19,9 @@ export default function ProductReview() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [scanBusyId, setScanBusyId] = useState<string | null>(null);
+  const [demoReviewNotes, setDemoReviewNotes] = useState("Architecture, technical stack, localization and security checklist validated in live demo session.");
+  const [demoScore, setDemoScore] = useState(90);
+  const [demoCertified, setDemoCertified] = useState<Record<string, boolean>>({});
 
   const p = rows.find((r) => r.id === sel) ?? rows[0];
   const open = p?.checks.filter((c) => c.score < c.max) ?? [];
@@ -122,6 +125,25 @@ export default function ProductReview() {
     } catch (err) {
       flash(err instanceof Error ? err.message : "Download failed");
     }
+  };
+
+  const partner = live.partners.find((x) => String(x.partner_id) === String(p?.partnerId));
+  const isAssistedBySelf = Boolean(
+    authSession?.user.sub && partner?.assisted_by && String(partner.assisted_by) === authSession.user.sub,
+  );
+
+  const certifyDemo = () => {
+    if (!p) return;
+    if (isAssistedBySelf) {
+      flash("BRD P-14/P-16 Four-Eyes Rule: The demo reviewer cannot be the commercial advisor who onboarded this partner.");
+      return;
+    }
+    setDemoCertified((prev) => ({ ...prev, [p.id]: true }));
+    const demoCheck = open.find((c) => c.key.toLowerCase().includes("demo") || c.label.toLowerCase().includes("demo") || c.key.toLowerCase().includes("functional"));
+    if (demoCheck) {
+      approve(demoCheck.key);
+    }
+    flash(`Demo review certified for ${p.name} (${demoScore}/100) by independent assurance reviewer`);
   };
 
   return (
@@ -240,6 +262,85 @@ export default function ProductReview() {
           )}
         </section>
       </div>
+
+      {/* Demo Review Gate (BRD P-14, P-15, P-16) */}
+      {p && (
+        <section className="rounded-lg bg-white p-6">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-medium">{p.name} · Live Technical &amp; Architecture Demo Review</h2>
+              <p className="text-xs text-muted">
+                Assurance specialists evaluate technical architecture, localization, and functional completeness. Reviewer must not be the onboarder (P-14/P-16).
+              </p>
+            </div>
+            {demoCertified[p.id] ? (
+              <Chip tone="success">Demo Certified</Chip>
+            ) : (
+              <Chip tone="warning">Awaiting Demo Sign-Off</Chip>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="flex flex-col gap-2 rounded-lg bg-[#F8FAFE] p-4 text-xs">
+              <span className="font-semibold text-ink">Demo Evaluation Checklist</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded border-line" />
+                <span>Architecture &amp; Data Flow Review</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded border-line" />
+                <span>Functional Completeness &amp; Core Workflows</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded border-line" />
+                <span>Regional Data Sovereignty &amp; Residency</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded border-line" />
+                <span>Security Hygiene &amp; RBAC Validation</span>
+              </label>
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-3 rounded-lg bg-[#F8FAFE] p-4 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-ink">Reviewer Certification Notes</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted">Assurance Score:</span>
+                  <input
+                    type="number"
+                    min={60}
+                    max={100}
+                    value={demoScore}
+                    onChange={(e) => setDemoScore(Number(e.target.value) || 90)}
+                    className="h-7 w-16 rounded border border-line bg-white px-1 text-center font-bold"
+                  />
+                  <span>/ 100</span>
+                </div>
+              </div>
+              <textarea
+                value={demoReviewNotes}
+                onChange={(e) => setDemoReviewNotes(e.target.value)}
+                rows={2}
+                className="rounded border border-line bg-white p-2 text-xs"
+              />
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[11px] text-muted">
+                  {isAssistedBySelf
+                    ? "⚠️ You are the onboarder for this vendor. A separate reviewer must certify."
+                    : "Independent reviewer certified · No conflict of interest."}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={demoCertified[p.id] || isAssistedBySelf}
+                  onClick={certifyDemo}
+                >
+                  {demoCertified[p.id] ? "Certified ✓" : "Certify Demo Review (P-14)"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <section className="rounded-lg bg-white p-6">

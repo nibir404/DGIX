@@ -13,6 +13,43 @@ export default function GovernanceAndAuditPage() {
   const [triggerSeverity, setTriggerSeverity] = useState<"high" | "critical">("critical");
   const [triggerSummary, setTriggerSummary] = useState("CVE-2026-41902 critical auth bypass reported in upstream dependency");
   const [selectedProdForTrigger, setSelectedProdForTrigger] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(true);
+  const [catalogControlReason, setCatalogControlReason] = useState<string | null>(null);
+
+  const toggleCatalogKillSwitch = async (action: "close" | "reopen") => {
+    const reason = window.prompt(
+      action === "close"
+        ? "Enter reason for emergency catalogue closure (BRD V-03):"
+        : "Enter reason for reopening catalogue:",
+    );
+    if (!reason || reason.trim().length < 5) {
+      flash("Action cancelled: a valid reason (min 5 chars) is required.");
+      return;
+    }
+    setBusy("catalog-control");
+    try {
+      const endpoint =
+        action === "close"
+          ? "/bff/v1/commercial/catalog/emergency-close"
+          : "/bff/v1/commercial/catalog/reopen";
+      const res = await apiFetch<{ catalog_open: boolean; reason: string }>(endpoint, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setCatalogOpen(res.catalog_open);
+      setCatalogControlReason(res.reason);
+      flash(
+        res.catalog_open
+          ? "Public catalogue reopened successfully"
+          : "Emergency kill-switch activated · Public catalogue closed (BRD V-03)",
+      );
+      await refreshLive();
+    } catch (err) {
+      flash(err instanceof Error ? err.message : "Failed to toggle catalogue control");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const castCouncilVote = async (assessment: Record<string, unknown>, countryCode = "UAE") => {
     const assId = String(assessment.assessment_id);
@@ -255,40 +292,40 @@ export default function GovernanceAndAuditPage() {
 
           <section className="rounded-lg bg-white p-6">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">Continuous Assurance Alert</h2>
-              <Chip tone="danger">Suspends listing on critical</Chip>
+              <h2 className="text-lg font-medium">Emergency Catalogue Control</h2>
+              <Chip tone={catalogOpen ? "success" : "danger"}>
+                {catalogOpen ? "Catalogue Open" : "Emergency Closed (V-03)"}
+              </Chip>
             </div>
-            <form onSubmit={fireAssuranceTrigger} className="flex flex-col gap-2.5 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={selectedProdForTrigger}
-                  onChange={(e) => setSelectedProdForTrigger(e.target.value)}
-                  className="h-9 rounded border border-line bg-white px-2"
-                >
-                  {live.products.map((p) => (
-                    <option key={String(p.product_id)} value={String(p.product_id)}>
-                      {String(p.name)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={triggerSeverity}
-                  onChange={(e) => setTriggerSeverity(e.target.value as "high" | "critical")}
-                  className="h-9 rounded border border-line bg-white px-2"
-                >
-                  <option value="critical">Critical security advisory (Suspends listing)</option>
-                  <option value="high">High SLA warning</option>
-                </select>
+            <p className="mb-3 text-xs text-muted">
+              Platform-wide emergency kill-switch to immediately freeze or restore public software distribution with recorded audit justification.
+            </p>
+            {catalogControlReason && (
+              <div className="mb-3 rounded bg-[#FEF2F2] p-2 text-xs text-danger">
+                <strong>Reason:</strong> {catalogControlReason}
               </div>
-              <input
-                value={triggerSummary}
-                onChange={(e) => setTriggerSummary(e.target.value)}
-                className="h-9 rounded border border-line px-2.5"
-              />
-              <Button type="submit" size="sm" variant="outline" disabled={busy === "trigger"}>
-                {busy === "trigger" ? "Recording..." : "Record assurance alert"}
-              </Button>
-            </form>
+            )}
+            <div className="flex gap-2">
+              {catalogOpen ? (
+                <button
+                  type="button"
+                  disabled={busy === "catalog-control"}
+                  onClick={() => void toggleCatalogKillSwitch("close")}
+                  className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-2 text-xs font-semibold text-danger hover:bg-danger hover:text-white"
+                >
+                  {busy === "catalog-control" ? "Processing..." : "Emergency Close Catalogue (Kill-Switch)"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy === "catalog-control"}
+                  onClick={() => void toggleCatalogKillSwitch("reopen")}
+                  className="rounded-lg border border-success/40 bg-success/10 px-4 py-2 text-xs font-semibold text-success hover:bg-success hover:text-white"
+                >
+                  {busy === "catalog-control" ? "Processing..." : "Reopen Public Catalogue"}
+                </button>
+              )}
+            </div>
           </section>
         </div>
       </div>

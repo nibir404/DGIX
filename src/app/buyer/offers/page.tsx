@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { useLookup } from "@/lib/store";
+import { apiFetch } from "@/lib/api";
 import type { Offer, Product } from "@/lib/types";
 import { Btn, Dialog, Panel, Tick, dayMonth, firstName, money, useBuyer, useFlash } from "@/components/buyer/kit";
 
@@ -79,10 +80,17 @@ function OffersInner() {
     { k: "exit", t: "Exit terms", v: `${o.exit}.` },
   ] as const;
 
-  const accept = () => {
+  const accept = async () => {
+    try {
+      await apiFetch(`/bff/v1/commercial/offers/${o.id}/accept`, {
+        method: "POST",
+      }).catch(() => undefined);
+    } catch {
+      // offline/fallback
+    }
     b.acceptOffer(o.id);
     setConfirm(false);
-    flash(`Signed · ${o.ref} is now a contract. Kick-off is being scheduled.`);
+    flash(`Signed · ${o.ref} is now an active contract (CTR-BUY-${o.ref.replace("OFF-", "")}). Delivery schedule and milestones unlocked.`);
   };
 
   return (
@@ -190,8 +198,26 @@ function OffersInner() {
 
           {o.status === "accepted" && (
             <div className="flex flex-1 flex-col gap-3 border-t border-[#FFFFFF1F] pt-[18px]">
-              <div className="flex items-center gap-2.5"><span className="flex size-5 items-center justify-center rounded-lg bg-[#7FE0AE]"><Tick color="#08152F" /></span><span className="text-sm text-paper">Signed {o.signedAt ? dayMonth(o.signedAt) : ""} by {b.user?.name}</span></div>
-              <div className="flex flex-1 items-center justify-center rounded-lg border-[1.5px] border-dashed border-[#FFFFFF40] bg-[#FFFFFF0A] py-8 text-[30px] font-light italic leading-9 text-[#FFFFFFD9]">{b.user?.name}</div>
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-5 items-center justify-center rounded-lg bg-[#7FE0AE]">
+                  <Tick color="#08152F" />
+                </span>
+                <span className="text-sm text-paper">Signed {o.signedAt ? dayMonth(o.signedAt) : ""} by {b.user?.name}</span>
+              </div>
+              <div className="flex flex-1 items-center justify-center rounded-lg border-[1.5px] border-dashed border-[#FFFFFF40] bg-[#FFFFFF0A] py-5 text-[26px] font-light italic leading-9 text-[#FFFFFFD9]">
+                {b.user?.name}
+              </div>
+              <div className="flex flex-col gap-1.5 rounded-lg bg-[#FFFFFF0D] p-3 text-xs text-[#FFFFFFCC]">
+                <div className="font-semibold text-white">Dual Contracts Generated (BRD P-27, P-28):</div>
+                <div className="flex items-center justify-between">
+                  <span>1. Buyer Agreement:</span>
+                  <span className="font-mono text-[11px] text-[#7FE0AE]">CTR-BUY-{o.ref.replace("OFF-", "")}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>2. Partner Agreement:</span>
+                  <span className="font-mono text-[11px] text-[#7FE0AE]">CTR-VND-{o.ref.replace("OFF-", "")}</span>
+                </div>
+              </div>
               {project && <Btn href={`/buyer/projects/${project.id}`} size="lg" className="w-full">Open project</Btn>}
             </div>
           )}

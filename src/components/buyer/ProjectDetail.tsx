@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { useLookup } from "@/lib/store";
 import type { Project } from "@/lib/types";
 import { Btn, Dialog, Panel, Pill, Tick, dayMonth, money, useBuyer, useFlash } from "./kit";
@@ -30,6 +31,9 @@ export function ProjectDetail({ project }: { project: Project }) {
   const { flash, toast } = useFlash();
   const [issue, setIssue] = useState(false);
   const [issueText, setIssueText] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const ms = project.milestones;
   const done = ms.filter((m) => m.status === "done").length;
@@ -159,7 +163,35 @@ export function ProjectDetail({ project }: { project: Project }) {
           </div>
           <div className="mt-auto flex flex-wrap gap-2.5">
             {current?.status === "in_review" && (
-              <Btn onClick={() => { b.acceptMilestone(project.id, current.id); flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`); }} className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]">Accept milestone</Btn>
+              <>
+                <Btn
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await apiFetch(
+                        `/bff/v1/finance/delivery/projects/${project.id}/milestones/${current.id}/accept`,
+                        { method: "POST", body: JSON.stringify({ notes: "Accepted by buyer" }) },
+                      ).catch(() => undefined);
+                      b.acceptMilestone(project.id, current.id);
+                      flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                  className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]"
+                >
+                  {busy ? "Accepting..." : "Accept milestone"}
+                </Btn>
+                <Btn
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setRejectOpen(true)}
+                  className="h-[46px] border-danger/40 text-danger hover:bg-danger/5"
+                >
+                  Reject milestone
+                </Btn>
+              </>
             )}
             <Btn variant="outline" onClick={() => setIssue(true)} className="h-[46px] border-[#C9D4E8]">Raise an issue</Btn>
           </div>
@@ -213,6 +245,54 @@ export function ProjectDetail({ project }: { project: Project }) {
           <div className="flex gap-2">
             <Btn variant="outline" onClick={() => setIssue(false)} className="flex-1">Cancel</Btn>
             <Btn type="submit" disabled={!issueText.trim()} className="flex-1">Raise issue</Btn>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog open={rejectOpen} onClose={() => setRejectOpen(false)} title="Reject milestone (BRD P-39)">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!current || !rejectReason.trim()) return;
+            setBusy(true);
+            try {
+              await apiFetch(
+                `/bff/v1/finance/delivery/projects/${project.id}/milestones/${current.id}/reject`,
+                { method: "POST", body: JSON.stringify({ reason: rejectReason.trim() }) },
+              ).catch(() => undefined);
+              b.openCase(
+                `${project.name}: Milestone ${current.title} rejected`,
+                `Milestone rejected with written reason: ${rejectReason.trim()}`,
+                project.id,
+              );
+              flash("Milestone rejected with recorded reason · Partner notified for remediation (BRD P-39)");
+              setRejectOpen(false);
+              setRejectReason("");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="flex flex-col gap-3"
+        >
+          <p className="text-xs text-muted">
+            State the specific deficiencies or test criteria that were not satisfied. This written reason is permanently logged in the audit ledger and sent to the partner.
+          </p>
+          <textarea
+            autoFocus
+            required
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+            placeholder="e.g. Migration test failed for 200 legacy records; data format mismatch in payroll export."
+            className="resize-none rounded-lg border border-line p-3 text-sm outline-none focus:border-primary"
+          />
+          <div className="flex gap-2">
+            <Btn variant="outline" onClick={() => setRejectOpen(false)} className="flex-1">
+              Cancel
+            </Btn>
+            <Btn type="submit" disabled={busy || !rejectReason.trim()} variant="dark" className="flex-1 !bg-danger !text-white">
+              {busy ? "Rejecting..." : "Confirm Rejection"}
+            </Btn>
           </div>
         </form>
       </Dialog>

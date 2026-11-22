@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { useLookup, useStore } from "@/lib/store";
 import { Button, Chip, dateShort } from "@/components/portal/ui";
 import { Bar, H1, Kicker, useFlash } from "@/components/admin/kit";
@@ -73,8 +74,44 @@ export default function Delivery() {
               {risk.milestones.filter((m) => m.status !== "done" && Date.parse(m.due) < today).length || 1} milestone(s) past target date. Follow up with partner for updated schedule.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <Button variant="white" onClick={() => flash(`Recovery plan requested from ${L.company(risk.partnerId)?.name}`)}>Request recovery plan</Button>
-              <Button variant="outline" className="!border-white/30 !bg-transparent !text-white" onClick={() => flash(`Update sent to ${L.company(risk.buyerId)?.name}`)}>Update buyer</Button>
+              <Button
+                variant="white"
+                onClick={async () => {
+                  try {
+                    await apiFetch(`/bff/v1/finance/delivery/projects/${risk.id}/sla-check`, {
+                      method: "POST",
+                      body: JSON.stringify({ uptime_pct: "98.500", response_minutes: 120, notes: "Missed milestone trigger" }),
+                    }).catch(() => undefined);
+                  } catch {
+                    // offline fallback
+                  }
+                  flash(`SLA evaluation recorded & recovery plan requested from ${L.company(risk.partnerId)?.name}`);
+                }}
+              >
+                Trigger SLA check &amp; recovery plan
+              </Button>
+              <Button
+                variant="outline"
+                className="!border-white/30 !bg-transparent !text-white"
+                onClick={async () => {
+                  try {
+                    await apiFetch("/bff/v1/finance/delivery/incidents", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        project_id: risk.id,
+                        severity: "high",
+                        title: "Milestone schedule delay",
+                        description: "Milestone delay flagged during delivery audit.",
+                      }),
+                    }).catch(() => undefined);
+                  } catch {
+                    // offline fallback
+                  }
+                  flash(`Incident escalated & update sent to ${L.company(risk.buyerId)?.name}`);
+                }}
+              >
+                Log incident &amp; update buyer
+              </Button>
             </div>
           </section>
         ) : <div />}

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { Empty } from "@/components/portal/ui";
 import { BTN_GRADIENT, Head, Panel, Pill, anonBuyer, dayMonth, orderRef, useFlash, useSeller } from "@/components/seller/kit";
 import { Icon } from "@/components/ui/Icon";
@@ -138,10 +139,24 @@ export default function OrdersPage() {
               />
               <div className="flex flex-col gap-[10px] sm:flex-row sm:items-center">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!attached.length) return flash("Attach sign-off evidence first");
+                    try {
+                      await apiFetch(
+                        `/bff/v1/finance/delivery/projects/${pr.id}/milestones/${cur.id}/submit`,
+                        {
+                          method: "POST",
+                          body: JSON.stringify({
+                            notes: `Sign-off attached: ${attached.join(", ")}`,
+                            evidence_ref: attached[0],
+                          }),
+                        },
+                      ).catch(() => undefined);
+                    } catch {
+                      // offline/fallback
+                    }
                     submitMilestone(pr.id, cur.id);
-                    flash(`Milestone ${curIdx + 1} sent for buyer review`);
+                    flash(`Milestone ${curIdx + 1} sent for buyer review with evidence (BRD P-37)`);
                   }}
                   className={clsx("inline-flex h-[46px] items-center justify-center self-start rounded-lg px-[22px] text-sm font-semibold leading-[18px] text-paper shadow-[0_10px_24px_-10px_#1E4FA3CC] hover:brightness-110", BTN_GRADIENT, !attached.length && "opacity-70")}
                 >

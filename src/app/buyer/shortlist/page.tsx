@@ -143,6 +143,9 @@ function ShortlistInner() {
                       <div className="text-[13px] leading-4 text-muted">by {partner?.name} · {trust(p, score)}</div>
                     </div>
                     <div className="flex flex-1 flex-col gap-2">
+                      <div className="rounded bg-[#F8FAFE] px-2 py-1 text-[11px] font-medium text-primary">
+                        Compatibility: {s.fit}% · {s.gaps.length > 0 ? "Configurable / Custom Scope" : "Ready Out-of-the-Box (OOTB)"}
+                      </div>
                       {s.strengths.map((t) => <div key={t} className="text-[13px] leading-4 text-ink">✓ {t}</div>)}
                       {s.gaps.map((t) => <div key={t} className="text-[13px] leading-4 text-warning">! {t}</div>)}
                     </div>

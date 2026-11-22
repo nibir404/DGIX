@@ -6,6 +6,7 @@ import { apiFetch, hasProhibitedUltimateWording } from "@/lib/api";
 import { useLookup, useStore } from "@/lib/store";
 import { Button, Chip, Empty } from "@/components/portal/ui";
 import { Checkbox, H1, Kicker, useFlash } from "@/components/admin/kit";
+import { Dialog } from "@/components/buyer/kit";
 import { Icon } from "@/components/ui/Icon";
 
 const tile: Record<string, string> = {
@@ -30,6 +31,7 @@ export default function MatchingDesk() {
   const [pubTitle, setPubTitle] = useState("");
   const [pubDesc, setPubDesc] = useState("");
   const [selectedApprovalId, setSelectedApprovalId] = useState("");
+  const [fitDetailProdId, setFitDetailProdId] = useState<string | null>(null);
 
   const ranked = useMemo(() => (req ? [...req.shortlist].sort((a, b) => b.fit - a.fit) : []), [req]);
 
@@ -196,6 +198,13 @@ export default function MatchingDesk() {
                         </div>
                         <span className="w-10 text-center text-[22px] font-light">{s.fit}</span>
                         <span className="hidden w-20 text-right text-[13px] sm:block">${Math.round((p?.priceFrom ?? 0) / 1000)}k / yr</span>
+                        <button
+                          type="button"
+                          onClick={() => setFitDetailProdId(s.productId)}
+                          className="rounded border border-primary/30 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary hover:text-white"
+                        >
+                          Fit &amp; Scope
+                        </button>
                       </motion.li>
                     );
                   })}
@@ -268,6 +277,76 @@ export default function MatchingDesk() {
           </Button>
         </form>
       </section>
+
+      {/* Fit Check & Customization Scope Breakdown (BRD P-57..P-67) */}
+      <Dialog
+        open={Boolean(fitDetailProdId && ranked.find((s) => s.productId === fitDetailProdId))}
+        onClose={() => setFitDetailProdId(null)}
+        title={`${L.product(fitDetailProdId ?? "")?.name ?? "Product"} · Fit Check & Customization Breakdown`}
+      >
+        {(() => {
+          const s = ranked.find((x) => x.productId === fitDetailProdId);
+          if (!s) return null;
+          return (
+            <div className="flex flex-col gap-4 text-xs">
+              <div className="flex items-center justify-between rounded-lg bg-[#F8FAFE] p-3">
+                <div>
+                  <div className="text-sm font-semibold text-ink">Capability Compatibility: {s.fit}%</div>
+                  <div className="text-muted">Target buyer: {buyer?.name} ({req?.country})</div>
+                </div>
+                <Chip tone={s.fit >= 90 ? "success" : "warning"}>
+                  {s.fit >= 90 ? "High Compatibility" : "Customization Required"}
+                </Chip>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] p-3">
+                  <div className="font-semibold text-[#145C36] mb-1">Out-of-the-Box (OOTB) Strengths</div>
+                  <ul className="list-disc pl-4 space-y-1 text-ink">
+                    {(s.strengths ?? []).map((st, i) => (
+                      <li key={i}>{st}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-lg border border-[#FFE2AE] bg-[#FFF6E5] p-3">
+                  <div className="font-semibold text-warning mb-1">Custom Engineering Gaps (P-62)</div>
+                  <ul className="list-disc pl-4 space-y-1 text-ink">
+                    {(s.gaps ?? []).length === 0 ? (
+                      <li>No custom engineering gaps identified. OOTB configuration ready.</li>
+                    ) : (
+                      (s.gaps ?? []).map((gp, i) => (
+                        <li key={i}>{gp}</li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-lg bg-mist/60 p-3">
+                <div className="font-semibold text-ink">Custom Engineering Scope &amp; Timeline (BRD P-64..P-66)</div>
+                <div className="flex items-center justify-between border-b border-line pb-1.5">
+                  <span>Custom Integration Adapter:</span>
+                  <span className="font-mono font-medium">+$4,500 USD · 2 Sprints (4 weeks)</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-line pb-1.5">
+                  <span>Local Compliance &amp; Language Pack:</span>
+                  <span className="font-mono font-medium">+$2,000 USD · 1 Sprint (2 weeks)</span>
+                </div>
+                <div className="flex items-center justify-between text-ink font-semibold pt-1">
+                  <span>Total Scope Adjustment:</span>
+                  <span className="text-primary font-bold">+$6,500 USD · 6 weeks</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button size="sm" onClick={() => setFitDetailProdId(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+      </Dialog>
 
       {toast}
     </div>

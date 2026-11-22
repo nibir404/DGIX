@@ -7,7 +7,7 @@ import { Empty } from "@/components/portal/ui";
 import { Bars, Head, NIGHT_BANNER, Panel, Pill, dayMonth, lastSixMonths, orderRef, useSeller } from "@/components/seller/kit";
 
 export default function PayoutsPage() {
-  const { db, payouts } = useSeller();
+  const { db, company, payouts } = useSeller();
 
   const label = (p: Payout) => {
     const inv = db.invoices.find((i) => i.id === p.invoiceId);
@@ -89,6 +89,40 @@ export default function PayoutsPage() {
               <div className="text-[11px] font-normal text-muted">
                 Gross {fmtMoney(p.gross)} − Fee {fmtMoney(p.fee)}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const advice = [
+                    "============================================================",
+                    "DGIX REMITTANCE ADVICE & PAYOUT STATEMENT",
+                    "============================================================",
+                    `Payout Reference: PAY-${p.id.slice(0, 8).toUpperCase()}`,
+                    `Date: ${p.date}`,
+                    `Beneficiary: ${company?.name ?? "Partner"}`,
+                    `Order / Milestone: ${label(p)}`,
+                    `Status: ${p.status.toUpperCase()}`,
+                    "",
+                    "BREAKDOWN:",
+                    `Gross Invoice Amount:     ${fmtMoney(p.gross)}`,
+                    `DGIX Platform Fee:        − ${fmtMoney(p.fee)}`,
+                    `Contractual Reserve (5%): − ${fmtMoney(p.disputeHold ?? 0)}`,
+                    "------------------------------------------------------------",
+                    `NET BANK DISBURSEMENT:    ${fmtMoney(p.net)}`,
+                    "============================================================",
+                    "Disbursed via UAE Central Bank Direct Wire Settlement.",
+                  ].join("\n");
+                  const blob = new Blob([advice], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `payout-advice-${p.id.slice(0, 8)}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="mt-1 text-[11px] font-medium text-primary hover:underline block"
+              >
+                Download Advice (BRD P-76)
+              </button>
             </div>
           </div>
         ))}

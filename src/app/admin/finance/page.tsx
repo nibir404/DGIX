@@ -268,9 +268,22 @@ export default function Finance() {
                       Gross {fmtMoney(po.gross)} − Fee {fmtMoney(po.fee)} · {dateShort(po.date)}
                     </div>
                   </div>
-                  <Chip tone={st === "paid" ? "success" : st === "scheduled" ? "info" : "draft"} dot={false}>
-                    {st === "paid" ? "Released" : st === "scheduled" ? "Pending release" : st}
-                  </Chip>
+                  <div className="flex items-center gap-1.5">
+                    <Chip tone={st === "paid" ? "success" : st === "scheduled" ? "info" : "draft"} dot={false}>
+                      {st === "paid" ? "Released" : st === "scheduled" ? "Pending release" : st}
+                    </Chip>
+                    {st === "scheduled" && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          approvePayouts([po.id]);
+                          flash(`Disbursement ${po.id.slice(0, 8)} approved and released to partner bank.`);
+                        }}
+                      >
+                        Release
+                      </Button>
+                    )}
+                  </div>
                   <span className="w-20 text-right text-sm font-semibold">{fmtMoney(po.net)}</span>
                 </div>
               );

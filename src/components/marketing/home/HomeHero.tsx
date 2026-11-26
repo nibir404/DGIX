@@ -10,6 +10,7 @@ import { SiteNav } from "@/components/marketing/SiteNav";
 import { Icon } from "@/components/ui/Icon";
 
 import dynamic from "next/dynamic";
+import { T } from "@/lib/i18n";
 
 const Globe = dynamic(() => import("@/components/marketing/globe/GlobeLines"), { ssr: false });
 
@@ -46,15 +47,27 @@ export function HomeHero() {
       {/* Foreground: everything centred */}
       <div className="pointer-events-none relative z-10 mx-auto flex min-h-[calc(100%-104px)] max-w-[980px] flex-col items-center justify-center gap-7 px-4 pb-10 pt-6 text-center sm:px-6 md:gap-8 md:pb-[150px]">
         <h1 ref={headline} className="text-[44px] leading-[46px] sm:text-[64px] sm:leading-[66px] md:text-[84px] md:leading-[86px] lg:text-[100px] lg:leading-[100px] font-light tracking-[-0.05em]">
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">Built in Bangladesh.</span></span>
-          <span className="hl-line block overflow-hidden pb-2"><span className="block">For the world.</span></span>
+          <span className="hl-line block overflow-hidden pb-2"><span className="block"><T>Built in Bangladesh.</T></span></span>
+          <span className="hl-line block overflow-hidden pb-2"><span className="block"><T>For the world.</T></span></span>
         </h1>
         <p className="hero-fade max-w-[620px] text-[17px] leading-[26px] text-white/75 sm:text-[19px] sm:leading-[29px]">
-          <span className="font-medium text-white">A Daffodil Group initiative</span> to take promising Bangladeshi technology to global buyers, and bring global expertise and opportunity back to Bangladesh.
+          <span className="font-medium text-white"><T>A Daffodil Group initiative</T></span><T>{" to take promising Bangladeshi technology to global buyers, and bring global expertise and opportunity back to Bangladesh."}</T>
         </p>
         <div className="pointer-events-auto flex w-full flex-col items-center gap-5">
           <div ref={barRef} className="hero-fade flex w-full justify-center">
             <NeedBar />
+          </div>
+          {/* Quick searches: one tap to a real need */}
+          <div className="hero-fade -mt-1 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[14px] text-white/60">
+            <span><T>Try</T></span>
+            {["HR & payroll", "Clinic billing", "AI document reading", "School management"].map((q, i) => (
+              <span key={q} className="flex items-center gap-2">
+                {i > 0 && <span aria-hidden className="text-white/30">·</span>}
+                <Link href={`/search?q=${encodeURIComponent(q)}`} className="text-white/85 underline-offset-4 hover:text-white hover:underline">
+                  <T>{q}</T>
+                </Link>
+              </span>
+            ))}
           </div>
           {/* Partner CTAs */}
           <div className="hero-fade flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
@@ -62,7 +75,7 @@ export function HomeHero() {
               href="/apply"
               className="group inline-flex h-14 items-center justify-center gap-3 rounded-lg bg-white pl-6 pr-2 text-[16px] font-semibold text-night shadow-[0_18px_40px_-14px_rgba(127,182,255,0.55)] transition-transform duration-200 active:scale-[0.97]"
             >
-              Become a partner
+              <T>Become a partner</T>
               <span className="flex size-10 items-center justify-center rounded-full bg-primary text-white transition-transform duration-300 group-hover:rotate-45">
                 <Icon name="arrowUpRight" size={14} strokeWidth={2.2} />
               </span>
@@ -71,7 +84,7 @@ export function HomeHero() {
               href="/apply?from=sell"
               className="inline-flex h-14 items-center justify-center rounded-lg border border-white/25 bg-white/10 px-7 text-[16px] font-semibold text-white backdrop-blur transition-[background-color,transform] duration-200 hover:bg-white/16 active:scale-[0.97]"
             >
-              Sell with us
+              <T>Sell with us</T>
             </Link>
           </div>
           {/* Compact film button for phones and tablets; large screens get the thumbnail card */}
@@ -79,7 +92,7 @@ export function HomeHero() {
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-primary transition-transform group-hover:scale-105">
               <Icon name="play" size={13} />
             </span>
-            <span className="text-[15px] font-medium">Watch how DGIX works</span>
+            <span className="text-[15px] font-medium"><T>Watch how DGIX works</T></span>
             <span className="font-mono text-[13px] text-sky">1:10</span>
           </button>
         </div>
@@ -103,8 +116,8 @@ export function HomeHero() {
           <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 font-mono text-[10px] leading-4 text-white">1:10</span>
         </span>
         <span className="flex min-w-0 flex-col gap-1">
-          <span className="text-[15px] font-semibold leading-5">How DGIX works</span>
-          <span className="text-[13px] leading-[18px] text-haze">From request to go-live, in one minute.</span>
+          <span className="text-[15px] font-semibold leading-5"><T>How DGIX works</T></span>
+          <span className="text-[13px] leading-[18px] text-haze"><T>From request to go-live, in one minute.</T></span>
         </span>
       </button>
 

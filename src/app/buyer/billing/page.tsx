@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useLookup } from "@/lib/store";
 import type { Invoice } from "@/lib/types";
 import { Btn, Dialog, Panel, daysUntil, dayMonth, money, useBuyer, useFlash } from "@/components/buyer/kit";
+import { downloadCsv, stamp } from "@/lib/csv";
 
 const statusChip = (i: Invoice) =>
   i.status === "due" ? { t: `Due ${dayMonth(i.due)}`, c: "bg-[#FFF3DC] text-warning" }
@@ -39,13 +40,11 @@ export default function Billing() {
   const max = Math.max(1, ...months.map((m) => m.v));
 
   const exportCsv = () => {
-    const rows = [["Invoice", "For", "Status", "Amount (USD)", "Due", "Paid on"], ...list.map((i) => [i.ref, `${projName(i.projectId)} · ${i.milestone}`, i.status, String(i.amount), i.due, i.paidOn ?? ""])];
-    const url = URL.createObjectURL(new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dgix-statement-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      `dgix-statement-${stamp()}`,
+      ["Invoice", "For", "Status", "Amount (USD)", "Due", "Paid on"],
+      list.map((i) => [i.ref, `${projName(i.projectId)} · ${i.milestone}`, i.status, i.amount, i.due, i.paidOn ?? ""]),
+    );
     flash("Statement exported");
   };
 

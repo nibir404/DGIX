@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Reveal, Stagger, staggerItem } from "@/components/marketing/Reveal";
 import { Panel, Eyebrow, H2 } from "./shared";
+import { T } from "@/lib/i18n";
 
 const tiles = [
   { c: "education", k: "Education", t: "EduVAS · AI Professor", d: "Education management and teaching. Also: Student360 and Alumni360." },
@@ -21,8 +22,8 @@ export function Solutions() {
     <Panel className="flex flex-col gap-12 px-6 py-20 md:gap-[56px] md:px-20 md:py-[128px]">
       <Reveal className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-5">
-          <Eyebrow>The portfolio</Eyebrow>
-          <H2 className="max-w-[720px]">What Bangladesh builds.</H2>
+          <Eyebrow><T>The portfolio</T></Eyebrow>
+          <H2 className="max-w-[720px]"><T>What Bangladesh builds.</T></H2>
         </div>
         <Link href="/solutions" className="shrink-0 text-[15px] leading-[18px] font-semibold text-ink underline decoration-1 underline-offset-4 hover:text-primary">
           Ask about the right solution →

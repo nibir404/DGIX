@@ -11,6 +11,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { AccountMenu } from "./AccountMenu";
 import { useLookup, useStore } from "@/lib/store";
 import type { Db, Role } from "@/lib/types";
+import { DemoSwitch } from "./DemoSwitch";
 
 type Item = { href: string; label: string; icon: IconName; badge?: (db: Db, companyId: string) => number; tone?: "amber" | "red" };
 type Config = { groups: { label?: string; items: Item[] }[]; primary: { label: string; href: string }; search: string };
@@ -178,6 +179,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <DemoSwitch />
         <header className="flex items-center justify-between gap-3 px-4 pt-4 sm:gap-4 sm:px-5 sm:pt-6 lg:px-8">
           <button
             onClick={() => setMenuOpen(true)}

@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/marketing/Reveal";
 import { ANDROID_APP } from "@/lib/app";
 import { Panel } from "./shared";
+import { T } from "@/lib/i18n";
 
 const PlayGlyph = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={(size * 28) / 26} viewBox="0 0 26 28" aria-hidden className="shrink-0">
@@ -159,10 +160,10 @@ export function DownloadApp() {
             <span className="flex size-11 items-center justify-center rounded-xl bg-white shadow-[0_10px_24px_-10px_#000]">
               <Image src="/brand/favicon-192.png" alt="" width={36} height={36} className="size-8" />
             </span>
-            <span className="text-[15px] text-white/75">DGIX for Android</span>
+            <span className="text-[15px] text-white/75"><T>DGIX for Android</T></span>
           </div>
           <h2 className="mt-8 max-w-[520px] text-[44px] font-semibold leading-[46px] tracking-[-0.03em] md:text-[64px] md:leading-[64px]">
-            Download the DGIX app today
+            <T>Download the DGIX app today</T>
           </h2>
           <p className="mt-6 max-w-[460px] text-[17px] leading-[27px] text-white/75">
             Requests, projects, invoices and approvals in your pocket. One sign-in, fingerprint unlock, the same rules as the web.
@@ -180,7 +181,7 @@ export function DownloadApp() {
             </span>
             <span>v{ANDROID_APP.version} · {ANDROID_APP.size} · {ANDROID_APP.minAndroid}</span>
             <Link href="/app" className="inline-flex items-center gap-1.5 font-medium text-white hover:underline">
-              More about the app <Icon name="arrowRight" size={13} />
+              <T>More about the app</T> <Icon name="arrowRight" size={13} />
             </Link>
           </div>
         </Reveal>

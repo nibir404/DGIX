@@ -9,6 +9,8 @@ import { H1, Kicker, useFlash } from "@/components/admin/kit";
 import { Dialog } from "@/components/buyer/kit";
 import { Icon } from "@/components/ui/Icon";
 import type { BuyerRequest, Offer, Product } from "@/lib/types";
+import { downloadCsv, stamp } from "@/lib/csv";
+import { CsvButton } from "@/components/portal/CsvButton";
 
 const COLS: { key: Offer["status"]; label: string }[] = [
   { key: "draft", label: "Drafting" },
@@ -63,9 +65,26 @@ export default function Offers() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Kicker>Every deal: buyer signs with DGIX, DGIX signs with the partner</Kicker>
-        <H1>Offers &amp; contracts</H1>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-2">
+          <Kicker>Every deal: buyer signs with DGIX, DGIX signs with the partner</Kicker>
+          <H1>Offers &amp; contracts</H1>
+        </div>
+        <CsvButton
+          className="self-start md:self-auto"
+          label="Download offers"
+          onClick={() => {
+            downloadCsv(
+              `dgix-offers-${stamp()}`,
+              ["Offer", "Buyer", "Country", "Product", "Status", "Price (USD)", "Milestones", "Demo rating", "Sent", "Signed", "Decline reason"],
+              db.offers.map((o) => {
+                const b = L.company(o.buyerId);
+                return [o.ref, b?.name ?? "", b?.country ?? "", L.product(o.productId)?.name ?? "", o.status, o.price, o.milestones.length, o.rating ?? "", o.sentAt ?? "", o.signedAt ?? "", o.declineReason ?? ""];
+              }),
+            );
+            flash(`${db.offers.length} offers downloaded`);
+          }}
+        />
       </div>
 
       {ready.length > 0 && (
@@ -122,6 +141,7 @@ export default function Offers() {
                     <div className={"mt-2 text-[18px] " + (col.key === "declined" ? "text-subtle" : "")}>{fmtMoney(o.price)}</div>
                     {col.key === "sent" && o.sentAt && <div className="text-xs text-warning">Sent {dateShort(o.sentAt)} · expires {dateShort(new Date(new Date(o.sentAt).getTime() + 17 * 864e5).toISOString())}</div>}
                     {col.key === "accepted" && o.signedAt && <div className="text-xs text-success">Signed {dateShort(o.signedAt)}</div>}
+                    {col.key === "declined" && o.declineReason && <div className="text-xs leading-4 text-muted">“{o.declineReason}”</div>}
                     {col.key === "draft" && (
                       <Button size="sm" className="mt-2 self-start" onClick={() => { sendOffer(o.id); flash(`${o.ref} sent to ${b?.name}`); }}>Send to buyer</Button>
                     )}

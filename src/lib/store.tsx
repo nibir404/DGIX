@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CHECK_META, seed } from "./seed";
-import type { BuyerRequest, Category, Db, Demo, Offer, Role, User } from "./types";
+import type { BuyerRequest, Category, Db, Demo, Offer, RequestEventKind, Role, User } from "./types";
 
 const KEY = "dgix-db-v1";
 const SESSION_COOKIE = "dgix_uid";
@@ -19,7 +19,7 @@ type Ctx = {
   createRequest: (r: Pick<BuyerRequest, "title" | "need" | "country" | "budget" | "users" | "goLive">) => BuyerRequest;
   bookDemo: (productId: string, requestId?: string) => void;
   acceptOffer: (offerId: string) => void;
-  declineOffer: (offerId: string) => void;
+  declineOffer: (offerId: string, reason?: string) => void;
   acceptMilestone: (projectId: string, milestoneId: string) => void;
   payInvoice: (invoiceId: string) => void;
   openCase: (title: string, body: string, projectId?: string) => void;
@@ -41,6 +41,7 @@ type Ctx = {
   rateDemo: (demoId: string, rating: NonNullable<Demo["rating"]>, notes?: string) => void;
   createOffer: (input: { requestId: string; productId: string; price: number; sla: string; warranty: string; exit: string; milestones: { title: string; amount: number }[]; send: boolean }) => Offer;
   addProduct: (input: { name: string; category: Category; tagline: string; description: string; markets: string[]; priceFrom: number }) => string;
+  closeRequest: (requestId: string, reason: string) => void;
   // Account
   updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
   changePassword: (current: string, next: string) => boolean;
@@ -110,6 +111,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const buyerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "buyer")?.id;
   const sellerUser = (d: Db, companyId?: string) => d.users.find((u) => u.companyId === companyId && u.role === "seller")?.id;
   const advisorOf = (d: Db, companyId?: string) => d.companies.find((c) => c.id === companyId)?.advisorId ?? "u-asha";
+  /** Append a dated entry to a request's activity log. */
+  const logReq = (d: Db, requestId: string | undefined, kind: RequestEventKind, text: string) => {
+    const r = d.requests.find((x) => x.id === requestId);
+    if (!r) return;
+    (r.log ??= []).push({ at: today(), by: user?.id, kind, text });
+  };
 
   const value: Ctx = {
     db,
@@ -183,6 +190,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .sort((a, b) => b.fit - a.fit)
         .slice(0, 3);
       req.shortlist = ranked.map(({ p, fit }) => ({ productId: p.id, fit, confirmed: false, strengths: [p.tagline], gaps: fit < 75 ? ["Partial fit — advisor to check"] : [] }));
+      req.log = [
+        { at: req.createdAt, by: user?.id, kind: "opened", text: `Request opened · ${input.users} users, go-live ${input.goLive}` },
+        { at: req.createdAt, kind: "matched", text: `AI ranked ${req.shortlist.length} verified products for advisor review` },
+      ];
       update((d) => {
         d.requests.unshift(req);
         notify(d, company?.advisorId ?? "u-asha", "New request · " + (company?.name ?? "Buyer"), input.title, "/admin/matching");
@@ -195,6 +206,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const r = d.requests.find((x) => x.id === requestId);
         if (r && r.status === "shortlist_sent") r.status = "demo";
         const p = d.products.find((x) => x.id === productId);
+        logReq(d, requestId, "demo", `Demo requested · ${p?.name}`);
         const seller = d.users.find((u) => u.companyId === p?.partnerId && u.role === "seller");
         if (seller) notify(d, seller.id, "New demo request", `${p?.name} · ${d.companies.find((c) => c.id === user?.companyId)?.name}`, "/seller/leads");
       }),
@@ -213,16 +225,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             milestones: o.milestones.map((m, i) => ({ id: "m" + (i + 1), title: m.title, amount: m.amount, status: i === 0 ? "in_progress" : "upcoming", due: new Date(Date.now() + (i + 1) * 21 * 864e5).toISOString().slice(0, 10) })),
           });
         }
+        logReq(d, o.requestId, "signed", `Offer ${o.ref} accepted and signed · project started`);
         notify(d, advisorOf(d, o.buyerId), "Offer accepted", `${o.ref} · ${p.name}`, "/admin/offers");
         notify(d, sellerUser(d, p.partnerId), "New order won", `${p.name} · ${d.companies.find((c) => c.id === o.buyerId)?.name} · first milestone started`, "/seller/orders");
       }),
-    declineOffer: (offerId) =>
+    declineOffer: (offerId, reason) =>
       update((d) => {
         const o = d.offers.find((x) => x.id === offerId);
         if (!o) return;
         o.status = "declined";
+        if (reason) o.declineReason = reason;
         const r = d.requests.find((x) => x.id === o.requestId);
-        if (r) r.status = "closed";
+        if (r) {
+          r.status = "closed";
+          if (reason) r.closedReason = reason;
+        }
+        logReq(d, o.requestId, "closed", `Offer ${o.ref} declined${reason ? ` · “${reason}”` : ""} · request closed`);
         notify(d, advisorOf(d, o.buyerId), "Offer declined", `${o.ref} · ${d.companies.find((c) => c.id === o.buyerId)?.name}`, "/admin/offers");
       }),
     acceptMilestone: (projectId, milestoneId) =>
@@ -291,6 +309,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         dm.status = "booked";
         const buyer = d.users.find((u) => u.companyId === dm.buyerId && u.role === "buyer");
         const p = d.products.find((x) => x.id === dm.productId);
+        logReq(d, dm.requestId, "demo", `Demo confirmed by the partner · ${p?.name}, ${new Date(dm.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`);
         if (buyer) notify(d, buyer.id, "Demo confirmed", `${p?.name} · ${new Date(dm.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, "/buyer/demos");
       }),
     submitMilestone: (projectId, milestoneId) =>
@@ -312,6 +331,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         r.shortlist.forEach((s) => (s.confirmed = true));
         r.status = "shortlist_sent";
         r.ownerId = user?.id ?? "u-asha";
+        (r.log ??= []).push({ at: today(), by: user?.id, kind: "shortlist", text: `Shortlist confirmed · ${r.shortlist.length} verified ${r.shortlist.length === 1 ? "product" : "products"} sent to the buyer` });
         const buyer = d.users.find((u) => u.companyId === r.buyerId && u.role === "buyer");
         if (buyer) notify(d, buyer.id, "Your shortlist is ready", `${r.shortlist.length} verified matches for ${r.title}`, "/buyer/shortlist");
       }),
@@ -323,6 +343,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         o.sentAt = today().slice(0, 10);
         const r = d.requests.find((x) => x.id === o.requestId);
         if (r) r.status = "offer";
+        logReq(d, o.requestId, "offer", `Offer ${o.ref} sent · $${o.price.toLocaleString()}`);
         const buyer = d.users.find((u) => u.companyId === o.buyerId && u.role === "buyer");
         if (buyer) notify(d, buyer.id, "New offer to review", `${o.ref} · $${o.price.toLocaleString()}`, "/buyer/offers");
       }),
@@ -374,6 +395,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (!dm) return;
         dm.status = "done";
         const p = d.products.find((x) => x.id === dm.productId);
+        logReq(d, dm.requestId, "demo", `Demo held · ${p?.name}`);
         notify(d, buyerUser(d, dm.buyerId), "How was the demo?", `${p?.name} · rate it so your advisor can prepare an offer`, "/buyer/demos");
       }),
     rateDemo: (demoId, rating, notes) =>
@@ -385,6 +407,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         dm.status = "done";
         const p = d.products.find((x) => x.id === dm.productId);
         const co = d.companies.find((c) => c.id === dm.buyerId);
+        logReq(d, dm.requestId, "demo", `Demo rated “${rating}” · ${p?.name}`);
         notify(d, advisorOf(d, dm.buyerId), `Demo rated “${rating}”`, `${co?.name} × ${p?.name}${rating === "Strong fit" ? " · ready for an offer" : ""}`, "/admin/offers");
       }),
     createOffer: (input) => {
@@ -408,6 +431,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         d.offers.unshift(offer);
         const req = d.requests.find((x) => x.id === input.requestId);
         if (req && input.send) req.status = "offer";
+        const prod = d.products.find((x) => x.id === input.productId);
+        logReq(d, input.requestId, "offer", input.send ? `Offer ${offer.ref} sent · ${prod?.name}, $${offer.price.toLocaleString()}` : `Offer ${offer.ref} drafted · ${prod?.name}`);
         if (input.send) notify(d, buyerUser(d, offer.buyerId), "New offer to review", `${offer.ref} · $${offer.price.toLocaleString()}`, "/buyer/offers");
       });
       return offer;
@@ -427,6 +452,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       return id;
     },
+    closeRequest: (requestId, reason) =>
+      update((d) => {
+        const r = d.requests.find((x) => x.id === requestId);
+        if (!r || r.status === "won" || r.status === "closed") return;
+        r.status = "closed";
+        r.closedReason = reason;
+        (r.log ??= []).push({ at: today(), by: user?.id, kind: "closed", text: `Request closed · “${reason}”` });
+        const closedByBuyer = user?.role === "buyer";
+        if (closedByBuyer) notify(d, advisorOf(d, r.buyerId), "Request closed by the buyer", `${r.title} · “${reason}”`, "/admin/matching");
+        else notify(d, buyerUser(d, r.buyerId), "Your request was closed", `${r.title} · “${reason}”`, `/buyer/requests/${r.id}`);
+      }),
     markRead: (id) =>
       update((d) => {
         const n = d.notifications.find((x) => x.id === id);

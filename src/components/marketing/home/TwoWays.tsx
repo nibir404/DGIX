@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Panel, Eyebrow, H2, ArrowUpRight } from "./shared";
+import { T } from "@/lib/i18n";
 
 type Card = {
   href: string; title: string; body: string; img: string; bg: string; light?: boolean;
@@ -12,7 +13,7 @@ type Card = {
 const cards: Card[] = [
   {
     href: "/how-it-works", title: "For buyers", img: "/media/glass-buyers.webp",
-    body: "Describe the need. Get a verified shortlist in a day. Sign one contract, pay per milestone.",
+    body: "Describe the need, your users and your go-live date. Your advisor arranges demos and follows the request through to one contract, paid per milestone.",
     bg: "radial-gradient(ellipse 70% 90% at 100% 0% in oklab, #7FB6FF 0%, #7FB6FF00 60%), linear-gradient(in oklab 135deg, #0C1F45 0%, #1E4FA3 70%)",
     dots: { c1: "#7FB6FF", c2: "#A9CCFF", sq: "#FFFFFF", accent: "#F6A11A", c3: "#A9CCFF" },
   },
@@ -54,8 +55,8 @@ export function TwoWays() {
   return (
     <Panel className="flex flex-col gap-10 px-4 pt-20 pb-16 md:px-[56px] md:pt-[140px] md:pb-[120px] lg:flex-row lg:gap-[64px]">
       <div className="flex flex-col gap-5 px-2 pt-2 md:px-0 lg:sticky lg:top-24 lg:w-[440px] lg:shrink-0 lg:self-start">
-        <Eyebrow>Two ways into DGIX</Eyebrow>
-        <H2>One exchange.<br />Both sides protected.</H2>
+        <Eyebrow><T>Two ways into DGIX</T></Eyebrow>
+        <H2><T>One exchange.</T><br /><T>Both sides protected.</T></H2>
       </div>
       <div className="flex flex-1 flex-col gap-5">
         {cards.map((c, i) => (

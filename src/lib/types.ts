@@ -94,7 +94,14 @@ export type BuyerRequest = {
   createdAt: string;
   dueAt?: string;
   shortlist: { productId: string; fit: number; gaps: string[]; strengths: string[]; confirmed: boolean }[];
+  /** Dated history of the request, newest last. Older saved data may not have it. */
+  log?: RequestEvent[];
+  /** Why the request was closed, when it was closed without an order. */
+  closedReason?: string;
 };
+
+export type RequestEventKind = "opened" | "matched" | "shortlist" | "demo" | "offer" | "signed" | "closed" | "note";
+export type RequestEvent = { at: string; by?: string; kind: RequestEventKind; text: string };
 
 export type Demo = {
   id: string;
@@ -120,6 +127,7 @@ export type Offer = {
   exit: string;
   milestones: { title: string; amount: number }[];
   status: "draft" | "sent" | "accepted" | "declined";
+  declineReason?: string;
   rating?: string;
   sentAt?: string;
   signedAt?: string;

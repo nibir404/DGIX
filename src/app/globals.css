@@ -21,8 +21,8 @@
   --color-glow-amber: #ffd58a;
   --color-haze: #aebbd6;
 
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-display: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", var(--font-bangla), system-ui, sans-serif;
+  --font-display: var(--font-jakarta), "Plus Jakarta Sans", var(--font-bangla), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
 
   --text-display: 104px;

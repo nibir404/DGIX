@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { faqs } from "@/lib/seed";
 import { Reveal } from "@/components/marketing/Reveal";
 import { Panel, Eyebrow, H2 } from "./shared";
+import { T } from "@/lib/i18n";
 
 const QUESTIONS = [
   "Does buying through DGIX cost more?",
@@ -58,8 +59,8 @@ export function Faq() {
   return (
     <Panel className="flex flex-col gap-10 px-6 py-20 md:px-20 md:py-[128px] lg:flex-row lg:gap-[96px]">
       <Reveal className="flex flex-col gap-5 lg:w-[480px] lg:shrink-0">
-        <Eyebrow>FAQ</Eyebrow>
-        <H2>Straight answers.</H2>
+        <Eyebrow><T>FAQ</T></Eyebrow>
+        <H2><T>Straight answers.</T></H2>
       </Reveal>
       <div className="flex-1">
         <FaqList items={items} />

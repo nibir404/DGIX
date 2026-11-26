@@ -2,6 +2,7 @@
 
 import { Reveal } from "@/components/marketing/Reveal";
 import { Panel, CountUp } from "./shared";
+import { T } from "@/lib/i18n";
 
 const stats = [
   { v: "06", d: "Daffodil AI projects in the Top 50, Bangladesh Innovation Fair 2026" },
@@ -29,7 +30,7 @@ export function Proof() {
         <div className="flex flex-col gap-5">
           <div className="text-[15px] leading-[18px] text-haze">The evidence</div>
           <h2 className="max-w-[700px] text-[36px] leading-[40px] md:text-[52px] md:leading-[56px] font-light tracking-tight text-paper">
-            Rooted in technology and education since 1990.
+            <T>Rooted in technology and education since 1990.</T>
           </h2>
         </div>
         <div

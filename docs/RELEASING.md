@@ -114,6 +114,7 @@ Vercel deploys every push to `main`, so the release is live once the deploy fini
 
 | Version | Date | Summary |
 | --- | --- | --- |
+| [v1.7.0](https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0) | 2026-11-26 | Request activity log, reasons for closing, CSV downloads, events, enrolment, support network, Bangla switch, demo switcher |
 | [v1.6.0](https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0) | 2026-11-14 | Home page copy updated from the exhibition posters |
 | [v1.5.1](https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1) | 2026-11-14 | Live activity card removed from the home hero |
 | [v1.5.0](https://github.com/nibir404/DGIX/compare/v1.4.0...v1.5.0) | 2026-11-14 | Partner application page and "Become a partner" / "Sell with us" hero buttons |

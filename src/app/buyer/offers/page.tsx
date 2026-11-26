@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { useLookup } from "@/lib/store";
 import type { Offer, Product } from "@/lib/types";
 import { Btn, Dialog, Panel, Tick, dayMonth, firstName, money, useBuyer, useFlash } from "@/components/buyer/kit";
+import { ReasonDialog } from "@/components/portal/ReasonDialog";
 
 const thumb = (v?: Product["visual"]) => (v === "people" ? "/media/buyer-req-hr.webp" : v === "bag" ? "/media/buyer-req-pos.webp" : "/media/buyer-req-ai.webp");
 const addDays = (iso: string, n: number) => new Date(new Date(iso).getTime() + n * 864e5).toISOString();
@@ -233,15 +234,15 @@ function OffersInner() {
           </div>
         </div>
       </Dialog>
-      <Dialog open={declining} onClose={() => setDeclining(false)} title="Decline this offer?">
-        <div className="flex flex-col gap-4 text-sm text-muted">
-          <p>{firstName(advisor?.name) || "Your advisor"} will be told and can prepare a different offer.</p>
-          <div className="flex gap-2">
-            <Btn variant="outline" onClick={() => setDeclining(false)} className="flex-1">Keep offer</Btn>
-            <Btn variant="dark" onClick={() => { b.declineOffer(o.id); setDeclining(false); flash(`${o.ref} declined`); }} className="flex-1">Decline</Btn>
-          </div>
-        </div>
-      </Dialog>
+      <ReasonDialog
+        open={declining}
+        title="Decline this offer?"
+        intro={`${firstName(advisor?.name) || "Your advisor"} will be told why and the request will be closed.`}
+        reasons={["The price is too high", "The scope doesn't match our need", "The timeline doesn't work", "We chose another solution"]}
+        confirmLabel="Decline offer"
+        onClose={() => setDeclining(false)}
+        onConfirm={(reason) => { b.declineOffer(o.id, reason); setDeclining(false); flash(`${o.ref} declined · ${firstName(advisor?.name) || "your advisor"} has been told why`); }}
+      />
       {toast}
     </div>
   );

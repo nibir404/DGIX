@@ -57,6 +57,7 @@ export function CreateAccountForm() {
             <div className="flex flex-col gap-2">
               <h2 className="text-[34px] leading-[42px] md:text-[40px] md:leading-12 font-light tracking-tight text-ink">Create your account</h2>
               <p className="text-[15px] leading-[18px] text-muted">{mode === "buy" ? "Free for buyers. Takes under a minute." : "Apply to list. We'll review your company first."}</p>
+              {mode === "buy" && <p className="text-[13px] leading-[18px] text-muted">Setting up your whole company? <Link href="/enrol" className="font-medium text-primary hover:underline">Enrol your organisation</Link></p>}
             </div>
             <div className="flex rounded-full bg-mist p-1">
               {(["buy", "sell"] as Mode[]).map((m) => (

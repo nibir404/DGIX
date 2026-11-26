@@ -3,6 +3,7 @@
 import { Reveal } from "@/components/marketing/Reveal";
 import { Panel, Eyebrow, H2 } from "./shared";
 import { Scorecard } from "./Scorecard";
+import { T } from "@/lib/i18n";
 
 export function TierPills() {
   return (
@@ -30,13 +31,14 @@ export function VerifiedSection() {
     >
       <Reveal className="flex flex-col gap-6 px-2 md:px-0 lg:w-[480px] lg:shrink-0">
         <Eyebrow>Daffodil Verified</Eyebrow>
-        <H2>Most products won&apos;t make the cut. That&apos;s the point.</H2>
+        <H2><T>{"Most products won't make the cut. That's the point."}</T></H2>
         <p className="text-[17px] leading-7 text-muted">Every listing carries a <span className="font-medium text-ink">product passport</span>: the record of the offer, owner and evidence buyers need before a pilot or purchase.</p>
         <ul className="flex flex-col gap-3 text-[15px] leading-6 text-muted">
           <li><span className="font-semibold text-ink">Rights &amp; proof</span> · owner, version, demo and permitted use</li>
           <li><span className="font-semibold text-ink">Delivery &amp; trust</span> · support, security, deployment and capacity</li>
           <li><span className="font-semibold text-ink">Commercial fit</span> · scope, price, terms and country readiness</li>
         </ul>
+        <p className="text-[15px] leading-6 text-muted">Each claim is reviewed for its <span className="font-medium text-ink">scope</span>, the <span className="font-medium text-ink">evidence</span> behind it, and the <span className="font-medium text-ink">remedy</span> if it falls short.</p>
         <TierPills />
       </Reveal>
       <Reveal delay={0.1} className="flex-1">

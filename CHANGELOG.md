@@ -5,6 +5,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.7.0] — 2026-11-26
+
+Ideas adapted from the Bangladesh Export Exchange site for a software exchange: a request history, reasons for closing, CSV downloads, events, organisation enrolment, a support network, a Bangla switch and a demo switcher.
+
+### Added
+- **Support network page (`/network`):** the industry associations (BASIS, e-CAB, BACCO, FBCCI), public institutions (ICT Division, BCC, Hi-Tech Park Authority, BIDA, EPB) and Bangladesh missions in the USA and GCC that support software exports, each with its official site, and a note that listing is not partnership or endorsement. Linked from the footer under Trust.
+- **Quick searches under the home search:** "Try HR & payroll · Clinic billing · AI document reading · School management".
+- **Request activity log:** every request keeps a dated history of who did what: opened, AI-ranked, shortlist confirmed, demo requested, confirmed, held and rated, offer drafted, sent, signed or declined, and closed. Buyers see it on a new request page (`/buyer/requests/[id]`, opened from Requests); staff see it in the Matching desk. Sample requests come with a matching history.
+- **Close or decline with a reason:** buyers can close a request, staff can close one they can't match, and buyers decline offers by picking a reason (or writing one). The other side is notified with the reason, it's logged on the request, and lost offers show it in Offers & contracts.
+- **CSV downloads:** "Download ledger" in Finance (invoices and payouts), "Download offers" in Offers & contracts, "Download statement" in seller Payouts. Buyer Billing's existing export now uses the same helper, so the download no longer risks being cancelled and Excel reads non-English text correctly.
+- **Buyer missions & events page (`/events`):** missions to Dhaka, virtual demo days and roadshows in the GCC and USA, how a mission runs, where Daffodil has exhibited, and a register-interest form. Linked from the footer.
+- **Organisation enrolment (`/enrol`):** a five-step, checked form for buying companies (organisation, administrator, team invites with roles, verification document, review) that issues an `ENR-` reference and saves progress in the browser. Linked from the footer and from Create account.
+- **Bangla language switch:** "বাংলা / English" in the site navigation and phone menu. The navigation, hero, home section headings, app section and footer are translated, with Noto Sans Bengali for Bangla text; the choice is remembered. Untranslated text stays in English.
+- **Demo switcher in the portals:** a slim "Demo · Sample data" bar to switch between Buyer · Omar, Staff · Asha, Seller · Nadia and Seller · Rahim (the demo script's people) in one click while presenting. The demo script now uses it.
+
+### Changed
+- "For buyers" now reads "Describe the need, your users and your go-live date. Your advisor arranges demos and follows the request through to one contract, paid per milestone." (it still promised a shortlist "in a day", a figure removed in 1.6.0).
+- Daffodil Verified adds: "Each claim is reviewed for its scope, the evidence behind it, and the remedy if it falls short."
+
 ## [1.6.0] — 2026-11-14
 
 The home page now tells the story from the DGIX exhibition posters.
@@ -143,7 +164,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nibir404/DGIX/compare/v1.4.0...v1.5.0

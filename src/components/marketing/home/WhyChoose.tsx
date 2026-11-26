@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Reveal, Stagger, staggerItem } from "@/components/marketing/Reveal";
 import { Panel, Eyebrow, H2 } from "./shared";
+import { T } from "@/lib/i18n";
 
 const items = [
   { v: "01", t: "Buyers", d: "Share your need and ask about a demo or pilot." },
@@ -18,8 +19,8 @@ export function WhyChoose() {
     <Panel className="flex flex-col gap-12 px-6 py-20 md:gap-[72px] md:px-20 md:py-[128px]">
       <Reveal className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-[96px]">
         <div className="flex flex-col gap-6 lg:w-[560px] lg:shrink-0">
-          <Eyebrow>Work with DGIX</Eyebrow>
-          <H2>Take the next step.</H2>
+          <Eyebrow><T>Work with DGIX</T></Eyebrow>
+          <H2><T>Take the next step.</T></H2>
         </div>
         <p className="text-[17px] leading-7 text-muted lg:w-[400px] lg:shrink-0">
           Tell us what you want to solve, build or bring to a new market. Contact Daffodil Group at <a href="https://daffodil.group/contact" className="font-medium text-primary underline underline-offset-4">daffodil.group/contact</a> with “DGIX” in the subject.

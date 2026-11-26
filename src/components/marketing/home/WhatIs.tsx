@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Reveal, Stagger, staggerItem } from "@/components/marketing/Reveal";
 import { Panel, Eyebrow, H2 } from "./shared";
+import { T } from "@/lib/i18n";
 
 const steps = [
   { n: "01", t: "Discover", d: "Identify a buyer need or a promising solution." },
@@ -33,7 +34,7 @@ export function WhatIs() {
       <Reveal className="flex flex-col gap-8 lg:flex-row lg:items-end lg:gap-[96px]">
         <div className="flex flex-col gap-6 lg:w-[480px] lg:shrink-0">
           <Eyebrow>How it works</Eyebrow>
-          <H2>From idea to market.</H2>
+          <H2><T>From idea to market.</T></H2>
         </div>
         <p className="flex-1 text-[17px] leading-7 md:text-lg md:leading-8 text-muted">
           DGIX, the Daffodil Global Innovation Exchange, follows <span className="font-medium text-ink">one buyer journey</span> to assess, match and commercialize eligible solutions. Discover solutions, explore a pilot, build a partnership.

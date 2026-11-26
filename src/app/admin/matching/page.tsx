@@ -6,6 +6,8 @@ import { useLookup, useStore } from "@/lib/store";
 import { Button, Empty } from "@/components/portal/ui";
 import { Checkbox, H1, useFlash } from "@/components/admin/kit";
 import { Icon } from "@/components/ui/Icon";
+import { ActivityLog } from "@/components/portal/ActivityLog";
+import { ReasonDialog } from "@/components/portal/ReasonDialog";
 
 const tile: Record<string, string> = {
   healthcare: "bg-[linear-gradient(135deg,#BDE7E4,#7CC9C4)]",
@@ -14,7 +16,8 @@ const tile: Record<string, string> = {
 };
 
 export default function MatchingDesk() {
-  const { db, confirmShortlist } = useStore();
+  const { db, confirmShortlist, closeRequest } = useStore();
+  const [closing, setClosing] = useState(false);
   const L = useLookup();
   const { flash, toast } = useFlash();
   const queue = db.requests.filter((r) => r.status === "matching");
@@ -104,6 +107,7 @@ export default function MatchingDesk() {
           </motion.ul>
         </section>
 
+        <div className="flex flex-col gap-4">
         <section className="rounded-lg bg-white p-6">
           <h2 className="mb-4 text-lg">Note to buyer</h2>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={5} className="w-full resize-none rounded-lg bg-mist/60 p-4 text-[15px] leading-[21px] outline-none focus:ring-2 focus:ring-primary/30" />
@@ -112,8 +116,29 @@ export default function MatchingDesk() {
             I checked price, SLA and country fit
           </label>
           <Button size="lg" className="mt-4 w-full" disabled={!checked || n === 0} onClick={send}>Send {n} product{n === 1 ? "" : "s"} to buyer</Button>
+          <button type="button" onClick={() => setClosing(true)} className="mt-3 w-full text-center text-[13px] font-medium text-muted hover:text-danger">
+            No suitable match? Close the request
+          </button>
         </section>
+        <section className="rounded-lg bg-white p-6">
+          <h2 className="mb-5 text-lg">Activity</h2>
+          <ActivityLog request={req} limit={6} />
+        </section>
+        </div>
       </div>
+      <ReasonDialog
+        open={closing}
+        title="Close this request?"
+        intro="The buyer is told the reason and the request leaves the matching queue."
+        reasons={["No verified product fits the need", "Outside DGIX's markets or categories", "Budget too far below the market", "Buyer stopped responding"]}
+        confirmLabel="Close request"
+        onClose={() => setClosing(false)}
+        onConfirm={(reason) => {
+          closeRequest(req.id, reason);
+          setClosing(false);
+          flash(`${req.ref} closed · the buyer has been told why`);
+        }}
+      />
       {toast}
     </div>
   );

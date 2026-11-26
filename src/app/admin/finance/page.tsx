@@ -6,6 +6,8 @@ import { useLookup, useStore } from "@/lib/store";
 import { fmtMoney } from "@/lib/seed";
 import { Button, Chip, dateShort } from "@/components/portal/ui";
 import { H1, Kicker, useFlash } from "@/components/admin/kit";
+import { downloadCsv, stamp } from "@/lib/csv";
+import { CsvButton } from "@/components/portal/CsvButton";
 
 const MONTHS = [14, 22, 19, 26, 21, 30, 27, 34, 32, 38, 48.6];
 
@@ -36,9 +38,25 @@ export default function Finance() {
           <Kicker>Buyers pay DGIX · DGIX keeps its fee · partners get the rest</Kicker>
           <H1>Finance</H1>
         </div>
-        <Button size="lg" disabled={!scheduled.length} onClick={() => { approvePayouts(scheduled.map((p) => p.id)); flash(`${scheduled.length} payout${scheduled.length > 1 ? "s" : ""} released · partners notified`); }}>
-          Approve payouts ({scheduled.length})
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <CsvButton
+            label="Download ledger"
+            onClick={() => {
+              const rows = [
+                ...db.invoices.map((i) => ["Invoice", i.ref, L.company(i.buyerId)?.name ?? "", i.milestone, i.status, i.amount, "", "", i.due, i.paidOn ?? ""]),
+                ...db.payouts.map((p) => {
+                  const inv = db.invoices.find((i) => i.id === p.invoiceId);
+                  return ["Payout", inv?.ref ?? "", L.company(p.partnerId)?.name ?? "", inv?.milestone ?? "", p.status, p.gross, p.fee, p.net, p.date, ""];
+                }),
+              ];
+              downloadCsv(`dgix-finance-ledger-${stamp()}`, ["Type", "Invoice", "Company", "Milestone", "Status", "Gross (USD)", "DGIX fee (USD)", "Net (USD)", "Due / payout date", "Paid on"], rows);
+              flash(`Ledger downloaded · ${rows.length} rows`);
+            }}
+          />
+          <Button size="lg" disabled={!scheduled.length} onClick={() => { approvePayouts(scheduled.map((p) => p.id)); flash(`${scheduled.length} payout${scheduled.length > 1 ? "s" : ""} released · partners notified`); }}>
+            Approve payouts ({scheduled.length})
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 overflow-hidden rounded-lg bg-white lg:grid-cols-4">

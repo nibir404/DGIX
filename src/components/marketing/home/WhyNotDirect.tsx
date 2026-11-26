@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Reveal, Stagger, staggerItem } from "@/components/marketing/Reveal";
 import { Icon } from "@/components/ui/Icon";
 import { Panel, Eyebrow, H2 } from "./shared";
+import { T } from "@/lib/i18n";
 
 const rows = [
   ["Dozens of vendors who all claim to be the best", "Every option already passed a 100-point check"],
@@ -22,8 +23,8 @@ export function WhyNotDirect() {
   return (
     <Panel className="flex flex-col gap-12 px-6 py-20 md:px-20 md:py-[128px] lg:flex-row lg:gap-[96px]">
       <Reveal className="flex flex-col gap-6 lg:w-[420px] lg:shrink-0">
-        <Eyebrow>The difference</Eyebrow>
-        <H2>Why not go direct?</H2>
+        <Eyebrow><T>The difference</T></Eyebrow>
+        <H2><T>Why not go direct?</T></H2>
         <p className="text-[17px] leading-7 text-muted">
           Same software, none of the risk. DGIX does the vetting, the contract and the follow-through, at <span className="font-semibold text-ink">no extra cost to you</span>.
         </p>

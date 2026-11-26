@@ -11,7 +11,7 @@ export default function Requests() {
   const b = useBuyer();
   const lk = useLookup();
   const list = [...b.requests].sort((a, c) => c.createdAt.localeCompare(a.createdAt));
-  const href = (r: (typeof list)[number]) => (r.status === "won" ? "/buyer/projects" : r.status === "offer" ? "/buyer/offers" : `/buyer/shortlist?request=${r.id}`);
+  const href = (r: (typeof list)[number]) => `/buyer/requests/${r.id}`;
 
   return (
     <div className="flex flex-col gap-5">

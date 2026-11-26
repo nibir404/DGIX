@@ -5,6 +5,8 @@ import { fmtMoney } from "@/lib/seed";
 import type { Payout } from "@/lib/types";
 import { Empty } from "@/components/portal/ui";
 import { Bars, Head, NIGHT_BANNER, Panel, Pill, dayMonth, lastSixMonths, orderRef, useSeller } from "@/components/seller/kit";
+import { downloadCsv, stamp } from "@/lib/csv";
+import { CsvButton } from "@/components/portal/CsvButton";
 
 export default function PayoutsPage() {
   const { db, payouts } = useSeller();
@@ -24,7 +26,28 @@ export default function PayoutsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Head kicker="Paid to Dutch-Bangla Bank ··· 2291 · in USD" title="Payouts" />
+      <Head
+        kicker="Paid to Dutch-Bangla Bank ··· 2291 · in USD"
+        title="Payouts"
+        right={
+          <CsvButton
+            className="self-start md:self-auto"
+            label="Download statement"
+            disabled={!payouts.length}
+            onClick={() => {
+              downloadCsv(
+                `dgix-payouts-${stamp()}`,
+                ["Invoice", "Project", "Milestone", "Status", "Gross (USD)", "DGIX fee (USD)", "Net (USD)", "Payout date"],
+                payouts.map((p) => {
+                  const inv = db.invoices.find((i) => i.id === p.invoiceId);
+                  const pr = db.projects.find((x) => x.id === inv?.projectId);
+                  return [inv?.ref ?? "", pr?.name ?? "", inv?.milestone ?? "", p.status, p.gross, p.fee, p.net, p.date];
+                }),
+              );
+            }}
+          />
+        }
+      />
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <Panel className="flex flex-col gap-[18px] rounded-lg bg-night p-6 md:p-7 lg:grow-[1.4] lg:basis-0" style={{ backgroundImage: NIGHT_BANNER }}>

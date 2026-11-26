@@ -8,7 +8,7 @@ A click-by-click script for showing how DGIX works, end to end, across all three
 
 1. Run the app (`npm run dev`) and open http://localhost:3000/sign-in.
 2. Click **Reset demo data** so you start from the seed state.
-3. Switch people with the **Sign in as** buttons in the **Test accounts** panel on `/sign-in`. To get back there, open the account menu (your avatar, top right) and choose **Sign out**.
+3. Switch people with the **Demo** bar at the top of every portal: **Buyer · Omar**, **Staff · Asha**, **Seller · Nadia** or **Seller · Rahim**, one click each. For anyone else (Farhan, Layla, James, Tanvir), use the **Sign in as** buttons in the **Test accounts** panel on `/sign-in`; to get there, open the account menu (your avatar, top right) and choose **Sign out**.
 4. Use a wide window (1280px or more) so the sidebar stays open.
 
 | Person | Role | Signs in as | What they do in the story |

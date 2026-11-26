@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
 import { portalHome, useLookup, useStore } from "@/lib/store";
 import { fmtMoney } from "@/lib/seed";
+import { T, LanguageToggle } from "@/lib/i18n";
 
 const links = [
   { href: "/solutions", label: "Solutions" },
@@ -63,11 +64,12 @@ function NavBar({ compact }: { compact?: boolean }) {
             href={l.href}
             className={clsx("text-[15px] leading-[18px] transition-colors hover:text-white", pathname.startsWith(l.href) ? "text-white font-medium" : "text-white/72")}
           >
-            {l.label}
+            <T>{l.label}</T>
           </Link>
         ))}
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+        <LanguageToggle className="hidden h-10 items-center rounded-lg px-3 text-[15px] text-white/72 transition-colors hover:text-white lg:inline-flex" />
         {ready && user ? <SignedIn /> : <SignedOut />}
         <MobileMenu />
       </div>
@@ -134,29 +136,30 @@ function MobileMenu() {
                     onClick={() => setOpen(false)}
                     className={clsx("flex items-center justify-between border-b border-white/10 py-4 text-xl font-medium", pathname.startsWith(l.href) ? "text-white" : "text-white/80")}
                   >
-                    {l.label}
+                    <T>{l.label}</T>
                     <Icon name="arrowUpRight" size={14} className="text-white/40" />
                   </Link>
                 </motion.div>
               ))}
             </nav>
             <div className="mt-auto flex flex-col gap-3 pt-8">
+              <LanguageToggle className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80" />
               {signedIn ? (
                 <>
                   <Link href={portalHome[user.role]} onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
-                    {user.role === "staff" ? "Open console" : "Open my portal"}
+                    <T>{user.role === "staff" ? "Open console" : "Open my portal"}</T>
                   </Link>
                   <button onClick={() => { setOpen(false); signOut(); router.push("/"); }} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
-                    Sign out
+                    <T>Sign out</T>
                   </button>
                 </>
               ) : (
                 <>
                   <Link href="/contact" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
-                    Get on board
+                    <T>Get on board</T>
                   </Link>
                   <Link href="/sign-in" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
-                    Sign in
+                    <T>Sign in</T>
                   </Link>
                 </>
               )}
@@ -172,10 +175,10 @@ function SignedOut() {
   return (
     <>
       <Link href="/sign-in" className="hidden md:block text-[15px] text-white/72 hover:text-white px-3">
-        Sign in
+        <T>Sign in</T>
       </Link>
       <Link href="/contact" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
-        Get on board
+        <T>Get on board</T>
         <span className="flex size-[30px] items-center justify-center rounded-full bg-primary text-white transition-transform group-hover:rotate-45">
           <Icon name="arrowUpRight" size={12} strokeWidth={2.2} />
         </span>

@@ -7,6 +7,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 Nothing yet.
 
+## [2.0.0] — 2026-11-26
+
+The portals now run on the real DGIX backend. Pial's and Masum's backend branches are merged with v1.7.0 ([#1](https://github.com/nibir404/DGIX/pull/1)).
+
+### Breaking
+- **Sign-in goes through Keycloak (OIDC)** via the DGIX BFF. The mock sign-in, the one-click test accounts, "Reset demo data" and the demo switcher are gone.
+- **Portal data lives on the BFF**, not in the browser. The portals need `NEXT_PUBLIC_BFF_URL` / `DGIX_INTERNAL_BFF_URL` set; without a reachable BFF they show no data.
+
+### Added
+- **Backend integration** (Pial): 9-microservice BFF client (`src/lib/api.ts`), four-eyes staff consoles, PCI SAQ A hosted checkout, dual contracts and contract templates, milestone submission with evidence, review and rejection, change requests, payout advice, disbursement and payout queries, digital licences, AI match explainability and four-eyes publishing, catalogue kill-switch, a 5-step product submission with 9 evidence document types, company sign-up with entity type and trade licence.
+- **BRD gap closure** (Masum): Ops & Customization console (`/admin/brd-ops`), contracts UI, Arabic alongside English and Bangla with right-to-left layout, validated phone numbers on onboarding forms, a unified onboarding wizard (in the code, not yet wired to `/create-account`).
+
+### Changed
+- **One language system:** English, বাংলা and العربية, covering the public site's v1.7.0 Bangla and the portals' dictionary, with one toggle.
+- Fonts load from a stylesheet instead of at build time, so builds don't fail when Google Fonts can't be reached.
+- Payout breakdowns use the fee and hold sent by the backend.
+- The "Get on board" button goes to `/create-account`.
+
+### Removed
+- "Close request" (no backend endpoint yet) and the portal demo switcher.
+
+### Known issues
+- Not yet verified end to end against a live BFF and Keycloak.
+- Declining an offer doesn't reach the backend yet; the milestone endpoint path needs confirming; there are two kill-switch screens. See [docs/MERGE_PLAN.md](docs/MERGE_PLAN.md).
+
 ## [1.7.0] — 2026-11-26
 
 Ideas adapted from the Bangladesh Export Exchange site for a software exchange: a request history, reasons for closing, CSV downloads, events, organisation enrolment, a support network, a Bangla switch and a demo switcher.
@@ -164,7 +189,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/nibir404/DGIX/compare/v1.7.0...v2.0.0
 [1.7.0]: https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/nibir404/DGIX/compare/v1.5.0...v1.5.1

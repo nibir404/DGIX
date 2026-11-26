@@ -2,11 +2,11 @@
 
 Frontend for **DGIX**, Daffodil's global innovation exchange: verified software from Bangladesh, matched to buyers in the USA and GCC, delivered under one contract.
 
-**Live site:** [dgix-rho.vercel.app](https://dgix-rho.vercel.app) · deployed on Vercel from `main`. Sign in with the test accounts at [/sign-in](https://dgix-rho.vercel.app/sign-in) to try the portals.
+**Live site:** [dgix-rho.vercel.app](https://dgix-rho.vercel.app) · deployed on Vercel from `main`. The public pages work on their own; sign-in and the portals need the DGIX backend (BFF) to be configured, see [Sign-in and backend](#sign-in-and-backend).
 
-This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff), built as a 1-1 implementation of the DGIX Paper design file. All data comes from local seed data, so every flow can be tested end to end without a backend.
+This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff). Since v2.0.0 the portals sign in through Keycloak and read and write their data through the DGIX BFF (backend-for-frontend), which runs as a separate service.
 
-> **Status:** v1.7.0. Complete UI with mock data and a mock sign-in, responsive from phones to 4K. There is no real backend, authentication or payments yet. See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+> **Status:** v2.0.0. Backend integration merged: sign-in, portal data and payments go through the DGIX BFF. Not yet verified end to end against a running backend (see Known limitations). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ---
 
@@ -19,7 +19,7 @@ This repository contains the public marketing site and three role-based portals 
 | Globe | d3-geo orthographic projection on a 2D canvas, Natural Earth data via world-atlas (hero globe) |
 | Motion | GSAP + ScrollTrigger (scroll-linked), Framer Motion (UI transitions), Lenis (smooth scroll) |
 | Fonts | Plus Jakarta Sans, JetBrains Mono (`next/font`) |
-| Data | Client-side store seeded from `src/lib/seed.ts`, persisted to `localStorage` |
+| Data | DGIX BFF over HTTPS (`src/lib/api.ts`, proxied at `/bff/*` and `/checkout/*` by `next.config.ts`); Keycloak OIDC sign-in |
 
 ## Getting started
 
@@ -41,22 +41,16 @@ Open http://localhost:3000.
 | `npm run typecheck` | TypeScript check |
 | `npm run globe:dots` | Regenerate `public/data/globe-dots.bin` (land dots for the hero globe) |
 
-## Test accounts
+## Sign-in and backend
 
-Go to **/sign-in**. The **Test accounts** panel lists every seed user with a one-click **Sign in as** button. All seed users share one test password, which is shown in that panel (`TEST_PASSWORD` in `src/lib/seed.ts`). It is a local test value only.
+The portals need the DGIX BFF, a separate service that is not in this repository. Set these environment variables (locally in `.env.local`, and in the Vercel project for deployments):
 
-| Role | User | Company | Portal |
-| --- | --- | --- | --- |
-| Buyer | Omar Khalid | Gulf Retail Group (UAE) | `/buyer` |
-| Buyer | Layla Haddad | Al Noor Clinics (Qatar) | `/buyer` |
-| Buyer | James Porter | Meridian Logistics (USA) | `/buyer` |
-| Seller | Rahim Karim | SoftHealth Ltd | `/seller` |
-| Seller | Nadia Chowdhury | Daffodil Software Ltd | `/seller` |
-| Seller | Tanvir Ahmed | Nexa Labs | `/seller` |
-| Staff | Asha Rahman | DGIX Operations (advisor) | `/admin` |
-| Staff | Farhan Hossain | DGIX Operations (finance) | `/admin` |
+| Variable | Used by | Example |
+| --- | --- | --- |
+| `NEXT_PUBLIC_BFF_URL` | The browser, to call the BFF | `https://bff.example.com` (or leave empty to use the same-origin `/bff` proxy) |
+| `DGIX_INTERNAL_BFF_URL` | The Next.js server proxy for `/bff/*` and `/checkout/*` | `http://127.0.0.1:18118` (the default) |
 
-**Reset demo data** on the sign-in page restores the seed state. Portal routes are protected by role (`src/middleware.ts`): each role can only open its own portal.
+Sign in at **/sign-in** with a Keycloak account for your role (buyer, seller or DGIX staff). Ask the backend team for test personas. Each role can only open its own portal (`src/middleware.ts`).
 
 ## End-to-end flow to try
 
@@ -103,8 +97,9 @@ src/
     ui/                 Icon, Avatar
   lib/
     types.ts            Domain types
-    seed.ts             Seed data for all users and modules
-    store.tsx           Client store: session, persistence, flow actions
+    api.ts              BFF client: OIDC session, typed requests, evidence upload/download
+    seed.ts             Check definitions and sample data used by the public site
+    store.tsx           Portal store, loaded from and written to the BFF
     app.ts              Android app links, version and checksum
   middleware.ts         Role-based route protection
 public/
@@ -138,6 +133,7 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 
 | Version | Date | Highlights |
 | --- | --- | --- |
+| v2.0.0 | 2026-11-26 | Backend integration: Keycloak sign-in and BFF data replace the mock sign-in and browser storage |
 | v1.7.0 | 2026-11-26 | Request activity log, close/decline reasons, CSV downloads, events, enrolment, support network, Bangla switch, demo switcher |
 | v1.6.0 | 2026-11-14 | Home page copy updated from the exhibition posters |
 | v1.5.1 | 2026-11-14 | Live activity card removed from the home hero |
@@ -151,6 +147,10 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 
 ## Known limitations
 
-- No backend. Data lives in the browser's `localStorage` per device.
-- Create account does not save a new user. Profile, password and notification changes are saved only in this browser's demo data. Some secondary actions (demo rating, reschedule, licence seats) only update the page until reload.
-- Some charts on the Staff and Seller dashboards use fixed values from the design rather than seed data.
+- Not yet run end to end against a live BFF and Keycloak; see [docs/MERGE_PLAN.md](docs/MERGE_PLAN.md).
+- Without the BFF configured, sign-in and the portals don't work. The public site works on its own.
+- Declining an offer is kept only in the page (the BFF has no decline endpoint yet), so it reappears after a reload.
+- The milestone endpoint path (`/bff/v1/delivery/projects/…`) needs confirming with the backend team.
+- Two catalogue kill-switch screens exist (`/admin/governance` and `/admin/brd-ops`).
+- Portal screens don't use the Bangla/Arabic dictionary yet; Arabic right-to-left layouts are unchecked.
+- The request activity log shows only "Request opened" until the BFF exposes per-request history; "Close request" is hidden until it can close a requirement.

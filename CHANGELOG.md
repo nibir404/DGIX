@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [2.0.1] — 2026-11-26
+
+UI fixes after the backend merge.
+
 ### Fixed
 - The "All countries" dropdown on the catalogue (and the site-nav account menu) is no longer cut off by the hero panel; it opens in a layer above the page, flips upward when there's no room, and closes on Escape.
 - The language switch no longer crowds the phone and tablet header; it stays in the menu below desktop width.
@@ -193,7 +199,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/nibir404/DGIX/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/nibir404/DGIX/compare/v1.7.0...v2.0.0
 [1.7.0]: https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0

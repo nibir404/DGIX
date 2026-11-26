@@ -114,6 +114,7 @@ Vercel deploys every push to `main`, so the release is live once the deploy fini
 
 | Version | Date | Summary |
 | --- | --- | --- |
+| [v2.0.1](https://github.com/nibir404/DGIX/compare/v2.0.0...v2.0.1) | 2026-11-26 | Unclipped dropdowns, cleaner phone header, readable backend errors |
 | [v2.0.0](https://github.com/nibir404/DGIX/compare/v1.7.0...v2.0.0) | 2026-11-26 | Backend integration (Keycloak sign-in, BFF data) merged with v1.7.0 |
 | [v1.7.0](https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0) | 2026-11-26 | Request activity log, reasons for closing, CSV downloads, events, enrolment, support network, Bangla switch, demo switcher |
 | [v1.6.0](https://github.com/nibir404/DGIX/compare/v1.5.1...v1.6.0) | 2026-11-14 | Home page copy updated from the exhibition posters |

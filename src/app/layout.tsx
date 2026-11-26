@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono, Noto_Sans_Bengali } from "next/font/google";
 import { StoreProvider } from "@/lib/store";
 import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
-
-const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800"] });
-const bangla = Noto_Sans_Bengali({ variable: "--font-bangla", subsets: ["bengali"], weight: ["300", "400", "500", "600", "700"] });
-const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500"] });
 
 // Absolute base for share links and images. Vercel sets VERCEL_PROJECT_PRODUCTION_URL at build time;
 // NEXT_PUBLIC_SITE_URL overrides it (e.g. a custom domain).
@@ -53,10 +48,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${jakarta.variable} ${jetbrains.variable} ${bangla.variable} antialiased`}>
-        <StoreProvider>
-          <LanguageProvider>{children}</LanguageProvider>
-        </StoreProvider>
+      <body className="font-sans antialiased">
+        <LanguageProvider>
+          <StoreProvider>{children}</StoreProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

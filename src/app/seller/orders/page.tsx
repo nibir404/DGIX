@@ -3,12 +3,13 @@
 import { useRef, useState } from "react";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { Empty } from "@/components/portal/ui";
 import { BTN_GRADIENT, Head, Panel, Pill, anonBuyer, dayMonth, orderRef, useFlash, useSeller } from "@/components/seller/kit";
 import { Icon } from "@/components/ui/Icon";
 
 export default function OrdersPage() {
-  const { db, projects, submitMilestone } = useSeller();
+  const { db, projects, submitMilestone, submitMilestoneLive } = useSeller();
   const { flash, toast } = useFlash();
   const [sel, setSel] = useState<string>();
   const [files, setFiles] = useState<Record<string, string[]>>({});
@@ -138,10 +139,19 @@ export default function OrdersPage() {
               />
               <div className="flex flex-col gap-[10px] sm:flex-row sm:items-center">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!attached.length) return flash("Attach sign-off evidence first");
-                    submitMilestone(pr.id, cur.id);
-                    flash(`Milestone ${curIdx + 1} sent for buyer review`);
+                    try {
+                      await submitMilestoneLive(
+                        pr.id,
+                        cur.id,
+                        `Sign-off attached: ${attached.join(", ")}`,
+                        attached,
+                      );
+                      flash(`Milestone ${curIdx + 1} sent for buyer review with evidence (BRD P-37)`);
+                    } catch (err) {
+                      flash(err instanceof Error ? err.message : "Milestone submission failed");
+                    }
                   }}
                   className={clsx("inline-flex h-[46px] items-center justify-center self-start rounded-lg px-[22px] text-sm font-semibold leading-[18px] text-paper shadow-[0_10px_24px_-10px_#1E4FA3CC] hover:brightness-110", BTN_GRADIENT, !attached.length && "opacity-70")}
                 >

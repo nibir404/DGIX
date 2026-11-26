@@ -7,19 +7,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { PageHero } from "@/components/marketing/PageHero";
 import { HeroBg, BG } from "@/components/marketing/pages/bits";
 import { Icon, type IconName } from "@/components/ui/Icon";
-
-/**
- * Partner application at /apply: a five-step form (Company, Contact, Product, Going global,
- * Review) for software companies that want to sell through DGIX. Each step is validated
- * before moving on, progress is saved as a draft in this browser, and the last step shows
- * everything for a final check. No backend yet: submissions are kept in localStorage.
- *
- * Opened from "Become a partner" (default) or "Sell with us" (?from=sell), which only
- * changes the eyebrow text.
- */
+import { hasProhibitedUltimateWording } from "@/lib/api";
+import { useStore } from "@/lib/store";
+import type { Category } from "@/lib/types";
 
 const DRAFT_KEY = "dgix-partner-draft";
-const STORE_KEY = "dgix-partner-applications";
 
 const TEAM = ["1–10", "11–50", "51–200", "201–500", "500+"];
 const CATEGORIES = ["ERP", "HR & payroll", "CRM & sales", "Retail & POS", "Healthcare", "Education", "Finance & accounting", "AI & automation", "Custom software", "IT services"];
@@ -29,19 +21,49 @@ const IP = ["We own it fully", "Shared with a client or partner", "Licensed from
 const MODES = ["Not sure yet", "List and sell through DGIX", "White-label for a buyer", "Custom builds on request"];
 
 type Form = {
-  company: string; brand: string; year: string; team: string; country: string; city: string; website: string;
-  name: string; role: string; email: string; phone: string;
+  company: string; regNumber: string; brand: string; year: string; team: string; country: string; city: string; website: string;
+  name: string; role: string; email: string; phone: string; password: string;
   product: string; count: string; category: string; what: string; stage: string; customers: string; demo: string;
   markets: string[]; ip: string; mode: string; agree: boolean;
 };
 type Key = keyof Form;
 
 const initial: Form = {
-  company: "", brand: "", year: "", team: "", country: "Bangladesh", city: "Dhaka", website: "",
-  name: "", role: "", email: "", phone: "",
+  company: "", regNumber: "", brand: "", year: "", team: "", country: "Bangladesh", city: "Dhaka", website: "",
+  name: "", role: "", email: "", phone: "", password: "",
   product: "", count: "1", category: "", what: "", stage: "", customers: "", demo: "",
   markets: [], ip: "", mode: MODES[0], agree: false,
 };
+
+function mapCategoryLabel(label: string): Category {
+  const lower = label.toLowerCase();
+  if (lower.includes("hr")) return "hr";
+  if (lower.includes("crm")) return "crm";
+  if (lower.includes("retail")) return "retail";
+  if (lower.includes("health")) return "healthcare";
+  if (lower.includes("education")) return "education";
+  if (lower.includes("finance")) return "finance";
+  if (lower.includes("ai")) return "ai";
+  if (lower.includes("custom")) return "custom";
+  if (lower.includes("service")) return "services";
+  return "erp";
+}
+
+function mapMarketsToCountries(markets: string[]): string[] {
+  const out: string[] = [];
+  for (const m of markets) {
+    if (m.includes("Gulf")) {
+      out.push("UAE", "SAU");
+    } else if (m === "USA") {
+      out.push("USA");
+    } else if (m === "Europe") {
+      out.push("GBR");
+    } else {
+      out.push("UAE");
+    }
+  }
+  return Array.from(new Set(out));
+}
 
 const STEPS: { title: string; blurb: string; icon: IconName; required: Key[] }[] = [
   { title: "Company", blurb: "Who you are", icon: "box", required: ["company", "country"] },
@@ -54,19 +76,27 @@ const STEPS: { title: string; blurb: string; icon: IconName; required: Key[] }[]
 const emailOk = (v: string) => /^\S+@\S+\.\S+$/.test(v);
 const urlOk = (v: string) => !v || /^https?:\/\/\S+\.\S+/.test(v);
 
-function errorsFor(step: number, f: Form): Partial<Record<Key, string>> {
+function errorsFor(step: number, f: Form, needsPassword: boolean): Partial<Record<Key, string>> {
   const e: Partial<Record<Key, string>> = {};
   for (const k of STEPS[step].required) {
     const v = f[k];
-    if (Array.isArray(v) ? !v.length : typeof v === "boolean" ? !v : !v.trim()) e[k] = k === "markets" ? "Pick at least one market" : k === "agree" ? "Please confirm to submit" : "Required";
+    if (Array.isArray(v) ? !v.length : typeof v === "boolean" ? !v : !v.trim()) {
+      e[k] = k === "markets" ? "Pick at least one market" : k === "agree" ? "Please confirm to submit" : "Required";
+    }
   }
   if (step === 0) {
     if (f.year && !/^(19|20)\d{2}$/.test(f.year)) e.year = "Enter a 4-digit year";
     if (!urlOk(f.website)) e.website = "Start with https://";
   }
-  if (step === 1 && f.email && !emailOk(f.email)) e.email = "Enter a valid email";
+  if (step === 1) {
+    if (f.email && !emailOk(f.email)) e.email = "Enter a valid email";
+    if (needsPassword && f.password.length < 8) e.password = "Use at least 8 characters for your partner portal password";
+  }
   if (step === 2) {
     if (f.what.trim() && f.what.trim().length < 30) e.what = "A little more detail, please (30+ characters)";
+    if (hasProhibitedUltimateWording(f.product, f.what)) {
+      e.what = "Please use specific, verifiable statements rather than superlatives such as 'ultimate'.";
+    }
     if (!urlOk(f.demo)) e.demo = "Start with https://";
   }
   return e;
@@ -78,32 +108,39 @@ const input =
 export function PartnerApply() {
   const sell = useSearchParams().get("from") === "sell";
   const eyebrow = sell ? "Sell with us" : "Become a partner";
+  const { user, applyPartnerLive } = useStore();
+  const alreadySeller = user?.role === "seller";
 
   const [f, setF] = useState<Form>(initial);
   const [step, setStep] = useState(0);
   const [reached, setReached] = useState(0);
   const [errors, setErrors] = useState<Partial<Record<Key, string>>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [dir, setDir] = useState(1);
   const [done, setDone] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [attachments, setAttachments] = useState<{ file: File; evidenceType: string }[]>([]);
+  const [docType, setDocType] = useState("kyb");
   const card = useRef<HTMLDivElement>(null);
 
-  // Restore a saved draft
   useEffect(() => {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-      if (d?.f) { setF({ ...initial, ...d.f }); setStep(d.step ?? 0); setReached(d.reached ?? 0); setRestored(true); }
+      if (d?.f) { setF({ ...initial, ...d.f, password: "" }); setStep(d.step ?? 0); setReached(d.reached ?? 0); setRestored(true); }
     } catch {}
   }, []);
 
-  // Save the draft as they go
   useEffect(() => {
     if (done) return;
-    const t = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f, step, reached })); } catch {} }, 300);
+    const { password: _pw, ...safeDraft } = f;
+    void _pw;
+    const t = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ f: safeDraft, step, reached })); } catch {} }, 300);
     return () => clearTimeout(t);
   }, [f, step, reached, done]);
 
   const set = <K extends Key>(k: K, v: Form[K]) => {
+    setSubmitError(null);
     setF((s) => ({ ...s, [k]: v }));
     if (errors[k]) setErrors((e) => { const n = { ...e }; delete n[k]; return n; });
   };
@@ -117,7 +154,7 @@ export function PartnerApply() {
   const go = (to: number) => {
     if (to > step) {
       for (let s = step; s < to; s++) {
-        const e = errorsFor(s, f);
+        const e = errorsFor(s, f, !alreadySeller);
         if (Object.keys(e).length) {
           setStep(s); setErrors(e);
           requestAnimationFrame(() => card.current?.querySelector<HTMLElement>("[aria-invalid=true],[data-invalid=true]")?.focus());
@@ -128,20 +165,47 @@ export function PartnerApply() {
     setErrors({}); setDir(to > step ? 1 : -1); setStep(to); setReached((r) => Math.max(r, to)); toTop();
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
     for (let s = 0; s < STEPS.length; s++) {
-      const e = errorsFor(s, f);
+      const e = errorsFor(s, f, !alreadySeller);
       if (Object.keys(e).length) { setDir(s > step ? 1 : -1); setStep(s); setErrors(e); toTop(); return; }
     }
+    setSubmitError(null);
+    setSubmitting(true);
     try {
-      const prev = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
-      localStorage.setItem(STORE_KEY, JSON.stringify([...prev, { ...f, intent: sell ? "sell" : "partner", submittedAt: new Date().toISOString() }]));
-      localStorage.removeItem(DRAFT_KEY);
-    } catch {}
-    setDone(true); toTop();
+      const regRef = f.regNumber.trim() || `REG-${(f.year || "2026").slice(0, 4)}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+      await applyPartnerLive({
+        companyName: f.company.trim(),
+        registrationNumber: regRef,
+        countryCode: f.country.trim(),
+        directorName: f.name.trim(),
+        directorRole: f.role.trim() || "Founder",
+        referenceOrg: f.brand.trim() || f.company.trim(),
+        referenceContact: f.name.trim(),
+        referenceEmail: f.email.trim(),
+        productName: f.product.trim(),
+        category: mapCategoryLabel(f.category),
+        tagline: `${f.category} · ${f.stage}`,
+        description: f.what.trim(),
+        markets: mapMarketsToCountries(f.markets),
+        priceFrom: 32000,
+        fullName: f.name.trim(),
+        email: f.email.trim(),
+        password: f.password,
+        attachments,
+      });
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      setDone(true);
+      toTop();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Could not submit your application. Please review your details and try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const startOver = () => { setF(initial); setStep(0); setReached(0); setErrors({}); setRestored(false); try { localStorage.removeItem(DRAFT_KEY); } catch {} };
+  const startOver = () => { setF(initial); setStep(0); setReached(0); setErrors({}); setSubmitError(null); setDone(false); setRestored(false); try { localStorage.removeItem(DRAFT_KEY); } catch {} };
 
   const pct = done ? 100 : Math.round((step / (STEPS.length - 1)) * 100);
 
@@ -223,7 +287,7 @@ export function PartnerApply() {
                 <motion.form
                   key={step}
                   noValidate
-                  onSubmit={(e) => { e.preventDefault(); if (step < STEPS.length - 1) go(step + 1); else submit(); }}
+                  onSubmit={(e) => { e.preventDefault(); if (step < STEPS.length - 1) go(step + 1); else void submit(); }}
                   custom={dir}
                   initial={{ opacity: 0, x: dir * 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -24 }}
                   transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
@@ -233,6 +297,9 @@ export function PartnerApply() {
                     <Grid>
                       <Field label="Registered company name" required full error={errors.company}>
                         <input autoFocus className={input} value={f.company} onChange={text("company")} aria-invalid={!!errors.company} autoComplete="organization" />
+                      </Field>
+                      <Field label="Registration / trade licence no." hint="optional">
+                        <input className={input} value={f.regNumber} onChange={text("regNumber")} placeholder="e.g. C-148290" />
                       </Field>
                       <Field label="Brand name" hint="if different">
                         <input className={input} value={f.brand} onChange={text("brand")} />
@@ -269,6 +336,11 @@ export function PartnerApply() {
                       <Field label="Phone or WhatsApp" required error={errors.phone}>
                         <input className={input} value={f.phone} onChange={text("phone")} aria-invalid={!!errors.phone} type="tel" autoComplete="tel" placeholder="+880" />
                       </Field>
+                      {!alreadySeller && (
+                        <Field label="Create a partner portal password" hint="8+ characters" required full error={errors.password}>
+                          <input className={input} value={f.password} onChange={text("password")} aria-invalid={!!errors.password} type="password" minLength={8} autoComplete="new-password" placeholder="••••••••" />
+                        </Field>
+                      )}
                     </Grid>
                   )}
 
@@ -325,10 +397,73 @@ export function PartnerApply() {
                       <Field label="How would you like to work with us?">
                         <Select value={f.mode} onChange={text("mode")} options={MODES} placeholder={false} />
                       </Field>
+                      <Field label="Supporting KYB & product documents" hint="optional — PDF, DOCX, ZIP, PNG (uploaded securely for review)" full as="div">
+                        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-line bg-mist/40 p-4">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <select
+                              value={docType}
+                              onChange={(e) => setDocType(e.target.value)}
+                              className="h-10 rounded-lg border border-line bg-white px-3 text-sm text-ink"
+                            >
+                              <option value="kyb">Company KYB / Trade License</option>
+                              <option value="architecture_doc">Product Architecture / Brochure</option>
+                              <option value="certificate">ISO 27001 / SOC 2 Certificate</option>
+                              <option value="pentest_report">Penetration Test / Security Report</option>
+                              <option value="ip_attestation">IP Ownership Proof</option>
+                              <option value="user_manual">User Manual / Demo Pack</option>
+                            </select>
+                            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-night px-4 text-xs font-semibold text-paper hover:bg-primary">
+                              + Attach file(s)
+                              <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.xlsx,.csv,.zip,.json,.png,.jpg,.jpeg"
+                                className="sr-only"
+                                onChange={(e) => {
+                                  const files = Array.from(e.target.files ?? []);
+                                  if (files.length > 0) {
+                                    setAttachments((prev) => [
+                                      ...prev,
+                                      ...files.map((file) => ({ file, evidenceType: docType })),
+                                    ]);
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
+                          </div>
+                          {attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {attachments.map((att, idx) => (
+                                <span
+                                  key={`${att.file.name}-${idx}`}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-1.5 text-xs text-ink"
+                                >
+                                  <span className="font-mono text-[11px] text-primary">{att.evidenceType}</span>
+                                  <span className="max-w-[200px] truncate">{att.file.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                                    className="font-semibold text-muted hover:text-danger"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </Field>
                     </Grid>
                   )}
 
                   {step === 4 && <Review f={f} onEdit={(s) => go(s)} agree={f.agree} setAgree={(v) => set("agree", v)} error={errors.agree} />}
+
+                  {submitError && (
+                    <div className="mt-5 rounded-lg bg-[#FBE7E7] px-4 py-3 text-sm text-danger">
+                      {submitError}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="mt-10 flex flex-col-reverse gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -339,8 +474,8 @@ export function PartnerApply() {
                     ) : (
                       <Link href="/" className="inline-flex h-12 items-center justify-center rounded-lg border border-line px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-mist">Cancel</Link>
                     )}
-                    <button type="submit" className="group inline-flex h-14 items-center justify-center gap-3 rounded-lg bg-primary pl-7 pr-2 text-[16px] font-semibold text-white shadow-[0_14px_32px_-12px_rgba(30,79,163,0.7)] transition-[background-color,transform] hover:bg-primary-strong active:scale-[0.97]">
-                      {step < STEPS.length - 1 ? `Continue to ${STEPS[step + 1].title.toLowerCase()}` : "Submit application"}
+                    <button type="submit" disabled={submitting} className="group inline-flex h-14 items-center justify-center gap-3 rounded-lg bg-primary pl-7 pr-2 text-[16px] font-semibold text-white shadow-[0_14px_32px_-12px_rgba(30,79,163,0.7)] transition-[background-color,transform] hover:bg-primary-strong active:scale-[0.97] disabled:opacity-60">
+                      {step < STEPS.length - 1 ? `Continue to ${STEPS[step + 1].title.toLowerCase()}` : submitting ? "Submitting application..." : "Submit application"}
                       <span className="grid size-10 place-items-center rounded-full bg-white text-primary transition-transform duration-300 group-hover:translate-x-0.5">
                         <Icon name={step < STEPS.length - 1 ? "arrowRight" : "arrowUpRight"} size={14} strokeWidth={2.2} />
                       </span>
@@ -394,7 +529,7 @@ function Select({ value, onChange, options, invalid, placeholder = true }: { val
 
 function Review({ f, onEdit, agree, setAgree, error }: { f: Form; onEdit: (step: number) => void; agree: boolean; setAgree: (v: boolean) => void; error?: string }) {
   const groups: { step: number; title: string; rows: [string, string][] }[] = [
-    { step: 0, title: "Company", rows: [["Company", f.company], ["Brand", f.brand], ["Established", f.year], ["Team", f.team], ["Location", [f.city, f.country].filter(Boolean).join(", ")], ["Website", f.website]] },
+    { step: 0, title: "Company", rows: [["Company", f.company], ["Registration", f.regNumber], ["Brand", f.brand], ["Established", f.year], ["Team", f.team], ["Location", [f.city, f.country].filter(Boolean).join(", ")], ["Website", f.website]] },
     { step: 1, title: "Contact", rows: [["Name", f.name], ["Role", f.role], ["Email", f.email], ["Phone", f.phone]] },
     { step: 2, title: "Product", rows: [["Product", f.product], ["Products to take global", f.count], ["Category", f.category], ["What it does", f.what], ["Stage", f.stage], ["Paying customers", f.customers], ["Demo link", f.demo]] },
     { step: 3, title: "Going global", rows: [["Markets", f.markets.join(", ")], ["IP owner", f.ip], ["Working model", f.mode]] },
@@ -428,9 +563,9 @@ function Review({ f, onEdit, agree, setAgree, error }: { f: Form; onEdit: (step:
 
 function Success({ f, onAnother }: { f: Form; onAnother: () => void }) {
   const steps = [
-    ["Review", "A partner manager reads your application within 3 working days."],
-    ["Intro call", "A 30-minute call to understand the product and your goals."],
-    ["MOU and verification", "Sign the MOU, then start the 100-point Daffodil Verified check."],
+    ["Review", "A partner manager reviews your company and product submission within 3 working days."],
+    ["Intro call", "A 30-minute call to align on target markets, pricing, and delivery capacity."],
+    ["MOU and verification", "Sign the MOU, then complete the 100-point Daffodil Verified check in your partner workspace."],
   ];
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-start px-5 pb-10 pt-10 sm:px-10">
@@ -439,7 +574,7 @@ function Success({ f, onAnother }: { f: Form; onAnother: () => void }) {
       </motion.span>
       <h2 className="mt-7 text-[30px] font-medium leading-9 tracking-[-0.02em] text-ink">Application received</h2>
       <p className="mt-3 max-w-[560px] text-[17px] leading-7 text-muted">
-        Thanks{f.name ? `, ${f.name.split(" ")[0]}` : ""}. We&apos;ve got your application for <span className="font-semibold text-ink">{f.product}</span>. We&apos;ll reply to <span className="font-semibold text-ink">{f.email}</span>.
+        Thanks{f.name ? `, ${f.name.split(" ")[0]}` : ""}. Your partner profile and product submission for <span className="font-semibold text-ink">{f.product}</span> are now active. We&apos;ll also follow up at <span className="font-semibold text-ink">{f.email}</span>.
       </p>
       <p className="mt-10 text-[13px] font-semibold uppercase tracking-[0.12em] text-subtle">What happens next</p>
       <ol className="mt-3 w-full divide-y divide-line rounded-lg border border-line">
@@ -454,7 +589,8 @@ function Success({ f, onAnother }: { f: Form; onAnother: () => void }) {
         ))}
       </ol>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link href="/verified" className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-strong">See the 100-point check</Link>
+        <Link href="/seller" className="inline-flex h-12 items-center justify-center rounded-lg bg-primary px-6 text-[15px] font-semibold text-white transition-colors hover:bg-primary-strong">Open Partner portal</Link>
+        <Link href="/verified" className="inline-flex h-12 items-center justify-center rounded-lg border border-line px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-mist">See the 100-point check</Link>
         <button onClick={onAnother} className="inline-flex h-12 items-center justify-center rounded-lg border border-line px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-mist">Apply with another product</button>
       </div>
     </motion.div>

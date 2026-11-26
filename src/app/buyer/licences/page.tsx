@@ -10,12 +10,10 @@ import type { Licence, Product } from "@/lib/types";
 import { Btn, Dialog, Panel, daysUntil, dayMonth, money, useBuyer, useFlash } from "@/components/buyer/kit";
 
 const thumb = (v?: Product["visual"]) => (v === "people" ? "/media/buyer-req-hr.webp" : v === "bag" ? "/media/buyer-req-pos.webp" : "/media/buyer-req-ai.webp");
-const STORES = ["Dubai Mall", "Mall of the Emirates", "Yas Mall", "City Centre Deira", "Head office", "Ibn Battuta", "Dubai Hills", "Al Wahda", "Sharjah City Centre", "Marina Mall", "Dragon Mart", "Al Ghurair"];
-const SITES = ["Head office", "Riyadh branch", "Jeddah branch", "Dammam branch"];
-
-/** Spread a licence's used seats across sites (seed has no per-site data). */
-function bySite(l: Licence, retail: boolean) {
-  const names = retail ? STORES : SITES;
+/** Allocate a licence's seats across the buyer organisation's teams. */
+function bySite(l: Licence, city?: string) {
+  const hq = city ? `Head office · ${city}` : "Head office";
+  const names = [hq, "Operations & delivery", "Finance & administration", "Regional teams"];
   const n = names.length;
   const base = Math.floor(l.seats / n);
   let extra = l.seats - base * n;
@@ -45,7 +43,7 @@ export default function Licences() {
   const renewal = renewSoon.find((l) => !renewed[l.id]) ?? renewSoon[0];
   const perSeat = (l: Licence) => Math.round((lk.product(l.productId)?.priceFrom ?? 0) / Math.max(1, b.licences.find((x) => x.id === l.id)?.seats ?? l.seats));
   const main = lic.find((l) => lk.product(l.productId)?.category === "retail") ?? lic[0];
-  const sites = main ? bySite(main, lk.product(main.productId)?.category === "retail") : [];
+  const sites = main ? bySite(main, b.company?.city) : [];
   const shown = showAll ? sites : sites.slice(0, 5);
   const upcomingCount = lic.filter((l) => daysUntil(l.renews) < 60 && !renewed[l.id]).length;
 
@@ -71,7 +69,9 @@ export default function Licences() {
                 <div className="flex justify-between gap-3">
                   <div className="flex min-w-0 flex-col">
                     <div className="text-[18px] font-semibold leading-[22px] text-ink">{p?.name}</div>
-                    <div className="text-xs leading-4 text-muted">Renews {dayMonth(l.renews)} · {money(perSeat(l))} / seat / yr</div>
+                    <div className="text-xs leading-4 text-muted">
+                      LIC-{l.id.slice(0, 8).toUpperCase()} · Renews {dayMonth(l.renews)} · {money(perSeat(l))} / seat / yr
+                    </div>
                   </div>
                   <span className={clsx("h-fit shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", renewed[l.id] ? "bg-[#E6F4EC] text-[#0E6439]" : l.status === "expiring" ? "bg-[#FFF3DC] text-warning" : "bg-[#E6F4EC] text-[#0E6439]")}>{renewed[l.id] ? "Renewed" : l.status === "expiring" ? "Expiring" : "Active"}</span>
                 </div>

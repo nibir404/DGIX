@@ -38,12 +38,18 @@ export default function BuyerHome() {
   // Stats
   const open = b.requests.filter((r) => !["won", "closed"].includes(r.status));
   const active = b.projects.filter((p) => p.milestones.some((m) => m.status !== "done"));
+  const projectCount = b.projects.length;
   const dueTotal = dueInv.reduce((s, i) => s + i.amount, 0);
   const dueDays = dueInv[0] ? daysUntil(dueInv[0].due) : null;
   const lic = b.licences.filter((l) => l.status === "active");
   const stats = [
     { label: "Open requests", value: open.length, sub: shortlist ? "Shortlist ready" : open.length ? "In matching" : "None open", tone: "text-primary" },
-    { label: "Active projects", value: active.length, sub: active.every((p) => p.health === "on_track") ? "On track" : "Needs attention", tone: active.every((p) => p.health === "on_track") ? "text-success" : "text-warning" },
+    {
+      label: "Projects",
+      value: projectCount,
+      sub: active.length > 0 ? (active.every((p) => p.health === "on_track") ? "All on track" : "Needs attention") : projectCount > 0 ? "Delivered" : "None yet",
+      tone: active.every((p) => p.health === "on_track") ? "text-success" : "text-warning",
+    },
     { label: "Amount due", value: money(dueTotal), sub: dueDays === null ? "Nothing due" : dueDays < 0 ? `Overdue by ${-dueDays} days` : `Due in ${dueDays} days`, tone: dueDays === null ? "text-muted" : "text-warning" },
     { label: "Active licences", value: lic.reduce((s, l) => s + l.seats, 0), sub: lic.map((l) => lk.product(l.productId)?.name).join(", ") || "None yet", tone: "text-muted" },
   ];

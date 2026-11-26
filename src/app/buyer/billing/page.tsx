@@ -1,31 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { motion } from "framer-motion";
-import { useLookup } from "@/lib/store";
+import { useLookup, useStore } from "@/lib/store";
 import type { Invoice } from "@/lib/types";
 import { Btn, Dialog, Panel, daysUntil, dayMonth, money, useBuyer, useFlash } from "@/components/buyer/kit";
-import { downloadCsv, stamp } from "@/lib/csv";
 
 const statusChip = (i: Invoice) =>
   i.status === "due" ? { t: `Due ${dayMonth(i.due)}`, c: "bg-[#FFF3DC] text-warning" }
   : i.status === "overdue" ? { t: "Overdue", c: "bg-[#FBE7E7] text-danger" }
-  : i.status === "paid" ? { t: "Paid · verifying", c: "bg-mist text-primary" }
+  : i.status === "paid" ? { t: "Paid · processing", c: "bg-mist text-primary" }
   : { t: "Paid", c: "bg-[#E6F4EC] text-[#0E6439]" };
 
-export default function Billing() {
+function BillingInner() {
   const b = useBuyer();
+  const { refreshLive } = useStore();
   const lk = useLookup();
+  const params = useSearchParams();
   const { flash, toast } = useFlash();
   const [paying, setPaying] = useState<Invoice | null>(null);
-  const [method, setMethod] = useState<"card" | "bank">("card");
+  const [receiptInv, setReceiptInv] = useState<Invoice | null>(null);
+  const justPaid = params.get("paid") === "1";
+  const expiredPayment = params.get("expired_payment");
+
+
+  useEffect(() => {
+    if (justPaid) {
+      void refreshLive();
+    }
+  }, [justPaid, refreshLive]);
 
   const list = [...b.invoices].sort((a, c) => (a.status === "due" ? -1 : 0) - (c.status === "due" ? -1 : 0) || c.due.localeCompare(a.due));
   const due = list.filter((i) => i.status === "due" || i.status === "overdue").sort((a, c) => a.due.localeCompare(c.due));
   const next = due[0];
-  const projName = (id: string) => lk.product(b.db.projects.find((p) => p.id === id)?.productId)?.name ?? "Project";
+  const projName = (id: string) => lk.product(b.db.projects.find((p) => p.id === id)?.productId)?.name ?? "Enterprise Order";
   const year = String(new Date().getFullYear());
   const paidThisYear = b.invoices.filter((i) => (i.status === "paid" || i.status === "verified") && (i.paidOn ?? "").startsWith(year));
   const spent = paidThisYear.reduce((s, i) => s + i.amount, 0);
@@ -40,18 +51,31 @@ export default function Billing() {
   const max = Math.max(1, ...months.map((m) => m.v));
 
   const exportCsv = () => {
-    downloadCsv(
-      `dgix-statement-${stamp()}`,
-      ["Invoice", "For", "Status", "Amount (USD)", "Due", "Paid on"],
-      list.map((i) => [i.ref, `${projName(i.projectId)} · ${i.milestone}`, i.status, i.amount, i.due, i.paidOn ?? ""]),
-    );
+    const rows = [
+      ["Invoice", "E-Invoice Clearance", "For", "Status", "Amount (USD)", "Due", "Paid on"],
+      ...list.map((i) => [
+        i.ref,
+        i.einvoiceClearanceId ?? "Standard",
+        `${projName(i.projectId)} · ${i.milestone}`,
+        i.status,
+        String(i.amount),
+        i.due,
+        i.paidOn ?? "",
+      ]),
+    ];
+    const url = URL.createObjectURL(new Blob([rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dgix-statement-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
     flash("Statement exported");
   };
 
   const pay = () => {
     if (!paying) return;
     b.payInvoice(paying.id);
-    flash(`${paying.ref} paid · ${money(paying.amount)}. DGIX will verify it.`);
+    flash(`Opening secure checkout for ${paying.ref}…`);
     setPaying(null);
   };
 
@@ -59,9 +83,20 @@ export default function Billing() {
 
   return (
     <div className="flex flex-col gap-5">
+      {justPaid && (
+        <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] px-4 py-3 text-sm text-[#145C36]">
+          <strong>Payment confirmed:</strong> Thank you. Your online payment has been received and your invoice status has been updated.
+        </div>
+      )}
+      {expiredPayment && (
+        <div className="rounded-lg border border-[#F5D08A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#8A5A00]">
+          <strong>Previous checkout session expired:</strong> Click <em>Pay invoice</em> below to start a fresh checkout session automatically.
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] leading-4 text-muted">All amounts in USD · one invoice per accepted milestone</div>
+          <div className="text-[13px] leading-4 text-muted">Invoices, tax e-invoicing &amp; payment history</div>
           <h1 className="text-[32px] font-light leading-10 tracking-tight text-ink md:text-[36px] md:leading-[44px]">Billing</h1>
         </div>
         <Btn variant="outline" onClick={exportCsv} className="self-start border-[#C9D4E8] md:self-auto">Export statement</Btn>
@@ -80,23 +115,30 @@ export default function Billing() {
                 <div className="text-[13px] leading-4 text-glow-amber">{dd < 0 ? `Overdue by ${-dd} days` : dd === 0 ? "Due today" : `Due in ${dd} days`} · {next.ref}</div>
                 <div className="text-[48px] font-light leading-[56px] tracking-[-0.05em] text-paper md:text-[56px] md:leading-[64px]">{money(next.amount)}</div>
                 <div className="text-sm leading-[18px] text-[#FFFFFFA6]">{projName(next.projectId)} · {next.milestone}</div>
+                {next.einvoiceClearanceId && (
+                  <div className="font-mono text-xs text-[#7FE0AE]">
+                    {next.einvoiceScheme?.toUpperCase()}: {next.einvoiceClearanceId}
+                  </div>
+                )}
               </div>
               <div className="flex w-full flex-col gap-2.5 sm:w-auto">
-                <button onClick={() => setPaying(next)} className="inline-flex h-[52px] items-center justify-center rounded-lg bg-paper px-7 text-[15px] font-semibold leading-[18px] text-night hover:bg-mist">Pay now</button>
-                <div className="text-center text-xs leading-4 text-[#FFFFFF8C]">Card or bank transfer</div>
+                <button onClick={() => setPaying(next)} className="inline-flex h-[52px] items-center justify-center rounded-lg bg-paper px-7 text-[15px] font-semibold leading-[18px] text-night hover:bg-mist">
+                  Pay invoice
+                </button>
+                <div className="text-center text-xs leading-4 text-[#FFFFFF8C]">Encrypted online checkout</div>
               </div>
             </>
           ) : (
             <div className="flex flex-col gap-2">
               <div className="text-[13px] leading-4 text-[#7FE0AE]">Nothing due</div>
               <div className="text-[32px] font-light leading-10 tracking-tight text-paper">You&apos;re all paid up.</div>
-              <div className="text-sm text-[#FFFFFFA6]">New invoices appear only after you accept a milestone.</div>
+              <div className="text-sm text-[#FFFFFFA6]">New invoices appear after order acceptance or milestone sign-off.</div>
             </div>
           )}
         </motion.div>
 
         <Panel className="flex flex-col gap-3.5 p-6 lg:grow lg:basis-0" delay={0.05}>
-          <div className="text-[13px] leading-4 text-muted">Spent this year</div>
+          <div className="text-[13px] leading-4 text-muted">Paid this year</div>
           <div className="text-[40px] font-light leading-12 tracking-tight text-ink">{money(spent)}</div>
           <div className="flex h-2.5 gap-1">
             {b.projects.map((p, i) => {
@@ -116,9 +158,9 @@ export default function Billing() {
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <Panel className="min-w-0 overflow-x-auto px-6 py-2 lg:grow-[1.6] lg:basis-0" delay={0.1}>
-          <div className="min-w-[520px]">
+          <div className="min-w-[540px]">
             <div className="flex items-center border-b border-[#F1F4FA] py-3.5 text-xs font-semibold leading-4 tracking-[0.06em] text-[#9AA2B4]">
-              <div className="flex-[1.2] basis-0">INVOICE</div>
+              <div className="flex-[1.3] basis-0">INVOICE / CLEARANCE</div>
               <div className="flex-[2] basis-0">FOR</div>
               <div className="flex-1 basis-0">STATUS</div>
               <div className="flex-1 basis-0 text-right">AMOUNT</div>
@@ -129,7 +171,12 @@ export default function Billing() {
               const isDue = i.status === "due" || i.status === "overdue";
               return (
                 <div key={i.id} className={clsx("flex items-center py-4", k < list.length - 1 && "border-b border-[#F1F4FA]")}>
-                  <div className="flex-[1.2] basis-0 text-sm font-medium leading-[18px] text-ink">{i.ref}</div>
+                  <div className="flex flex-[1.3] basis-0 flex-col pr-2">
+                    <span className="text-sm font-medium leading-[18px] text-ink">{i.ref}</span>
+                    {i.einvoiceClearanceId && (
+                      <span className="truncate font-mono text-[10.5px] text-muted">{i.einvoiceClearanceId}</span>
+                    )}
+                  </div>
                   <div className="flex flex-[2] basis-0 flex-col pr-3">
                     <Link href={`/buyer/projects/${i.projectId}`} className="text-sm leading-[18px] text-ink hover:text-primary">{projName(i.projectId)} · {i.milestone}</Link>
                     <div className="text-xs leading-4 text-[#9AA2B4]">{i.paidOn ? `Paid ${dayMonth(i.paidOn)}` : `Due ${dayMonth(i.due)}`}</div>
@@ -138,7 +185,11 @@ export default function Billing() {
                     <span className={clsx("whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", s.c)}>{s.t}</span>
                   </div>
                   <div className="flex flex-1 basis-0 items-center justify-end gap-2.5">
-                    {isDue && <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>}
+                    {isDue ? (
+                      <button onClick={() => setPaying(i)} className="inline-flex h-[30px] items-center rounded-lg bg-night px-3 text-xs font-semibold text-paper">Pay</button>
+                    ) : (
+                      <button onClick={() => setReceiptInv(i)} className="inline-flex h-[30px] items-center rounded-lg border border-[#CBD7EE] bg-white px-2.5 text-xs font-medium text-ink hover:bg-mist">Receipt</button>
+                    )}
                     <span className={clsx("text-right text-[15px] leading-[18px] text-ink", isDue && "font-semibold")}>{money(i.amount)}</span>
                   </div>
                 </div>
@@ -168,40 +219,80 @@ export default function Billing() {
             </div>
           </Panel>
           <Panel className="flex flex-col gap-3 p-5" delay={0.2}>
-            <div className="text-base font-medium leading-5 text-ink">Payment method</div>
-            <div className="flex items-center gap-3 rounded-lg bg-[linear-gradient(135deg,#0C1F45_0%,#1E4FA3_100%)] p-3.5">
-              <svg width="28" height="20" viewBox="0 0 28 20" className="shrink-0"><rect x="0.5" y="0.5" width="27" height="19" rx="4" fill="none" stroke="rgb(255 255 255 / 50%)" /><rect x="4" y="6" width="6" height="5" rx="1" fill="#FFD58A" /></svg>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="text-[13px] font-semibold leading-4 text-paper">Company Visa ·· 4410</div>
-                <div className="text-[11px] leading-[14px] text-[#FFFFFF99]">Expires 08/28</div>
+            <div className="text-base font-medium leading-5 text-ink">Online payment &amp; tax receipts</div>
+            <div className="rounded-lg bg-[linear-gradient(135deg,#0C1F45_0%,#1E4FA3_100%)] p-3.5 text-paper">
+              <div className="text-[13px] font-semibold">Stripe · Adyen · Checkout.com · SSLCommerz</div>
+              <div className="mt-1 text-[11px] leading-4 text-[#FFFFFFB3]">
+                Payments are processed through encrypted online checkout with instant confirmation and downloadable statements.
               </div>
-              <Link href={`/buyer/support?subject=${encodeURIComponent("Change payment method")}`} className="text-xs leading-4 text-glow-amber">Change</Link>
             </div>
-            <div className="text-xs leading-4 text-muted">VAT invoices go to finance@{b.user?.email.split("@")[1] ?? "company.com"}</div>
+            <div className="text-xs leading-4 text-muted">Tax e-invoices and receipts are sent to finance@{b.user?.email.split("@")[1] ?? "company.com"}</div>
           </Panel>
         </div>
       </div>
 
-      <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Pay ${paying?.ref ?? ""}`}>
-        {paying && (
+      <Dialog open={!!paying} onClose={() => setPaying(null)} title={`Pay invoice · ${paying?.ref ?? ""}`}>
+        {receiptInv && (
+        <Dialog open onClose={() => setReceiptInv(null)} title={`Tax Receipt · ${receiptInv.ref}`}>
+          <div className="flex flex-col gap-4 text-sm text-ink">
+            <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] p-4 text-[#145C36]">
+              <div className="font-semibold text-base">Payment Confirmed & Verified</div>
+              <div className="text-xs text-[#2A724A] mt-0.5">Transaction has been cleared through official DGIX escrow gateway.</div>
+            </div>
+            <div className="flex flex-col gap-2 rounded-lg bg-[#F8FAFC] p-4 text-xs">
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Invoice Ref:</span>
+                <span className="font-mono font-medium">{receiptInv.ref}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Amount Paid:</span>
+                <span className="font-bold text-sm text-night">{money(receiptInv.amount)} {receiptInv.currency}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Paid Date:</span>
+                <span>{receiptInv.paidOn ? dayMonth(receiptInv.paidOn) : "Today"}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-muted">Payment Channel:</span>
+                <span className="uppercase font-medium">{receiptInv.gateway || "Stripe / Regional Bank"}</span>
+              </div>
+              {receiptInv.einvoiceClearanceId && (
+                <div className="flex justify-between py-1">
+                  <span className="text-muted">E-Invoice Clearance ID:</span>
+                  <span className="font-mono">{receiptInv.einvoiceClearanceId}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Btn variant="outline" onClick={() => window.print()}>Print Receipt</Btn>
+              <Btn onClick={() => setReceiptInv(null)}>Close</Btn>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {paying && (
           <div className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between">
               <div className="text-sm text-muted">{projName(paying.projectId)} · {paying.milestone}</div>
               <div className="text-2xl font-light text-ink">{money(paying.amount)}</div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {(["card", "bank"] as const).map((m) => (
-                <button key={m} onClick={() => setMethod(m)} className={clsx("rounded-lg border px-3 py-3 text-left text-[13px]", method === m ? "border-primary bg-mist font-semibold text-primary" : "border-[#E3E9F4] text-ink")}>
-                  {m === "card" ? "Company Visa ·· 4410" : "Bank transfer"}
-                </button>
-              ))}
+            <div className="rounded-lg border border-[#CBD7EE] bg-[#F6F9FF] p-3.5 text-xs leading-5 text-[#2C3E66]">
+              You will be directed to our encrypted online checkout page to complete payment by corporate card or supported regional payment method.
             </div>
-            <div className="text-xs text-muted">Funds are held by DGIX and released to the partner after verification.</div>
-            <Btn onClick={pay} size="lg">Pay {money(paying.amount)}</Btn>
+            <Btn onClick={pay} size="lg">Continue to checkout ({money(paying.amount)}) →</Btn>
           </div>
         )}
       </Dialog>
       {toast}
     </div>
+  );
+}
+
+export default function Billing() {
+  return (
+    <Suspense fallback={null}>
+      <BillingInner />
+    </Suspense>
   );
 }

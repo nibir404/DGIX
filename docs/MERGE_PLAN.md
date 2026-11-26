@@ -1,6 +1,29 @@
 # Merge plan: backend branches into `main`
 
-Status: **plan only, nothing merged.** Written 26 Nov 2026 against `main` at v1.7.0 (`221111c`).
+Status: **steps 1 and 2 done on `integrate/backend`** (26 Nov 2026). Written against `main` at v1.7.0 (`221111c`).
+
+## Progress
+
+| Step | State | Commit |
+| --- | --- | --- |
+| 1 · Merge Pial's branch | Done: 11 conflicts resolved, type-check, lint (0 errors) and build pass | `725971a` |
+| 2 · Merge Masum's branch | Done: 8 conflicts resolved, type-check, lint (0 errors) and build (52 pages) pass | `af52ca0` |
+| 3 · Run against the backend | **Blocked:** needs the BFF and Keycloak test personas | |
+| 4 · Re-implement v1.7.0 features on the backend | Not started; needs the backend additions below | |
+| 5 · Verify and release v2.0.0 | Not started | |
+
+Provisional choices made while merging (change them if the team decides otherwise):
+- **Sign-up:** Pial's `CreateAccountForm` is kept; Masum's unified onboarding wizard is in the tree but not wired to `/create-account`.
+- **Demo switcher:** deleted. The demo script now says to sign in as each Keycloak persona.
+- **Main button:** keeps the label "Get on board" and now goes to `/create-account`.
+
+Found during the merge:
+- **Declining an offer doesn't reach the backend at all.** Pial's `declineOffer` only marks it in the page's memory, so the offer comes back after a reload. The BFF needs a decline endpoint (with a reason).
+- **Milestone endpoints disagree.** Pial calls `/bff/v1/delivery/projects/…`; Masum called `/bff/v1/finance/delivery/projects/…`. The merge uses Pial's path everywhere. The backend team should confirm it.
+- **Payout maths:** Masum's version is kept (reads fee and hold from the server). Pial's fell back to a hard-coded `+ 8000` and a 5% hold.
+- **Masum's key dictionary (`nav.home` …) isn't used by any screen yet**, so the portals don't translate. Arabic sets the page right-to-left, which no screen has been checked in.
+- **Two kill-switch screens:** Pial's governance page and Masum's `/admin/brd-ops`. Keep one.
+- **Lint:** 8 warnings remain, all unused variables already present on Pial's branch.
 
 ## Where things stand
 

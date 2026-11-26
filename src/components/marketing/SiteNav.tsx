@@ -69,7 +69,7 @@ function NavBar({ compact }: { compact?: boolean }) {
         ))}
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-        <LanguageToggle className="hidden h-10 items-center rounded-lg px-3 text-[15px] text-white/72 transition-colors hover:text-white lg:inline-flex" />
+        <LanguageToggle tone="dark" className="hidden lg:inline-flex" />
         {ready && user ? <SignedIn /> : <SignedOut />}
         <MobileMenu />
       </div>
@@ -143,7 +143,7 @@ function MobileMenu() {
               ))}
             </nav>
             <div className="mt-auto flex flex-col gap-3 pt-8">
-              <LanguageToggle className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80" />
+              <LanguageToggle tone="dark" className="self-center" />
               {signedIn ? (
                 <>
                   <Link href={portalHome[user.role]} onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
@@ -155,7 +155,7 @@ function MobileMenu() {
                 </>
               ) : (
                 <>
-                  <Link href="/contact" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
+                  <Link href="/create-account" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">
                     <T>Get on board</T>
                   </Link>
                   <Link href="/sign-in" onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80">
@@ -177,7 +177,7 @@ function SignedOut() {
       <Link href="/sign-in" className="hidden md:block text-[15px] text-white/72 hover:text-white px-3">
         <T>Sign in</T>
       </Link>
-      <Link href="/contact" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
+      <Link href="/create-account" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">
         <T>Get on board</T>
         <span className="flex size-[30px] items-center justify-center rounded-full bg-primary text-white transition-transform group-hover:rotate-45">
           <Icon name="arrowUpRight" size={12} strokeWidth={2.2} />

@@ -96,11 +96,19 @@ export const blueBtn = "bg-[linear-gradient(180deg,#3A72DC_0%,#1E4FA3_100%)] sha
 /* ---------- product visual ---------- */
 export function Visual({ p, className }: { p: Product; className?: string }) {
   const s = score(p);
+  const isPilot = p.status === "pilot" || p.classification === "pilot_eligible";
   return (
     <div className={clsx("relative flex items-center justify-center overflow-clip rounded-lg bg-cover bg-center", className)} style={{ backgroundImage: `url(${VISUAL[p.visual]})` }}>
-      <div className="absolute left-4 top-4 flex h-[30px] items-center gap-[6px] rounded-lg bg-white/85 pl-2 pr-3 shadow-[0_6px_16px_-8px_#0C1F454D]">
-        <Svg name="shieldCheck" size={16} color="#14804A" />
-        <span className="text-xs font-semibold leading-4 text-ink">{p.status === "pilot" ? `Pilot · ${s}` : `${s}/100`}</span>
+      <div
+        className={clsx(
+          "absolute left-4 top-4 flex h-[30px] items-center gap-[6px] rounded-lg pl-2 pr-3 shadow-[0_6px_16px_-8px_#0C1F454D]",
+          isPilot ? "bg-[#FFF4E0]/95" : "bg-white/90",
+        )}
+      >
+        <Svg name={isPilot ? "clock" : "shieldCheck"} size={16} color={isPilot ? "#B86E00" : "#14804A"} />
+        <span className={clsx("text-xs font-semibold leading-4", isPilot ? "text-[#8A5300]" : "text-ink")}>
+          {isPilot ? `Pilot-Eligible · ${s}/100` : `Globally Ready · ${s}/100`}
+        </span>
       </div>
       <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/85 px-3 py-2 shadow-[0_10px_24px_-10px_#0C1F4559]">
         <span className="text-xs leading-4 text-muted">{p.metricLabel}</span>

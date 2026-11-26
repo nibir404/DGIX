@@ -1,14 +1,114 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 /**
- * Lightweight English / Bangla switch for the public site.
- * Text is keyed by its English wording: anything missing from BN stays in English.
+ * One language system for the whole site.
+ *
+ * - Portals use keys: t("nav.home") from DICT (English, Bangla, Arabic). (Masum, feat/brd-gap-closure)
+ * - The public site uses English text as the key: <T>Solutions</T> from TEXT_BN. (v1.7.0)
+ * Anything without a translation falls back to English. Arabic switches the page to right-to-left.
  */
-export type Lang = "en" | "bn";
+export type AppLocale = "en" | "bn" | "ar";
 
-const BN: Record<string, string> = {
+const STORAGE_KEY = "dgix_locale";
+const LEGACY_KEY = "dgix_lang"; // v1.7.0 stored the choice here
+
+const DICT: Record<AppLocale, Record<string, string>> = {
+  en: {
+    "nav.home": "Home",
+    "nav.requests": "Requests",
+    "nav.demos": "Demos",
+    "nav.offers": "Offers & contracts",
+    "nav.projects": "Projects",
+    "nav.billing": "Billing",
+    "nav.licences": "Licences",
+    "nav.support": "Support",
+    "nav.products": "Products & passport",
+    "nav.verification": "Verification",
+    "nav.leads": "Leads & demos",
+    "nav.orders": "Orders & delivery",
+    "nav.payouts": "Payouts",
+    "nav.agreement": "Agreement & contracts",
+    "nav.today": "Today",
+    "nav.matching": "Matching desk",
+    "nav.review": "Product review",
+    "nav.governance": "Council & audit",
+    "nav.delivery": "Delivery",
+    "nav.finance": "Finance & ledger",
+    "nav.partners": "Partners & agreements",
+    "nav.contracts": "Contracts & templates",
+    "cta.new_request": "New request",
+    "cta.add_product": "+ Add product",
+    "cta.new_shortlist": "+ New shortlist",
+    "cta.pay_invoice": "Pay invoice",
+    "cta.download_receipt": "Download receipt",
+    "label.verified_partner": "DGIX Verified Partner",
+  },
+  bn: {
+    "nav.home": "হোম",
+    "nav.requests": "রিকোয়েস্ট",
+    "nav.demos": "ডেমো",
+    "nav.offers": "অফার ও চুক্তি",
+    "nav.projects": "প্রজেক্ট",
+    "nav.billing": "বিলিং ও পেমেন্ট",
+    "nav.licences": "লাইসেন্স",
+    "nav.support": "সাপোর্ট",
+    "nav.products": "প্রোডাক্ট ও পাসপোর্ট",
+    "nav.verification": "ভেরিফিকেশন",
+    "nav.leads": "লিড ও ডেমো",
+    "nav.orders": "অর্ডার ও ডেলিভারি",
+    "nav.payouts": "পেআউট",
+    "nav.agreement": "চুক্তি ও এমওইউ",
+    "nav.today": "আজকের সারসংক্ষেপ",
+    "nav.matching": "ম্যাচিং ডেস্ক",
+    "nav.review": "প্রোডাক্ট রিভিউ",
+    "nav.governance": "কাউন্সিল ও অডিট",
+    "nav.delivery": "ডেলিভারি",
+    "nav.finance": "ফাইন্যান্স ও লেজার",
+    "nav.partners": "পার্টনার ও চুক্তি",
+    "nav.contracts": "কন্ট্রাক্ট ও টেমপ্লেট",
+    "cta.new_request": "নতুন রিকোয়েস্ট",
+    "cta.add_product": "+ প্রোডাক্ট যোগ করুন",
+    "cta.new_shortlist": "+ নতুন শর্টলিস্ট",
+    "cta.pay_invoice": "ইনভয়েস পরিশোধ করুন",
+    "cta.download_receipt": "রসিদ ডাউনলোড",
+    "label.verified_partner": "DGIX যাচাইকৃত পার্টনার",
+  },
+  ar: {
+    "nav.home": "الرئيسية",
+    "nav.requests": "الطلبات",
+    "nav.demos": "العروض التوضيحية",
+    "nav.offers": "العروض والعقود",
+    "nav.projects": "المشاريع",
+    "nav.billing": "الفواتير والدفع",
+    "nav.licences": "التراخيص",
+    "nav.support": "الدعم",
+    "nav.products": "المنتجات والجواز",
+    "nav.verification": "التحقق",
+    "nav.leads": "العملاء والعروض",
+    "nav.orders": "الطلبات والتسليم",
+    "nav.payouts": "المدفوعات",
+    "nav.agreement": "الاتفاقيات والعقود",
+    "nav.today": "اليوم",
+    "nav.matching": "مكتب المطابقة",
+    "nav.review": "مراجعة المنتجات",
+    "nav.governance": "المجلس والتدقيق",
+    "nav.delivery": "التسليم",
+    "nav.finance": "المالية والسجل",
+    "nav.partners": "الشركاء والاتفاقيات",
+    "nav.contracts": "العقود والنماذج",
+    "cta.new_request": "طلب جديد",
+    "cta.add_product": "+ إضافة منتج",
+    "cta.new_shortlist": "+ قائمة مختصرة",
+    "cta.pay_invoice": "دفع الفاتورة",
+    "cta.download_receipt": "تنزيل الإيصال",
+    "label.verified_partner": "شريك DGIX معتمد",
+  },
+};
+
+/** Public-site text, keyed by its English wording. */
+const TEXT_BN: Record<string, string> = {
   // Navigation and calls to action
   "Solutions": "সমাধান",
   "How it works": "কীভাবে কাজ করে",
@@ -82,59 +182,107 @@ const BN: Record<string, string> = {
   "Language": "ভাষা",
 };
 
-const KEY = "dgix_lang";
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (en: string) => string };
-const LangCtx = createContext<Ctx>({ lang: "en", setLang: () => {}, t: (s) => s });
+type LocaleContextValue = {
+  locale: AppLocale;
+  setLocale: (next: AppLocale) => void;
+  t: (key: string, fallback?: string) => string;
+};
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+const lookup = (locale: AppLocale, key: string, fallback?: string) =>
+  DICT[locale]?.[key] ?? (locale === "bn" ? TEXT_BN[key] : undefined) ?? DICT.en[key] ?? fallback ?? key;
+
+const LocaleContext = createContext<LocaleContextValue>({
+  locale: "en",
+  setLocale: () => {},
+  t: (k, fb) => lookup("en", k, fb),
+});
+
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<AppLocale>("en");
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(KEY);
-      if (saved === "bn" || saved === "en") setLangState(saved);
-    } catch {}
+      const saved = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_KEY);
+      if (saved === "en" || saved === "bn" || saved === "ar") setLocaleState(saved);
+    } catch {
+      // ignore storage errors
+    }
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = lang;
-  }, [lang]);
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+    try {
+      window.localStorage.setItem(STORAGE_KEY, locale);
+      window.localStorage.removeItem(LEGACY_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }, [locale]);
 
-  const setLang = useCallback((l: Lang) => {
-    setLangState(l);
-    try { localStorage.setItem(KEY, l); } catch {}
-  }, []);
+  const value = useMemo<LocaleContextValue>(
+    () => ({ locale, setLocale: setLocaleState, t: (key: string, fallback?: string) => lookup(locale, key, fallback) }),
+    [locale],
+  );
 
-  const t = useCallback((en: string) => (lang === "bn" ? BN[en] ?? en : en), [lang]);
-  return <LangCtx.Provider value={{ lang, setLang, t }}>{children}</LangCtx.Provider>;
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
-export const useLang = () => useContext(LangCtx);
+export function useLocale() {
+  return useContext(LocaleContext);
+}
+
+/* ---- v1.7.0 names, kept as aliases so public-site components don't change ---- */
+
+export type Lang = AppLocale;
+export const LanguageProvider = LocaleProvider;
+
+export function useLang() {
+  const { locale, setLocale, t } = useLocale();
+  const tt = useCallback((en: string) => t(en, en), [t]);
+  return { lang: locale, setLang: setLocale, t: tt };
+}
 
 /** Translate a fixed English string: <T>Solutions</T>. Safe inside server components. */
 export function T({ children }: { children: string }) {
-  const { t } = useLang();
-  return <>{t(children)}</>;
+  const { t } = useLocale();
+  return <>{t(children, children)}</>;
 }
 
-/** "বাংলা" / "English" switch. */
-export function LanguageToggle({ className, tone = "dark" }: { className?: string; tone?: "dark" | "light" }) {
-  const { lang, setLang } = useLang();
-  const next: Lang = lang === "en" ? "bn" : "en";
+/** EN · বাংলা · العربية. `tone="dark"` for the public navigation, `light` for the portals. */
+export function LanguageToggle({ className = "", tone = "light" }: { className?: string; tone?: "light" | "dark" }) {
+  const { locale, setLocale } = useLocale();
+  const options: { code: AppLocale; label: string }[] = [
+    { code: "en", label: "EN" },
+    { code: "bn", label: "বাংলা" },
+    { code: "ar", label: "العربية" },
+  ];
+  const dark = tone === "dark";
   return (
-    <button
-      type="button"
-      onClick={() => setLang(next)}
-      lang={next}
-      aria-label={next === "bn" ? "Switch to Bangla" : "ইংরেজিতে দেখুন"}
-      className={
-        className ??
-        (tone === "dark"
-          ? "inline-flex h-10 items-center rounded-lg px-3 text-[15px] text-white/72 transition-colors hover:text-white"
-          : "inline-flex h-10 items-center rounded-lg px-3 text-[15px] text-ink/70 transition-colors hover:text-ink")
-      }
+    <div
+      role="group"
+      aria-label="Language"
+      className={`inline-flex items-center rounded-lg border p-0.5 text-xs ${dark ? "border-white/18 bg-white/8" : "border-[#DCE4F2] bg-[#F6F8FC]"} ${className}`}
     >
-      {next === "bn" ? "বাংলা" : "English"}
-    </button>
+      {options.map((opt) => {
+        const on = locale === opt.code;
+        return (
+          <button
+            key={opt.code}
+            type="button"
+            lang={opt.code}
+            aria-pressed={on}
+            onClick={() => setLocale(opt.code)}
+            className={
+              on
+                ? `rounded-md px-2 py-1 font-semibold transition ${dark ? "bg-white text-night" : "bg-night text-paper"}`
+                : `rounded-md px-2 py-1 font-medium transition ${dark ? "text-white/70 hover:text-white" : "text-muted hover:text-ink"}`
+            }
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

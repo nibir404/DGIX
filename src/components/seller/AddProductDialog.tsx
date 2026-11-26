@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { Dialog } from "@/components/buyer/kit";
 import { Button } from "@/components/portal/ui";
 import { Icon } from "@/components/ui/Icon";
+import { hasProhibitedUltimateWording } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import type { Category } from "@/lib/types";
 
@@ -23,15 +24,16 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: "custom", label: "Custom software" },
   { value: "services", label: "Services" },
 ];
-const MARKETS = ["UAE", "KSA", "Qatar", "USA"];
+const MARKETS = ["UAE", "KSA", "Qatar", "BGD", "USA"];
 
-/** Seller: start a new product passport. It enters review at PG0 with every check open. */
+/** Seller: start a new product passport. Enforces FR-CAT-03 (no "ultimate" wording) and registers in product-registry. */
 export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; onClose: () => void; onAdded: (id: string, name: string) => void }) {
   const { addProduct } = useStore();
   const [f, setF] = useState({ name: "", category: "erp" as Category, tagline: "", description: "", price: "" });
   const [markets, setMarkets] = useState<string[]>(["UAE"]);
   const price = Number(f.price.replace(/[^0-9]/g, "")) || 0;
-  const ok = f.name.trim().length > 1 && f.tagline.trim().length > 2 && markets.length > 0 && price > 0;
+  const prohibited = hasProhibitedUltimateWording(f.name, f.tagline, f.description);
+  const ok = f.name.trim().length > 1 && f.tagline.trim().length > 2 && markets.length > 0 && price > 0 && !prohibited;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +54,14 @@ export function AddProductDialog({ open, onClose, onAdded }: { open: boolean; on
   return (
     <Dialog open={open} onClose={onClose} title="Add a product">
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <p className="text-sm text-muted">DGIX reviews every claim before buyers see it. You&apos;ll upload evidence for 8 checks next.</p>
+        <p className="text-sm text-muted">
+          Every product claim is reviewed by our assurance team before buyers see it. Please use clear, verifiable statements rather than unsubstantiated superlatives.
+        </p>
+        {prohibited && (
+          <div className="rounded-lg border border-[#F2B8B8] bg-[#FFF5F5] px-3.5 py-2.5 text-xs font-medium text-danger">
+            Product claims cannot contain the word &ldquo;ultimate&rdquo;. Please use specific, verifiable phrasing.
+          </div>
+        )}
         <label className="flex flex-col gap-1.5">
           <span className="text-[13px] font-medium">Product name</span>
           <input autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. ClinicFlow EMR" className={clsx(FIELD, "h-11")} />

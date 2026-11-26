@@ -30,6 +30,23 @@ export default function SupportPage() {
 
   const active = cases.find((c) => c.id === sel) ?? open[0];
   const who = (id: string) => db.users.find((u) => u.id === id);
+  const replyTimesMin = cases
+    .filter((c) => c.messages.length >= 2)
+    .map((c) => Math.max(1, Math.round((new Date(c.messages[1].at).getTime() - new Date(c.opened).getTime()) / 60000)));
+  const avgReplyMin = replyTimesMin.length
+    ? Math.round(replyTimesMin.reduce((s, n) => s + n, 0) / replyTimesMin.length)
+    : null;
+  const avgReplyLabel =
+    avgReplyMin === null ? "—" : avgReplyMin < 60 ? `${avgReplyMin} min` : `${Math.round(avgReplyMin / 60)} h`;
+  const withinSlaCount = cases.filter((c) => {
+    if (c.messages.length >= 2) {
+      const mins = (new Date(c.messages[1].at).getTime() - new Date(c.opened).getTime()) / 60000;
+      return mins <= 240;
+    }
+    const ageHours = (Date.now() - new Date(c.opened).getTime()) / 3600000;
+    return ageHours <= 4 || isSolved(c);
+  }).length;
+  const slaPctLabel = cases.length === 0 ? "100%" : `${Math.round((withinSlaCount / cases.length) * 100)}%`;
   const contextOf = (c: SupportCase) => {
     const pr = db.projects.find((p) => p.id === c.projectId);
     const buyer = pr ? anonBuyer(db.companies.find((x) => x.id === pr.buyerId)).replace(" · ", ", ") : "DGIX";
@@ -129,20 +146,20 @@ export default function SupportPage() {
             <div className="text-[13px] leading-4 text-[#FFFFFFB3]">Your SLA · last 30 days</div>
             <div className="flex gap-6">
               <div className="flex flex-col gap-1">
-                <div className="text-[34px] font-light leading-[42px] text-paper">52 min</div>
+                <div className="text-[34px] font-light leading-[42px] text-paper">{avgReplyLabel}</div>
                 <div className="text-xs leading-4 text-[#FFFFFF99]">avg. first reply</div>
               </div>
               <div className="flex flex-col gap-1">
-                <div className="text-[34px] font-light leading-[42px] text-[#7FE0AE]">100%</div>
+                <div className="text-[34px] font-light leading-[42px] text-[#7FE0AE]">{slaPctLabel}</div>
                 <div className="text-xs leading-4 text-[#FFFFFF99]">within SLA</div>
               </div>
             </div>
-            <div className="text-xs leading-4 text-[#FFFFFF8C]">Missed SLAs lower your readiness score.</div>
+            <div className="text-xs leading-4 text-[#FFFFFF8C]">Timely responses maintain your partner readiness standing.</div>
           </Panel>
 
           <Panel className="flex flex-col gap-3 bg-paper p-[22px]">
             <div className="text-base font-medium leading-5 text-ink">Need help from DGIX?</div>
-            <div className="text-[13px] leading-[19px] text-muted">Asha replies within 1 hour, Sun–Thu, Dhaka time.</div>
+            <div className="text-[13px] leading-[19px] text-muted">Our partner desk replies within 1 business hour, Sun–Thu.</div>
             <AnimatePresence initial={false}>
               {compose && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -157,11 +174,11 @@ export default function SupportPage() {
                 openCase(msg.trim().slice(0, 60), msg.trim());
                 setMsg("");
                 setCompose(false);
-                flash("Message sent to Asha · new ticket opened");
+                flash("Message sent · new support ticket opened");
               }}
               className="inline-flex h-10 shrink-0 items-center self-start rounded-lg bg-[#EAF0FB] px-[18px] text-[13px] font-semibold leading-4 text-primary hover:bg-[#DCE6F8]"
             >
-              {compose ? "Send to Asha" : "Message Asha"}
+              {compose ? "Send message" : "Message partner desk"}
             </button>
           </Panel>
         </div>

@@ -1,19 +1,15 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import { useLookup } from "@/lib/store";
 import { ActivityLog } from "@/components/portal/ActivityLog";
-import { ReasonDialog } from "@/components/portal/ReasonDialog";
-import { Arrow, Btn, Heading, Panel, StatusTag, dayMonth, useBuyer, useFlash } from "@/components/buyer/kit";
+import { Arrow, Btn, Heading, Panel, StatusTag, dayMonth, useBuyer } from "@/components/buyer/kit";
 
-const CLOSE_REASONS = ["Our budget changed", "We chose another solution", "Our need changed", "The timeline moved", "None of the matches fit"];
 
 export default function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const b = useBuyer();
   const lk = useLookup();
-  const { flash, toast } = useFlash();
-  const [closing, setClosing] = useState(false);
   const r = b.requests.find((x) => x.id === id);
 
   if (!r) {
@@ -32,7 +28,6 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
     r.status === "offer" ? { label: "Review the offer", href: "/buyer/offers" } :
     r.status === "shortlist_sent" || r.status === "demo" ? { label: "See your shortlist", href: `/buyer/shortlist?request=${r.id}` } :
     null;
-  const canClose = r.status !== "won" && r.status !== "closed";
   const facts: [string, string][] = [
     ["Country", r.country],
     ["Users", r.users],
@@ -72,15 +67,6 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
               <p className="text-sm text-muted">Offer {offer.ref} · {offer.status === "sent" ? "waiting for your decision" : offer.status}</p>
             )}
           </Panel>
-          {canClose && (
-            <Panel className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between" delay={0.05}>
-              <div>
-                <div className="text-[15px] font-semibold text-ink">No longer need this?</div>
-                <p className="text-sm text-muted">Close the request and tell {advisor ? advisor.name.split(" ")[0] : "your advisor"} why.</p>
-              </div>
-              <Btn variant="outline" onClick={() => setClosing(true)} className="text-danger hover:border-danger">Close request</Btn>
-            </Panel>
-          )}
         </div>
 
         <Panel className="p-6" delay={0.1}>
@@ -89,20 +75,6 @@ export default function RequestDetail({ params }: { params: Promise<{ id: string
         </Panel>
       </div>
 
-      <ReasonDialog
-        open={closing}
-        title="Close this request?"
-        intro="Your advisor stops matching and the shortlist is withdrawn. You can always send a new request."
-        reasons={CLOSE_REASONS}
-        confirmLabel="Close request"
-        onClose={() => setClosing(false)}
-        onConfirm={(reason) => {
-          b.closeRequest(r.id, reason);
-          setClosing(false);
-          flash("Request closed · your advisor has been told why");
-        }}
-      />
-      {toast}
     </div>
   );
 }

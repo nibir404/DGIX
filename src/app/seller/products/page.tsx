@@ -6,7 +6,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { Button, Empty } from "@/components/portal/ui";
-import { AddProductDialog } from "@/components/seller/AddProductDialog";
+import { ProductSubmissionWizard } from "@/components/seller/ProductSubmissionWizard";
 import { Icon } from "@/components/ui/Icon";
 import { useFlash } from "@/components/admin/kit";
 import { Head, NIGHT_CARD, Panel, ProductTabs, scoreOf, useSeller } from "@/components/seller/kit";
@@ -38,13 +38,17 @@ function Products() {
 
   const dialog = (
     <>
-      <AddProductDialog
+      <ProductSubmissionWizard
         open={adding}
         onClose={() => setAdding(false)}
-        onAdded={(id, name) => {
+        onAdded={(id, name, isDraft) => {
           setAdding(false);
           setSel(id);
-          flash(`${name} submitted · upload evidence in Verification`);
+          flash(
+            isDraft
+              ? `Draft passport saved for ${name} · resume anytime from Products & Verification`
+              : `${name} registered & submitted for Gate PG1 assurance review!`,
+          );
         }}
       />
       {toast}
@@ -52,14 +56,14 @@ function Products() {
   );
   const addBtn = (
     <Button onClick={() => setAdding(true)} className="shrink-0">
-      <Icon name="plus" size={16} /> Add product
+      <Icon name="plus" size={16} /> Register Software (5-Step Wizard)
     </Button>
   );
 
   if (!p)
     return (
       <>
-        <Empty title="No products yet" body="Add your first product to start its passport. DGIX checks it before buyers see it." action={addBtn} />
+        <Empty title="No products yet" body="Register your first software to start its passport and 9-document verification. DGIX verifies it before buyers see it." action={addBtn} />
         {dialog}
       </>
     );
@@ -70,7 +74,30 @@ function Products() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Head kicker={<>Products / {p.name}</>} title="Product passport" right={<ProductTabs products={products} value={p.id} onChange={setSel} />} />
+      <Head kicker={<>Products / {p.name}</>} title="Product passport" right={<div className="flex items-center gap-2">{addBtn}<ProductTabs products={products} value={p.id} onChange={setSel} /></div>} />
+
+      {/* Verification & Evidence Banner */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+            <Icon name="shield" size={20} />
+          </span>
+          <div>
+            <div className="text-sm font-semibold text-ink">Statutory Verification Desk (9 Core Documents)</div>
+            <div className="text-xs text-muted">
+              Upload QA results, pentest reports, user manuals, client feedback and certifications to unlock verified marketplace listing.
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/seller/verification"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <Icon name="upload" size={14} /> Upload 9 Evidence Documents
+          </Link>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <Panel className="flex flex-col gap-5 bg-paper p-5 sm:flex-row lg:grow-[1.5] lg:basis-0">

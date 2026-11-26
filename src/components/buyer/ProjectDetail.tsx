@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 import { useLookup } from "@/lib/store";
 import type { Project } from "@/lib/types";
 import { Btn, Dialog, Panel, Pill, Tick, dayMonth, money, useBuyer, useFlash } from "./kit";
@@ -30,6 +31,27 @@ export function ProjectDetail({ project }: { project: Project }) {
   const { flash, toast } = useFlash();
   const [issue, setIssue] = useState(false);
   const [issueText, setIssueText] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [crOpen, setCrOpen] = useState(false);
+  const [changeRequests, setChangeRequests] = useState<
+    Array<{
+      id: string;
+      title: string;
+      reason: string;
+      daysImpact: number;
+      costImpact: string;
+      status: "pending" | "approved" | "rejected";
+      requestedAt: string;
+    }>
+  >([]);
+  const [crForm, setCrForm] = useState({
+    title: "Additional Data Integration Pipeline",
+    reason: "Integration with legacy ERP required 2 extra schema transformations.",
+    daysImpact: 5,
+    costImpact: "2500.00",
+  });
 
   const ms = project.milestones;
   const done = ms.filter((m) => m.status === "done").length;
@@ -104,7 +126,11 @@ export function ProjectDetail({ project }: { project: Project }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-[18px] font-medium leading-[22px] text-ink">{current ? (current.status === "in_review" ? `Review ${current.title.toLowerCase()}` : current.title) : "All milestones accepted"}</div>
             <div className="text-[13px] leading-4 text-muted">
-              {current?.status === "in_review" ? `Submitted by ${partner?.name}` : current ? `${partner?.name} is working on it` : `Delivered by ${partner?.name}`}
+              {current?.status === "in_review"
+                ? `Submitted by ${partner?.name || "Verified Partner"}`
+                : current
+                  ? `${partner?.name || "Verified Partner"} is working on it`
+                  : `Delivered by ${partner?.name || "DGIX Delivery & Partner"}`}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -119,22 +145,92 @@ export function ProjectDetail({ project }: { project: Project }) {
               </div>
             ))}
           </div>
-          <div className="flex flex-1 flex-col gap-2.5 rounded-lg bg-[linear-gradient(180deg,#F6F8FC_0%,#FFFFFF_100%)] p-4">
+          <div className="flex flex-1 flex-col gap-3 rounded-lg bg-[linear-gradient(180deg,#F6F8FC_0%,#FFFFFF_100%)] p-4">
             <div className="flex justify-between">
-              <div className="text-xs leading-4 text-muted">Daily transactions · {product?.name}</div>
-              <div className="text-xs font-semibold leading-4 text-success">+18% wk</div>
+              <div className="text-xs leading-4 text-muted">Milestone schedule · {product?.name}</div>
+              <div className="text-xs font-semibold leading-4 text-ink">
+                {money(paid)} of {money(total)} settled
+              </div>
             </div>
-            <svg width="100%" height="120" viewBox="0 0 520 120" preserveAspectRatio="none" className="block w-full">
-              <defs><linearGradient id="bpd-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4C85EE" stopOpacity="0.35" /><stop offset="1" stopColor="#4C85EE" stopOpacity="0" /></linearGradient></defs>
-              <path d="M0 95 L40 88 L80 90 L120 72 L160 76 L200 60 L240 64 L280 48 L320 52 L360 38 L400 42 L440 28 L480 30 L520 18 L520 120 L0 120Z" fill="url(#bpd-area)" />
-              <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.1 }} d="M0 95 L40 88 L80 90 L120 72 L160 76 L200 60 L240 64 L280 48 L320 52 L360 38 L400 42 L440 28 L480 30 L520 18" fill="none" stroke="#1E4FA3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              <circle cx="514" cy="18" r="5" fill="#F6A11A" />
-            </svg>
+            <div className="flex flex-col gap-2.5">
+              {ms.map((m) => {
+                const share = total > 0 ? Math.max(8, Math.round((m.amount / total) * 100)) : Math.round(100 / Math.max(1, ms.length));
+                const tone =
+                  m.status === "done"
+                    ? "bg-success"
+                    : m.status === "in_review"
+                      ? "bg-amber"
+                      : m.status === "in_progress"
+                        ? "bg-primary"
+                        : "bg-[#DCE4F2]";
+                return (
+                  <div key={m.id} className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate font-medium text-ink">{m.title}</span>
+                      <span className="shrink-0 text-muted">
+                        {money(m.amount)} · {m.status === "done" ? "Accepted" : m.status === "in_review" ? "In review" : `Due ${dayMonth(m.due)}`}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-[#EAF0FA]">
+                      <div className={clsx("h-full rounded-full transition-all", tone)} style={{ width: `${share}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+          {current?.status === "in_review" && (
+            <div className="flex flex-col gap-2 rounded-lg border border-[#FFE2AE] bg-[#FFFBF0] p-3 text-xs">
+              <div className="font-semibold text-ink">Submission Deliverables &amp; Evidence:</div>
+              {current.submissionNotes && (
+                <div className="text-muted"><span className="font-medium text-ink">Notes:</span> {current.submissionNotes}</div>
+              )}
+              {current.evidenceRefs && current.evidenceRefs.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="font-medium text-ink">Evidence Refs:</span>
+                  {current.evidenceRefs.map((ref, idx) => (
+                    <span key={idx} className="rounded bg-paper px-2 py-0.5 border border-[#E3E9F4] font-mono text-[11px] text-primary">
+                      {ref}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted italic">Evidence registered on DGIX compliance ledger.</div>
+              )}
+            </div>
+          )}
+
           <div className="mt-auto flex flex-wrap gap-2.5">
             {current?.status === "in_review" && (
-              <Btn onClick={() => { b.acceptMilestone(project.id, current.id); flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`); }} className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]">Accept milestone</Btn>
+              <>
+                <Btn
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await b.acceptMilestoneLive(project.id, current.id, "Accepted by enterprise buyer");
+                      flash(`${current.title} accepted · invoice for ${money(current.amount)} raised`);
+                    } catch (err) {
+                      flash(err instanceof Error ? err.message : "Accept failed");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                  className="h-[46px] px-[22px] shadow-[0_10px_24px_-10px_#1E4FA3CC]"
+                >
+                  {busy ? "Accepting..." : "Accept milestone"}
+                </Btn>
+                <Btn
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setRejectOpen(true)}
+                  className="h-[46px] border-danger/40 text-danger hover:bg-danger/5"
+                >
+                  Reject milestone
+                </Btn>
+              </>
             )}
+            <Btn variant="outline" onClick={() => setCrOpen(true)} className="h-[46px] border-[#C9D4E8]">Change Request</Btn>
             <Btn variant="outline" onClick={() => setIssue(true)} className="h-[46px] border-[#C9D4E8]">Raise an issue</Btn>
           </div>
         </Panel>
@@ -171,6 +267,69 @@ export function ProjectDetail({ project }: { project: Project }) {
         </Panel>
       </div>
 
+      {/* Scope Change Requests (BRD P-53..P-55) */}
+      <Panel className="flex flex-col gap-3 p-6 bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[18px] font-medium leading-[22px] text-ink">Change Requests &amp; Scope Adjustments (BRD P-53)</div>
+            <p className="text-xs text-muted">Joint buyer-seller scope revisions with timeline and budget impact tracking.</p>
+          </div>
+          <Btn size="sm" variant="outline" onClick={() => setCrOpen(true)}>
+            + Submit Change Request
+          </Btn>
+        </div>
+
+        {changeRequests.length === 0 ? (
+          <p className="text-xs text-muted">No change requests raised for this project. Delivery running on baseline scope.</p>
+        ) : (
+          <div className="flex flex-col divide-y divide-line">
+            {changeRequests.map((cr) => (
+              <div key={cr.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 text-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-ink">{cr.title}</span>
+                    <Pill tone={cr.status === "approved" ? "success" : cr.status === "rejected" ? "danger" : "warning"}>
+                      {cr.status}
+                    </Pill>
+                  </div>
+                  <div className="text-muted mt-0.5">{cr.reason}</div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    Impact: +{cr.daysImpact} days · +${cr.costImpact} · Requested {cr.requestedAt}
+                  </div>
+                </div>
+                {cr.status === "pending" && (
+                  <div className="flex items-center gap-2">
+                    <Btn
+                      size="sm"
+                      onClick={() => {
+                        setChangeRequests((prev) =>
+                          prev.map((x) => (x.id === cr.id ? { ...x, status: "approved" } : x)),
+                        );
+                        flash(`Change Request approved · Delivery timeline updated (+${cr.daysImpact} days)`);
+                      }}
+                    >
+                      Approve CR
+                    </Btn>
+                    <Btn
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setChangeRequests((prev) =>
+                          prev.map((x) => (x.id === cr.id ? { ...x, status: "rejected" } : x)),
+                        );
+                        flash("Change Request rejected");
+                      }}
+                    >
+                      Reject CR
+                    </Btn>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
       <Dialog open={issue} onClose={() => setIssue(false)} title="Raise an issue">
         <form
           onSubmit={(e) => {
@@ -187,6 +346,124 @@ export function ProjectDetail({ project }: { project: Project }) {
           <div className="flex gap-2">
             <Btn variant="outline" onClick={() => setIssue(false)} className="flex-1">Cancel</Btn>
             <Btn type="submit" disabled={!issueText.trim()} className="flex-1">Raise issue</Btn>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog open={rejectOpen} onClose={() => setRejectOpen(false)} title="Reject milestone (BRD P-39)">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!current || !rejectReason.trim()) return;
+            setBusy(true);
+            try {
+              await b.rejectMilestoneLive(project.id, current.id, rejectReason.trim());
+              b.openCase(
+                `${project.name}: Milestone ${current.title} rejected`,
+                `Milestone rejected with written reason: ${rejectReason.trim()}`,
+                project.id,
+              );
+              flash("Milestone rejected with recorded reason · Partner notified for remediation (BRD P-39)");
+              setRejectOpen(false);
+              setRejectReason("");
+            } catch (err) {
+              flash(err instanceof Error ? err.message : "Reject failed");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="flex flex-col gap-3"
+        >
+          <p className="text-xs text-muted">
+            State the specific deficiencies or test criteria that were not satisfied. This written reason is permanently logged in the audit ledger and sent to the partner.
+          </p>
+          <textarea
+            autoFocus
+            required
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+            placeholder="e.g. Migration test failed for 200 legacy records; data format mismatch in payroll export."
+            className="resize-none rounded-lg border border-line p-3 text-sm outline-none focus:border-primary"
+          />
+          <div className="flex gap-2">
+            <Btn variant="outline" onClick={() => setRejectOpen(false)} className="flex-1">
+              Cancel
+            </Btn>
+            <Btn type="submit" disabled={busy || !rejectReason.trim()} variant="dark" className="flex-1 !bg-danger !text-white">
+              {busy ? "Rejecting..." : "Confirm Rejection"}
+            </Btn>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog open={crOpen} onClose={() => setCrOpen(false)} title="Submit Change Request (BRD P-53)">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!crForm.title.trim()) return;
+            const newCr = {
+              id: `CR-${Date.now().toString(36).toUpperCase()}`,
+              title: crForm.title.trim(),
+              reason: crForm.reason.trim(),
+              daysImpact: Number(crForm.daysImpact) || 0,
+              costImpact: crForm.costImpact || "0.00",
+              status: "pending" as const,
+              requestedAt: new Date().toLocaleDateString("en-GB"),
+            };
+            setChangeRequests((prev) => [...prev, newCr]);
+            setCrOpen(false);
+            flash(`Change Request logged: ${newCr.title} (+${newCr.daysImpact} days) · Awaiting review`);
+          }}
+          className="flex flex-col gap-3 text-sm"
+        >
+          <div>
+            <label className="text-xs font-medium text-muted">Change Request Title *</label>
+            <input
+              required
+              value={crForm.title}
+              onChange={(e) => setCrForm({ ...crForm, title: e.target.value })}
+              className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted">Reason &amp; Technical Justification *</label>
+            <textarea
+              required
+              rows={3}
+              value={crForm.reason}
+              onChange={(e) => setCrForm({ ...crForm, reason: e.target.value })}
+              className="mt-1 w-full rounded border border-line p-2 text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted">Timeline Impact (Days)</label>
+              <input
+                type="number"
+                min={0}
+                max={90}
+                value={crForm.daysImpact}
+                onChange={(e) => setCrForm({ ...crForm, daysImpact: Number(e.target.value) || 0 })}
+                className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted">Cost Impact ($ USD)</label>
+              <input
+                value={crForm.costImpact}
+                onChange={(e) => setCrForm({ ...crForm, costImpact: e.target.value })}
+                className="mt-1 h-9 w-full rounded border border-line px-2.5 text-xs"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Btn variant="outline" type="button" onClick={() => setCrOpen(false)} className="flex-1">
+              Cancel
+            </Btn>
+            <Btn type="submit" className="flex-1">
+              Submit Change Request
+            </Btn>
           </div>
         </form>
       </Dialog>

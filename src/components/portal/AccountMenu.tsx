@@ -18,11 +18,6 @@ const GearIcon = () => (
   </svg>
 );
 
-/**
- * Account menu: profile, account settings, help and sign out.
- * `variant="header"` is the round avatar in the top bar (opens downward);
- * `variant="sidebar"` is the user row at the bottom of the sidebar (opens upward).
- */
 export function AccountMenu({ variant = "header", collapsed = false }: { variant?: "header" | "sidebar"; collapsed?: boolean }) {
   const { user, signOut } = useStore();
   const { company, user: findUser } = useLookup();
@@ -31,7 +26,9 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
@@ -80,7 +77,9 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
             <>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold leading-[18px] text-ink">{user.name}</span>
-                <span className="block truncate text-xs leading-4 text-muted">{user.title}</span>
+                <span className="block truncate text-xs leading-4 text-muted">
+                  {user.title || co?.name}
+                </span>
               </span>
               <Icon name="chevronDown" size={14} className={clsx("shrink-0 text-subtle transition-transform", !open && "rotate-180")} />
             </>
@@ -97,19 +96,26 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
             exit={{ opacity: 0, y: up ? 6 : -6, scale: 0.98 }}
             transition={{ duration: 0.14 }}
             className={clsx(
-              "absolute z-50 w-[min(280px,calc(100vw-32px))] rounded-lg border border-line/70 bg-white p-1.5 shadow-[0_24px_60px_rgba(12,31,69,0.18)]",
+              "absolute z-50 w-[min(300px,calc(100vw-32px))] rounded-lg border border-line/70 bg-white p-1.5 shadow-[0_24px_60px_rgba(12,31,69,0.18)]",
               up ? (collapsed ? "bottom-0 left-full ml-3 origin-bottom-left" : "bottom-full left-0 mb-2 origin-bottom-left") : "right-0 top-14 origin-top-right",
             )}
           >
             <div className="flex items-center gap-3 px-2.5 pb-3 pt-2">
               <Avatar user={user} size={40} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-ink">{user.name}</div>
                 <div className="truncate text-xs text-muted">{user.email}</div>
-                <div className="truncate text-xs text-subtle">{co?.name}</div>
+                {user.title && (
+                  <div className="mt-1">
+                    <span className="inline-block rounded bg-mist px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                      {user.title}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="h-px bg-line" />
+
             {advisor && (
               <>
                 <Link
@@ -124,7 +130,7 @@ export function AccountMenu({ variant = "header", collapsed = false }: { variant
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-ink">{advisor.name}</span>
-                    <span className="block truncate text-xs text-success">{user.role === "buyer" ? "Advisor" : "Manager"} · online</span>
+                    <span className="block truncate text-xs text-success">{user.role === "buyer" ? "Advisor" : "Partner desk"} · online</span>
                   </span>
                   <span className="flex items-center gap-1 rounded-md bg-mist px-2.5 py-1 text-xs font-semibold text-primary transition-colors group-hover:bg-white">
                     <Icon name="chat" size={13} /> Message

@@ -16,8 +16,8 @@ const promises: { icon: IconName; text: string }[] = [
 
 const offices = [
   { label: "Headquarters", title: "Dhaka, Bangladesh", body: "102/1 Shukrabad, Mirpur Road, Dhanmondi, Dhaka-1207", mist: true },
-  { label: "GCC support", title: "[City, country]", body: "Regional office to be confirmed" },
-  { label: "Partners", title: "partners@dgix", body: "Apply, or ask about a readiness report" },
+  { label: "GCC support", title: "Dubai, United Arab Emirates", body: "Regional advisory & delivery support across the UAE, Saudi Arabia and Qatar" },
+  { label: "Partners", title: "partners@dgix.daffodil.global", body: "Apply to list software, or ask about a readiness report" },
 ];
 
 export default function ContactPage() {

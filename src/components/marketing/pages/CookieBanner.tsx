@@ -75,21 +75,21 @@ export function CookieBanner() {
             )}
           </AnimatePresence>
           <div className="flex flex-col gap-[10px] sm:flex-row">
-            <button onClick={() => save({ preferences: false, analytics: false, marketing: false })} className="flex h-[46px] grow basis-0 items-center justify-center rounded-lg border-[1.5px] border-ink text-sm font-semibold text-ink hover:bg-mist">
+            <button onClick={() => save({ preferences: false, analytics: false, marketing: false })} className="flex h-[46px] items-center sm:grow sm:basis-0 justify-center rounded-lg border-[1.5px] border-ink text-sm font-semibold text-ink hover:bg-mist">
               Essential only
             </button>
             {custom ? (
-              <button onClick={() => save(prefs)} className="flex h-[46px] grow basis-0 items-center justify-center rounded-lg bg-mist text-sm font-semibold text-ink hover:bg-line">
+              <button onClick={() => save(prefs)} className="flex h-[46px] items-center sm:grow sm:basis-0 justify-center rounded-lg bg-mist text-sm font-semibold text-ink hover:bg-line">
                 Save choices
               </button>
             ) : (
-              <button onClick={() => setCustom(true)} className="flex h-[46px] grow basis-0 items-center justify-center rounded-lg bg-mist text-sm font-semibold text-ink hover:bg-line">
+              <button onClick={() => setCustom(true)} className="flex h-[46px] items-center sm:grow sm:basis-0 justify-center rounded-lg bg-mist text-sm font-semibold text-ink hover:bg-line">
                 Customise
               </button>
             )}
             <button
               onClick={() => save({ preferences: true, analytics: true, marketing: true })}
-              className="flex h-[46px] grow basis-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
+              className="flex h-[46px] items-center sm:grow sm:basis-0 justify-center rounded-lg text-sm font-semibold text-white"
               style={{ backgroundImage: "linear-gradient(180deg, #4C85EE 0%, #1E4FA3 100%)" }}
             >
               Accept all

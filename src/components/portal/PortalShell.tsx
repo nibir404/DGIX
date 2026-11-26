@@ -295,6 +295,10 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
             </div>
           ))}
         </nav>
+        {/* Phones: the header has no room for the language toggle, so it lives in the menu */}
+        <div className="flex justify-center pb-3 sm:hidden">
+          <LanguageToggle />
+        </div>
         <div className="border-t border-line pt-4">
           <AccountMenu variant="sidebar" collapsed={collapsed} />
         </div>
@@ -324,7 +328,7 @@ export function PortalShell({ role, children }: { role: Role; children: React.Re
                 <Icon name="plus" size={16} /> {cfg.primary.label.replace(/^\+\s*/, "")}
               </Link>
             )}
-            <LanguageToggle />
+            <LanguageToggle className="hidden sm:inline-flex" />
             <NotificationBell count={unread} />
             <AccountMenu />
           </div>

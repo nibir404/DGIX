@@ -175,7 +175,7 @@ function MobileMenu() {
 function SignedOut() {
   return (
     <>
-      <Link href="/sign-in" className="hidden md:block text-[15px] text-white/72 hover:text-white px-3">
+      <Link href="/sign-in" className="hidden min-h-10 items-center px-3 text-[15px] text-white/72 hover:text-white md:inline-flex">
         <T>Sign in</T>
       </Link>
       <Link href="/create-account" className="group hidden min-[400px]:flex h-10 sm:h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-white pl-4 sm:pl-5 pr-1.5 sm:pr-2 text-[14px] sm:text-[15px] font-medium text-night">

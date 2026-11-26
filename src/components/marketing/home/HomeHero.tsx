@@ -63,7 +63,7 @@ export function HomeHero() {
             {["HR & payroll", "Clinic billing", "AI document reading", "School management"].map((q, i) => (
               <span key={q} className="flex items-center gap-2">
                 {i > 0 && <span aria-hidden className="text-white/30">·</span>}
-                <Link href={`/search?q=${encodeURIComponent(q)}`} className="text-white/85 underline-offset-4 hover:text-white hover:underline">
+                <Link href={`/search?q=${encodeURIComponent(q)}`} className="inline-flex min-h-8 items-center text-white/85 underline-offset-4 hover:text-white hover:underline">
                   <T>{q}</T>
                 </Link>
               </span>

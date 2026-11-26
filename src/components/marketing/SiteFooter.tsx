@@ -40,10 +40,10 @@ export function SiteFooter() {
         </div>
         <div className="grid grid-cols-3 gap-6 md:contents">
           {cols.map((c) => (
-            <div key={c.title} className="flex flex-col gap-3 md:flex-1">
+            <div key={c.title} className="flex flex-col gap-0.5 md:flex-1">
               <div className="text-[13px] font-semibold uppercase tracking-caps leading-4 text-[#7F8DAD]"><T>{c.title}</T></div>
               {c.links.map(([l, h]) => (
-                <Link key={h} href={h} className="text-[15px] leading-[18px] text-white hover:text-sky transition-colors">
+                <Link key={h} href={h} className="inline-flex min-h-8 items-center self-start text-[15px] leading-[18px] text-white transition-colors hover:text-sky">
                   <T>{l}</T>
                 </Link>
               ))}
@@ -53,10 +53,10 @@ export function SiteFooter() {
       </div>
       <div className="flex flex-col gap-2 md:flex-row md:justify-between text-[13px] leading-4 text-[#7F8DAD]">
         <span>© 2026 Daffodil Group Ltd · dgix.daffodil.global</span>
-        <span className="flex gap-1">
-          <Link href="/legal/privacy" className="hover:text-white"><T>Privacy</T></Link>·
-          <Link href="/legal/terms" className="hover:text-white"><T>Terms</T></Link>·
-          <Link href="/legal/cookies" className="hover:text-white"><T>Cookies</T></Link>
+        <span className="flex items-center gap-1">
+          <Link href="/legal/privacy" className="inline-flex min-h-8 items-center px-1 hover:text-white"><T>Privacy</T></Link>·
+          <Link href="/legal/terms" className="inline-flex min-h-8 items-center px-1 hover:text-white"><T>Terms</T></Link>·
+          <Link href="/legal/cookies" className="inline-flex min-h-8 items-center px-1 hover:text-white"><T>Cookies</T></Link>
         </span>
       </div>
     </footer>

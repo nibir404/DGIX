@@ -25,7 +25,7 @@ export function Solutions() {
           <Eyebrow><T>The portfolio</T></Eyebrow>
           <H2 className="max-w-[720px]"><T>What Bangladesh builds.</T></H2>
         </div>
-        <Link href="/solutions" className="shrink-0 text-[15px] leading-[18px] font-semibold text-ink underline decoration-1 underline-offset-4 hover:text-primary">
+        <Link href="/solutions" className="inline-flex min-h-10 shrink-0 items-center self-start text-[15px] leading-[18px] font-semibold text-ink underline decoration-1 underline-offset-4 hover:text-primary">
           Ask about the right solution →
         </Link>
       </Reveal>

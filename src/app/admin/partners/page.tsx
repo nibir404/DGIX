@@ -674,7 +674,7 @@ export default function Partners() {
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <input
                 value={contractForm.title}
                 onChange={(e) => setContractForm({ ...contractForm, title: e.target.value })}
@@ -807,7 +807,7 @@ export default function Partners() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="text-xs font-medium text-muted">Country</label>
               <select

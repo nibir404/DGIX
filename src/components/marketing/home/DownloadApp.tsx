@@ -180,7 +180,7 @@ export function DownloadApp() {
               Scan to install
             </span>
             <span>v{ANDROID_APP.version} · {ANDROID_APP.size} · {ANDROID_APP.minAndroid}</span>
-            <Link href="/app" className="inline-flex items-center gap-1.5 font-medium text-white hover:underline">
+            <Link href="/app" className="inline-flex min-h-10 items-center gap-1.5 font-medium text-white hover:underline">
               <T>More about the app</T> <Icon name="arrowRight" size={13} />
             </Link>
           </div>

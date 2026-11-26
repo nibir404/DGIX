@@ -197,7 +197,7 @@ export default function Finance() {
               value={fxRate}
               onChange={(e) => setFxRate(e.target.value)}
               placeholder="Rate to USD"
-              className="h-9 flex-1 rounded border border-line px-2.5 font-mono text-xs"
+              className="h-9 min-w-0 flex-1 rounded border border-line px-2.5 font-mono text-xs"
             />
             <Button type="submit" size="sm" disabled={busyId === "fx"}>
               Update FX

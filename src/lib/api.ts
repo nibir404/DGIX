@@ -144,8 +144,18 @@ async function parseErrorResponse(resp: Response): Promise<ApiError> {
       // fall through
     }
   }
-  const txt = (await resp.text().catch(() => "")).slice(0, 300);
-  return new ApiError(resp.status, `HTTP ${resp.status}`, txt || resp.statusText);
+  const raw = (await resp.text().catch(() => "")).trim();
+  // Non-JSON replies come from a proxy or gateway (an HTML error page, or a bare 404/5xx when the
+  // BFF isn't reachable). Never show that markup to people: give a readable message instead.
+  const looksLikeMarkup = raw.startsWith("<") || raw.length > 160;
+  const gateway = [404, 502, 503, 504].includes(resp.status);
+  const detail =
+    looksLikeMarkup || gateway || !raw
+      ? gateway || looksLikeMarkup
+        ? "The DGIX service can't be reached right now. Please try again shortly."
+        : resp.statusText || `Request failed (${resp.status})`
+      : raw;
+  return new ApiError(resp.status, `HTTP ${resp.status}`, detail);
 }
 
 let refreshInFlight: Promise<AuthSession | null> | null = null;

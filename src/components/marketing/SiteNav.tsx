@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { portalHome, useLookup, useStore } from "@/lib/store";
 import { fmtMoney } from "@/lib/seed";
 import { T, LanguageToggle } from "@/lib/i18n";
+import { FloatingLayer } from "@/components/ui/FloatingLayer";
 
 const links = [
   { href: "/solutions", label: "Solutions" },
@@ -193,9 +194,15 @@ function SignedIn() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [btn, setBtn] = useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
@@ -223,6 +230,7 @@ function SignedIn() {
       </Link>
       <button
         onClick={() => setOpen((o) => !o)}
+        ref={setBtn}
         aria-expanded={open}
         className="hidden md:flex items-center gap-2.5 rounded-lg border border-white/18 bg-white/8 py-1 pl-1 pr-3 text-left"
       >
@@ -233,14 +241,13 @@ function SignedIn() {
         </span>
         <Icon name="chevronDown" size={14} className={clsx("text-haze transition-transform", open && "rotate-180")} />
       </button>
-      <AnimatePresence>
-        {open && (
+      {/* Rendered outside the hero panel so its overflow-hidden can't clip the menu */}
+      <FloatingLayer anchor={btn} open={open} layerRef={menuRef} minWidth={280} gap={10}>
           <motion.div
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 top-[58px] z-50 flex w-[280px] flex-col rounded-lg bg-white p-2 shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
+            className="flex flex-col rounded-lg bg-white p-2 shadow-[0_24px_60px_rgba(0,0,0,0.4)]"
           >
             <div className="p-3">
               <span className="rounded-lg bg-mist px-2.5 py-1 text-xs font-semibold text-primary">{menu.badge}</span>
@@ -278,8 +285,7 @@ function SignedIn() {
               Sign out
             </button>
           </motion.div>
-        )}
-      </AnimatePresence>
+      </FloatingLayer>
     </div>
   );
 }

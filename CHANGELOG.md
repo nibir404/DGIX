@@ -5,7 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- The "All countries" dropdown on the catalogue (and the site-nav account menu) is no longer cut off by the hero panel; it opens in a layer above the page, flips upward when there's no room, and closes on Escape.
+- The language switch no longer crowds the phone and tablet header; it stays in the menu below desktop width.
+- Errors from an unreachable backend now read "The DGIX service can't be reached right now. Please try again shortly." instead of raw HTML or "HTTP 404".
+- README and changelog: the product catalogue also needs the backend (previously said the public site works on its own).
 
 ## [2.0.0] — 2026-11-26
 
@@ -13,7 +17,7 @@ The portals now run on the real DGIX backend. Pial's and Masum's backend branche
 
 ### Breaking
 - **Sign-in goes through Keycloak (OIDC)** via the DGIX BFF. The mock sign-in, the one-click test accounts, "Reset demo data" and the demo switcher are gone.
-- **Portal data lives on the BFF**, not in the browser. The portals need `NEXT_PUBLIC_BFF_URL` / `DGIX_INTERNAL_BFF_URL` set; without a reachable BFF they show no data.
+- **Portal data lives on the BFF**, not in the browser. The portals need `NEXT_PUBLIC_BFF_URL` / `DGIX_INTERNAL_BFF_URL` set; without a reachable BFF they show no data. The public product catalogue (Solutions, category pages, search) also loads from the BFF and is empty without it.
 
 ### Added
 - **Backend integration** (Pial): 9-microservice BFF client (`src/lib/api.ts`), four-eyes staff consoles, PCI SAQ A hosted checkout, dual contracts and contract templates, milestone submission with evidence, review and rejection, change requests, payout advice, disbursement and payout queries, digital licences, AI match explainability and four-eyes publishing, catalogue kill-switch, a 5-step product submission with 9 evidence document types, company sign-up with entity type and trade licence.

@@ -2,7 +2,7 @@
 
 Frontend for **DGIX**, Daffodil's global innovation exchange: verified software from Bangladesh, matched to buyers in the USA and GCC, delivered under one contract.
 
-**Live site:** [dgix-rho.vercel.app](https://dgix-rho.vercel.app) · deployed on Vercel from `main`. The public pages work on their own; sign-in and the portals need the DGIX backend (BFF) to be configured, see [Sign-in and backend](#sign-in-and-backend).
+**Live site:** [dgix-rho.vercel.app](https://dgix-rho.vercel.app) · deployed on Vercel from `main`. The informational pages work on their own; the product catalogue (Solutions, category pages, search), sign-in and the portals need the DGIX backend (BFF) to be configured, see [Sign-in and backend](#sign-in-and-backend).
 
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff). Since v2.0.0 the portals sign in through Keycloak and read and write their data through the DGIX BFF (backend-for-frontend), which runs as a separate service.
 
@@ -148,7 +148,7 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 ## Known limitations
 
 - Not yet run end to end against a live BFF and Keycloak; see [docs/MERGE_PLAN.md](docs/MERGE_PLAN.md).
-- Without the BFF configured, sign-in and the portals don't work. The public site works on its own.
+- Without the BFF configured, the product catalogue shows no products ("HTTP 404"), and sign-in and the portals don't work. Informational pages (home, how it works, pricing, about, events, network) work on their own.
 - Declining an offer is kept only in the page (the BFF has no decline endpoint yet), so it reappears after a reload.
 - The milestone endpoint path (`/bff/v1/delivery/projects/…`) needs confirming with the backend team.
 - Two catalogue kill-switch screens exist (`/admin/governance` and `/admin/brd-ops`).

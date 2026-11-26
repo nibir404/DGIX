@@ -258,11 +258,13 @@ export function LanguageToggle({ className = "", tone = "light" }: { className?:
     { code: "ar", label: "العربية" },
   ];
   const dark = tone === "dark";
+  // Only apply the default display when the caller doesn't set one (e.g. "hidden lg:inline-flex").
+  const display = /(^|\s)(hidden|flex|inline-flex|block|grid)(\s|$)/.test(className) ? "" : "inline-flex";
   return (
     <div
       role="group"
       aria-label="Language"
-      className={`inline-flex items-center rounded-lg border p-0.5 text-xs ${dark ? "border-white/18 bg-white/8" : "border-[#DCE4F2] bg-[#F6F8FC]"} ${className}`}
+      className={`${display} items-center rounded-lg border p-0.5 text-xs ${dark ? "border-white/18 bg-white/8" : "border-[#DCE4F2] bg-[#F6F8FC]"} ${className}`}
     >
       {options.map((opt) => {
         const on = locale === opt.code;

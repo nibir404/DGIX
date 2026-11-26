@@ -9,6 +9,7 @@ import { PageHero } from "@/components/marketing/PageHero";
 import { Reveal } from "@/components/marketing/Reveal";
 import { CHIPS, MARKETS, isPublic } from "./data";
 import { Chip, HeroStat, NotListed, ProductCard, ServicePanels, SortMenu, Svg, sortProducts } from "./ui";
+import { FloatingLayer } from "@/components/ui/FloatingLayer";
 
 export function Catalogue() {
   const { db, catalogueDisclaimer, syncing, lastError, refreshLive } = useStore();
@@ -20,6 +21,8 @@ export function Catalogue() {
   const [sort, setSort] = useState("Best fit");
   const [mOpen, setMOpen] = useState(false);
   const mRef = useRef<HTMLDivElement>(null);
+  const mMenuRef = useRef<HTMLDivElement>(null);
+  const [mBtn, setMBtn] = useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const c = params.get("category");
@@ -27,9 +30,18 @@ export function Catalogue() {
   }, [params]);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => mRef.current && !mRef.current.contains(e.target as Node) && setMOpen(false);
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (mRef.current?.contains(t) || mMenuRef.current?.contains(t)) return;
+      setMOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMOpen(false);
+    window.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const pub = useMemo(() => db.products.filter(isPublic), [db.products]);
@@ -71,22 +83,25 @@ export function Catalogue() {
             </button>
           </form>
           <div ref={mRef} className="relative">
-            <button onClick={() => setMOpen(!mOpen)} className="flex h-[60px] w-full items-center gap-[10px] rounded-lg border border-white/20 bg-white/10 px-[22px] md:w-auto">
+            <button ref={setMBtn} onClick={() => setMOpen(!mOpen)} aria-haspopup="listbox" aria-expanded={mOpen} className="flex h-[60px] w-full items-center gap-[10px] rounded-lg border border-white/20 bg-white/10 px-[22px] md:w-auto">
               <Svg name="globe" size={20} color="#fff" />
               <span className="flex-1 text-left text-base leading-5 text-white">{mName}</span>
               <Svg name="chevD" size={18} color="#fff" />
             </button>
-            <AnimatePresence>
-              {mOpen && (
+            {/* Rendered outside the hero panel so its overflow-hidden can't clip the list */}
+            <FloatingLayer anchor={mBtn} open={mOpen} layerRef={mMenuRef}>
                 <motion.div
+                  role="listbox"
+                  aria-label="Country"
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="absolute right-0 top-[68px] z-30 flex w-full min-w-60 flex-col rounded-lg bg-paper p-1.5 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
+                  className="flex flex-col rounded-lg bg-paper p-1.5 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
                 >
                   {[{ code: "all", name: "All countries" }, ...MARKETS].map((m) => (
                     <button
                       key={m.code}
+                      role="option"
+                      aria-selected={m.code === market}
                       onClick={() => {
                         setMarket(m.code);
                         setMOpen(false);
@@ -97,8 +112,7 @@ export function Catalogue() {
                     </button>
                   ))}
                 </motion.div>
-              )}
-            </AnimatePresence>
+            </FloatingLayer>
           </div>
         </div>
       </PageHero>

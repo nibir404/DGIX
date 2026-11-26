@@ -7,6 +7,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 Nothing yet.
 
+## [2.0.2] — 2026-11-26
+
+Responsive fixes from a full audit of every public and portal page at 320 to 1920px wide.
+
+### Fixed
+- Contact page no longer scrolls sideways on phones; long email addresses wrap.
+- Portal header fits at 320px; on phones the language switch moves into the menu.
+- Staff finance FX form and partner grids fit on small phones.
+- Cookie banner buttons keep their full height on phones.
+- Larger tap targets for footer, hero quick-search, nav "Sign in" and section links.
+
 ## [2.0.1] — 2026-11-26
 
 UI fixes after the backend merge.
@@ -199,7 +210,8 @@ First complete release of the DGIX frontend.
 - Media converted to WebP (about 25 MB saved). Explainer video compressed from 66 MB to 6 MB and loaded on demand.
 - Globe code-split and paused off screen, with precomputed land-dot data.
 
-[Unreleased]: https://github.com/nibir404/DGIX/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/nibir404/DGIX/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/nibir404/DGIX/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/nibir404/DGIX/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/nibir404/DGIX/compare/v1.7.0...v2.0.0
 [1.7.0]: https://github.com/nibir404/DGIX/compare/v1.6.0...v1.7.0

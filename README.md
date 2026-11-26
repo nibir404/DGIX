@@ -6,7 +6,7 @@ Frontend for **DGIX**, Daffodil's global innovation exchange: verified software 
 
 This repository contains the public marketing site and three role-based portals (Buyer, Seller, Staff). Since v2.0.0 the portals sign in through Keycloak and read and write their data through the DGIX BFF (backend-for-frontend), which runs as a separate service.
 
-> **Status:** v2.0.1. Backend integration merged: sign-in, portal data and payments go through the DGIX BFF. Not yet verified end to end against a running backend (see Known limitations). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+> **Status:** v2.0.2. Backend integration merged: sign-in, portal data and payments go through the DGIX BFF. Not yet verified end to end against a running backend (see Known limitations). See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ---
 
@@ -133,6 +133,7 @@ This project follows [Semantic Versioning](https://semver.org). Each release is 
 
 | Version | Date | Highlights |
 | --- | --- | --- |
+| v2.0.2 | 2026-11-26 | Responsive fixes across every page from 320 to 1920px |
 | v2.0.1 | 2026-11-26 | Unclipped dropdowns, cleaner phone header, readable backend errors |
 | v2.0.0 | 2026-11-26 | Backend integration: Keycloak sign-in and BFF data replace the mock sign-in and browser storage |
 | v1.7.0 | 2026-11-26 | Request activity log, close/decline reasons, CSV downloads, events, enrolment, support network, Bangla switch, demo switcher |

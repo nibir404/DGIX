@@ -118,7 +118,7 @@ function OffersInner() {
             <Image src={thumb(p?.visual)} alt="" width={120} height={84} className="h-[84px] w-[120px] shrink-0 rounded-lg object-cover" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="text-[18px] font-semibold leading-[22px] text-ink">{p?.name}{req?.users && req.users !== "—" ? ` · ${req.users} employees` : ""}</div>
-              <div className="text-[13px] leading-4 text-muted">Delivered by {lk.company(p?.partnerId)?.name} · Contract with DGIX</div>
+              <div className="text-[13px] leading-4 text-muted">Delivered by {lk.company(p?.partnerId)?.name ?? "DGIX Verified Partner"} · Contract with DGIX</div>
               <div className="mt-1 flex flex-wrap gap-2">
                 <span className={clsx("rounded-lg px-2.5 py-1 text-xs font-semibold leading-4", score === 100 ? "bg-[#E6F4EC] text-[#0E6439]" : "bg-[#FDF1DE] text-warning")}>{p?.status === "pilot" ? "Pilot" : "Verified"} {score}/100</span>
                 <span className="rounded-lg bg-[#F6F8FC] px-2.5 py-1 text-xs leading-4 text-ink">12-month term</span>

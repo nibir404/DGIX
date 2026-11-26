@@ -146,6 +146,7 @@ type Ctx = {
     entity_type?: "INDIVIDUAL" | "COMPANY";
     country_code?: string;
     trade_license_ref?: string;
+    registration_number?: string;
     skip_partner_bootstrap?: boolean;
   }) => Promise<User>;
   applyPartnerLive: (input: {
@@ -166,6 +167,7 @@ type Ctx = {
     fullName?: string;
     email?: string;
     password?: string;
+    attachments?: { file: File; evidenceType: string }[];
   }) => Promise<User>;
   uploadRealEvidence: (params: {
     productId: string;
@@ -205,6 +207,7 @@ type Ctx = {
   ) => Promise<void>;
   createPayoutQueryLive: (payoutId: string, question: string) => Promise<void>;
   replyPayoutQueryLive: (queryId: string, reply: string) => Promise<void>;
+  rejectMilestone: (projectId: string, milestoneId: string, reason: string) => void;
   payInvoice: (invoiceId: string) => void;
   openCase: (title: string, body: string, projectId?: string) => void;
   replyCase: (caseId: string, body: string) => void;
@@ -237,6 +240,7 @@ type Ctx = {
     description: string;
     markets: string[];
     priceFrom: number;
+    attachments?: { file: File; evidenceType: string }[];
   }) => string;
   updateProfile: (patch: Partial<Pick<User, "name" | "title" | "email">>) => void;
   changePassword: (current: string, next: string) => boolean;
@@ -919,12 +923,23 @@ function hydrateDbFromLive(params: {
   const payouts: Payout[] = live.payouts.map((po) => {
     const pay = live.payments.find((p) => String(p.payment_id) === String(po.payment_id));
     const inv = live.invoices.find((i) => String(i.order_id) === String(po.order_id));
-    const rawWholesale = Number(po.amount ?? 0);
-    const holdPct = pay ? Number(pay.dispute_hold_pct ?? 0) : 0.05;
-    const holdAmt = Math.round(rawWholesale * holdPct);
-    const gross = pay ? Number(pay.amount ?? 0) : (rawWholesale + 8000);
-    const fee = Math.max(0, Math.round(gross - rawWholesale));
-    const net = Math.max(0, rawWholesale - holdAmt);
+    const net = Number(po.amount ?? 0);
+    const hasServerBreakdown = po.gross_amount !== undefined && po.gross_amount !== null;
+    const gross = hasServerBreakdown
+      ? Number(po.gross_amount)
+      : pay
+        ? Number(pay.amount ?? 0)
+        : net;
+    const holdAmt =
+      po.dispute_hold_amount !== undefined && po.dispute_hold_amount !== null
+        ? Number(po.dispute_hold_amount)
+        : pay
+          ? Math.round(gross * Number(pay.dispute_hold_pct ?? 0))
+          : 0;
+    const fee =
+      po.dgix_fee_amount !== undefined && po.dgix_fee_amount !== null
+        ? Number(po.dgix_fee_amount)
+        : Math.max(0, Math.round(gross - net - holdAmt));
     const rawStatus = String(po.status ?? "pending_approval");
     const status: Payout["status"] =
       rawStatus === "approved" || rawStatus === "paid" || rawStatus === "disbursed"
@@ -1515,6 +1530,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       fullName?: string;
       email?: string;
       password?: string;
+      attachments?: { file: File; evidenceType: string }[];
     }): Promise<User> => {
       setLastError(null);
       let activeSession = loadStoredSession() ?? authSession;
@@ -1597,12 +1613,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         },
       }).catch(() => undefined);
 
+      const verId = String(createdVer.version_id);
+      if (input.attachments && input.attachments.length > 0) {
+        for (const att of input.attachments) {
+          await uploadEvidenceBinary({
+            productVersionId: verId,
+            evidenceType: att.evidenceType,
+            file: att.file,
+            filename: att.file.name,
+          }).catch(() => undefined);
+        }
+      }
+
       const countryCodes = input.markets.map(toIsoCountry);
       await apiFetch("/bff/v1/governance/assessments", {
         method: "POST",
         body: {
           product_id: pid,
-          product_version_id: String(createdVer.version_id),
+          product_version_id: verId,
           pao_user_id: u.id,
           country_codes: countryCodes.length > 0 ? countryCodes : [isoCountry],
         },
@@ -1833,9 +1861,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await refreshLive();
     },
 
+    // Masum's buyer "request rework": same endpoint as rejectMilestoneLive (Pial's path).
+    rejectMilestone: (projectId, milestoneId, reason) => {
+      runBg(async () => {
+        await apiFetch(`/bff/v1/delivery/projects/${projectId}/milestones/${milestoneId}/reject`, {
+          method: "POST",
+          body: { reason: reason.trim() || "Reopened by buyer for rework." },
+        });
+        await refreshLive();
+      });
+    },
+
     payInvoice: (invoiceId) => {
       const inv = db.invoices.find((i) => i.id === invoiceId);
-      if (inv?.sandboxCheckoutUrl && typeof window !== "undefined") {
+      const isStale = inv?.paymentStatus === "expired" || inv?.paymentStatus === "cancelled";
+      if (!isStale && inv?.sandboxCheckoutUrl && typeof window !== "undefined") {
         window.location.href = buildSandboxCheckoutRedirectUrl(inv.sandboxCheckoutUrl);
         return;
       }
@@ -1852,6 +1892,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
         if (typeof pay.sandbox_checkout_url === "string" && typeof window !== "undefined") {
           window.location.href = buildSandboxCheckoutRedirectUrl(pay.sandbox_checkout_url);
+        } else if (typeof pay.payment_id === "string" && typeof window !== "undefined") {
+          const fallbackUrl = `/checkout/hosted/${pay.payment_id}?gateway=stripe&amount=${encodeURIComponent(String(inv.amount))}&currency=USD&order_id=${encodeURIComponent(inv.orderId ?? "")}`;
+          window.location.href = buildSandboxCheckoutRedirectUrl(fallbackUrl);
         }
       });
     },
@@ -2124,12 +2167,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             no_conflict_declared: true,
           },
         });
+        const verId = String(createdVer.version_id);
+        if (input.attachments && input.attachments.length > 0) {
+          for (const att of input.attachments) {
+            await uploadEvidenceBinary({
+              productVersionId: verId,
+              evidenceType: att.evidenceType,
+              file: att.file,
+              filename: att.file.name,
+            }).catch(() => undefined);
+          }
+        }
         const countryCodes = input.markets.map(toIsoCountry);
         await apiFetch("/bff/v1/governance/assessments", {
           method: "POST",
           body: {
             product_id: pid,
-            product_version_id: String(createdVer.version_id),
+            product_version_id: verId,
             pao_user_id: user.id,
             country_codes: countryCodes.length > 0 ? countryCodes : ["UAE"],
           },

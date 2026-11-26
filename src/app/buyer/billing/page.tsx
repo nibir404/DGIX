@@ -24,6 +24,8 @@ function BillingInner() {
   const [paying, setPaying] = useState<Invoice | null>(null);
   const [receiptInv, setReceiptInv] = useState<Invoice | null>(null);
   const justPaid = params.get("paid") === "1";
+  const expiredPayment = params.get("expired_payment");
+
 
   useEffect(() => {
     if (justPaid) {
@@ -84,6 +86,11 @@ function BillingInner() {
       {justPaid && (
         <div className="rounded-lg border border-[#BCE3CC] bg-[#F2FBF6] px-4 py-3 text-sm text-[#145C36]">
           <strong>Payment confirmed:</strong> Thank you. Your online payment has been received and your invoice status has been updated.
+        </div>
+      )}
+      {expiredPayment && (
+        <div className="rounded-lg border border-[#F5D08A] bg-[#FFFBEB] px-4 py-3 text-sm text-[#8A5A00]">
+          <strong>Previous checkout session expired:</strong> Click <em>Pay invoice</em> below to start a fresh checkout session automatically.
         </div>
       )}
 

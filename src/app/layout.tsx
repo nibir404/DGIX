@@ -49,9 +49,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <StoreProvider>
-          <LanguageProvider>{children}</LanguageProvider>
-        </StoreProvider>
+        <LanguageProvider>
+          <StoreProvider>{children}</StoreProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

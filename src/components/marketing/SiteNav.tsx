@@ -69,7 +69,7 @@ function NavBar({ compact }: { compact?: boolean }) {
         ))}
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-        <LanguageToggle className="hidden h-10 items-center rounded-lg px-3 text-[15px] text-white/72 transition-colors hover:text-white lg:inline-flex" />
+        <LanguageToggle tone="dark" className="hidden lg:inline-flex" />
         {ready && user ? <SignedIn /> : <SignedOut />}
         <MobileMenu />
       </div>
@@ -143,7 +143,7 @@ function MobileMenu() {
               ))}
             </nav>
             <div className="mt-auto flex flex-col gap-3 pt-8">
-              <LanguageToggle className="flex h-12 items-center justify-center rounded-lg border border-white/18 text-[15px] text-white/80" />
+              <LanguageToggle tone="dark" className="self-center" />
               {signedIn ? (
                 <>
                   <Link href={portalHome[user.role]} onClick={() => setOpen(false)} className="flex h-12 items-center justify-center rounded-lg bg-white text-[15px] font-semibold text-night">

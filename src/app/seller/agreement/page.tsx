@@ -7,6 +7,7 @@ import { useStore } from "@/lib/store";
 import { Button, Empty } from "@/components/portal/ui";
 import { Head, Panel, Pill, useFlash, useSeller } from "@/components/seller/kit";
 
+
 const TERMS = [
   ["You keep", "All IP and source code. DGIX receives non-exclusive regional distribution rights only."],
   ["You deliver", "Implementation, training and tier-2/3 engineering support under each buyer's signed SLA."],
